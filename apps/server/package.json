@@ -1,0 +1,13 @@
+{
+  "name": "server",
+  "version": "0.0.1",
+  "private": true,
+  "description": "D&D Game Go 后端服务",
+  "scripts": {
+    "dev": "go run cmd/server/main.go",
+    "build": "go build -o ../../bin/server cmd/server/main.go",
+    "lint": "go vet ./...",
+    "test": "go test ./...",
+    "clean": "rm -rf ../../bin/server"
+  }
+}

@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* D&D Theme Colors */
+@theme {
+  /* Primary colors */
+  --color-primary-50: #fef2f2;
+  --color-primary-100: #fee2e2;
+  --color-primary-200: #fecaca;
+  --color-primary-300: #fca5a5;
+  --color-primary-400: #f87171;
+  --color-primary-500: #ef4444;
+  --color-primary-600: #dc2626;
+  --color-primary-700: #b91c1c;
+  --color-primary-800: #991b1b;
+  --color-primary-900: #7f1d1d;
+
+  /* D&D specific colors */
+  --color-parchment: #f5e6d3;
+  --color-ink: #2c1810;
+
+  /* Fonts */
+  --font-display: 'Cinzel', serif;
+  --font-body: 'Crimson Text', serif;
+}
+
+/* Base styles */
+html {
+  font-family: var(--font-body, system-ui, sans-serif);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}

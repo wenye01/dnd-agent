@@ -1,0 +1,57 @@
+# D&D Game Server Configuration
+
+server:
+  host: 0.0.0.0
+  port: 8080
+  read_timeout: 30
+  write_timeout: 30
+
+# Log configuration
+log:
+  level: debug
+  format: console
+  output: stdout
+
+# CORS configuration
+cors:
+  allowed_origins:
+    - http://localhost:5173
+    - http://localhost:3000
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+  allowed_headers:
+    - Content-Type
+    - Authorization
+
+# WebSocket configuration
+websocket:
+  read_buffer_size: 1024
+  write_buffer_size: 1024
+  ping_period: 54
+  pong_wait: 60
+
+# Game configuration
+game:
+  max_players_per_room: 6
+  turn_timeout: 30000
+  auto_save_interval: 60000
+
+# LLM configuration
+llm:
+  provider: openai
+  openai:
+    # For GLM (智谱AI), use these settings:
+    # BaseURL: https://open.bigmodel.cn/api/paas/v4/
+    # Model: glm-4-flash
+    api_key: ${GLM_API_KEY:-}
+    base_url: ${GLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4/}
+    model: ${GLM_MODEL:-glm-4-flash}
+
+# Persistence configuration
+persistence:
+  data_dir: ./data/sessions
+  auto_save: true

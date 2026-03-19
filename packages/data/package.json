@@ -1,0 +1,6 @@
+{
+  "name": "@dnd-game/data",
+  "version": "0.0.1",
+  "private": true,
+  "description": "D&D 游戏静态数据"
+}

@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+fvtt/
+
+# AI Agent Workflow Systems (local only)
+.claude/
+.trellis/
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+*.env
+
+# Data
+data/sessions/
+data/saves/
+
+# Build cache
+.turbo/
+
+# Resources (large files, PDFs)
+resource/
