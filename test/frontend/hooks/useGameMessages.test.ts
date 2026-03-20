@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import type { ServerMessage } from '../types'
+import type { ServerMessage } from '../../../apps/web/src/types'
 
 // Test file for useGameMessages hook
 // This file contains basic structure and tests for the hook

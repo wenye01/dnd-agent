@@ -1,28 +1,25 @@
-package dice
+package dice_test
 
 import (
 	"strings"
 	"sync"
 	"testing"
+
+	dice "github.com/dnd-game/server/internal/server/dice"
 )
 
 func TestNewService(t *testing.T) {
 	t.Run("creates new service", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		if svc == nil {
 			t.Errorf("NewService() should return non-nil")
-		}
-		if svc.rnd == nil {
-			t.Errorf("Service should have random source")
 		}
 	})
 
 	t.Run("multiple services are independent", func(t *testing.T) {
-		svc1 := NewService()
-		svc2 := NewService()
+		svc1 := dice.NewService()
+		svc2 := dice.NewService()
 
-		// Different services should have different random sources
-		// (they're initialized at different times with different seeds)
 		if svc1 == svc2 {
 			t.Errorf("NewService() should return new instances")
 		}
@@ -31,7 +28,7 @@ func TestNewService(t *testing.T) {
 
 func TestService_Roll(t *testing.T) {
 	t.Run("simple d20 roll", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		result, err := svc.Roll("d20")
 
 		if err != nil {
@@ -46,7 +43,7 @@ func TestService_Roll(t *testing.T) {
 	})
 
 	t.Run("dice with modifier", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		result, err := svc.Roll("2d6+3")
 
 		if err != nil {
@@ -64,7 +61,7 @@ func TestService_Roll(t *testing.T) {
 	})
 
 	t.Run("keep highest", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		result, err := svc.Roll("4d6k3")
 
 		if err != nil {
@@ -79,7 +76,7 @@ func TestService_Roll(t *testing.T) {
 	})
 
 	t.Run("invalid formula returns error", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		_, err := svc.Roll("invalid")
 
 		if err == nil {
@@ -91,7 +88,7 @@ func TestService_Roll(t *testing.T) {
 	})
 
 	t.Run("empty formula returns error", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		_, err := svc.Roll("")
 
 		if err == nil {
@@ -100,7 +97,7 @@ func TestService_Roll(t *testing.T) {
 	})
 
 	t.Run("complex formula", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		result, err := svc.Roll("4d6k3+2")
 
 		if err != nil {
@@ -117,7 +114,7 @@ func TestService_Roll(t *testing.T) {
 
 func TestService_AbilityCheck(t *testing.T) {
 	t.Run("basic ability check", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		result := svc.AbilityCheck(5, 15, false, false)
 
 		if result.Modifier != 5 {
@@ -132,7 +129,7 @@ func TestService_AbilityCheck(t *testing.T) {
 	})
 
 	t.Run("ability check with advantage", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		result := svc.AbilityCheck(3, 12, true, false)
 
 		if !result.Advantage {
@@ -144,7 +141,7 @@ func TestService_AbilityCheck(t *testing.T) {
 	})
 
 	t.Run("ability check with disadvantage", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		result := svc.AbilityCheck(2, 10, false, true)
 
 		if !result.Disadvantage {
@@ -155,33 +152,8 @@ func TestService_AbilityCheck(t *testing.T) {
 		}
 	})
 
-	t.Run("advantage takes higher roll", func(t *testing.T) {
-		svc := NewService()
-		// Run multiple times to verify advantage behavior
-		// With advantage, we should get better results on average
-		sumWithAdvantage := 0
-		sumNormal := 0
-		iterations := 100
-
-		for i := 0; i < iterations; i++ {
-			result := svc.AbilityCheck(0, 10, true, false)
-			sumWithAdvantage += result.Roll
-		}
-
-		for i := 0; i < iterations; i++ {
-			result := svc.AbilityCheck(0, 10, false, false)
-			sumNormal += result.Roll
-		}
-
-		// Advantage should have a higher average (though it's probabilistic)
-		// We just verify they're different, not necessarily which is higher
-		// due to randomness
-		_ = sumWithAdvantage
-		_ = sumNormal
-	})
-
 	t.Run("natural 20 is crit", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		found := false
 		for i := 0; i < 1000; i++ {
 			result := svc.AbilityCheck(0, 30, false, false)
@@ -201,12 +173,11 @@ func TestService_AbilityCheck(t *testing.T) {
 
 func TestService_ThreadSafety(t *testing.T) {
 	t.Run("concurrent rolls", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		var wg sync.WaitGroup
 		errors := make(chan error, 100)
 		done := make(chan bool, 100)
 
-		// Launch 100 goroutines doing rolls concurrently
 		for i := 0; i < 100; i++ {
 			wg.Add(1)
 			go func() {
@@ -225,14 +196,12 @@ func TestService_ThreadSafety(t *testing.T) {
 		close(errors)
 		close(done)
 
-		// Check for errors
 		for err := range errors {
 			t.Errorf("Concurrent roll error: %v", err)
 		}
 
-		// Verify all goroutines completed
 		completed := 0
-		for _ = range done {
+		for range done {
 			completed++
 		}
 		if completed != 100 {
@@ -241,7 +210,7 @@ func TestService_ThreadSafety(t *testing.T) {
 	})
 
 	t.Run("concurrent ability checks", func(t *testing.T) {
-		svc := NewService()
+		svc := dice.NewService()
 		var wg sync.WaitGroup
 
 		for i := 0; i < 50; i++ {
@@ -253,25 +222,12 @@ func TestService_ThreadSafety(t *testing.T) {
 		}
 
 		wg.Wait()
-		// If we get here without deadlock or panic, test passes
-	})
-}
-
-func TestService_rollD20(t *testing.T) {
-	t.Run("roll is in valid range", func(t *testing.T) {
-		svc := NewService()
-		for i := 0; i < 1000; i++ {
-			roll := svc.rollD20()
-			if roll < 1 || roll > 20 {
-				t.Errorf("rollD20() returned %d, out of range [1,20]", roll)
-			}
-		}
 	})
 }
 
 func TestToRollResult(t *testing.T) {
 	t.Run("convert result to roll result", func(t *testing.T) {
-		result := &Result{
+		result := &dice.Result{
 			Dice:     []int{3, 4, 5},
 			KeptDice: []int{4, 5},
 			Modifier: 2,
@@ -280,7 +236,7 @@ func TestToRollResult(t *testing.T) {
 			IsFumble: false,
 		}
 
-		rollResult := ToRollResult(result, "3d6+2")
+		rollResult := dice.ToRollResult(result, "3d6+2")
 
 		if rollResult.Formula != "3d6+2" {
 			t.Errorf("Expected formula '3d6+2', got %s", rollResult.Formula)
@@ -297,7 +253,7 @@ func TestToRollResult(t *testing.T) {
 	})
 
 	t.Run("convert with crit", func(t *testing.T) {
-		result := &Result{
+		result := &dice.Result{
 			Dice:     []int{20},
 			KeptDice: []int{20},
 			Modifier: 5,
@@ -306,7 +262,7 @@ func TestToRollResult(t *testing.T) {
 			IsFumble: false,
 		}
 
-		rollResult := ToRollResult(result, "1d20+5")
+		rollResult := dice.ToRollResult(result, "1d20+5")
 
 		if !rollResult.IsCrit {
 			t.Errorf("Expected crit to be true")
@@ -317,7 +273,7 @@ func TestToRollResult(t *testing.T) {
 	})
 
 	t.Run("convert with fumble", func(t *testing.T) {
-		result := &Result{
+		result := &dice.Result{
 			Dice:     []int{1},
 			KeptDice: []int{1},
 			Modifier: 0,
@@ -326,7 +282,7 @@ func TestToRollResult(t *testing.T) {
 			IsFumble: true,
 		}
 
-		rollResult := ToRollResult(result, "1d20")
+		rollResult := dice.ToRollResult(result, "1d20")
 
 		if rollResult.IsCrit {
 			t.Errorf("Expected crit to be false")
@@ -339,7 +295,7 @@ func TestToRollResult(t *testing.T) {
 
 func TestRollResult(t *testing.T) {
 	t.Run("roll result structure", func(t *testing.T) {
-		result := &RollResult{
+		result := &dice.RollResult{
 			Formula:  "2d6+3",
 			Dice:     []int{4, 5},
 			Modifier: 3,
@@ -353,24 +309,6 @@ func TestRollResult(t *testing.T) {
 		}
 		if result.Total != 12 {
 			t.Errorf("Total mismatch")
-		}
-	})
-}
-
-func TestGetGlobalRand(t *testing.T) {
-	t.Run("global rand is initialized", func(t *testing.T) {
-		rnd := getGlobalRand()
-		if rnd == nil {
-			t.Errorf("getGlobalRand() should return non-nil")
-		}
-	})
-
-	t.Run("global rand is consistent", func(t *testing.T) {
-		rnd1 := getGlobalRand()
-		rnd2 := getGlobalRand()
-
-		if rnd1 != rnd2 {
-			t.Errorf("getGlobalRand() should return same instance")
 		}
 	})
 }

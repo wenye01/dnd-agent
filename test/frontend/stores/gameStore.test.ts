@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useGameStore } from './gameStore'
-import type { GameState, Character, CombatState } from '../types'
+import { useGameStore } from '../../../apps/web/src/stores/gameStore'
+import type { GameState, Character, CombatState } from '../../../apps/web/src/types'
 
 describe('gameStore', () => {
   beforeEach(() => {
@@ -100,8 +100,8 @@ describe('gameStore', () => {
       setGameState(secondState)
 
       const state = useGameStore.getState()
-      expect(state.gameState.sessionId).toBe('session-2')
-      expect(state.gameState.phase).toBe('combat')
+      expect(state.gameState?.sessionId).toBe('session-2')
+      expect(state.gameState?.phase).toBe('combat')
     })
   })
 
@@ -127,7 +127,7 @@ describe('gameStore', () => {
       const state = useGameStore.getState()
       expect(state.gameState?.phase).toBe('combat')
       expect(state.gameState?.currentMapId).toBe('map-2')
-      expect(state.gameState?.sessionId).toBe('session-123') // Unchanged
+      expect(state.gameState?.sessionId).toBe('session-123')
     })
 
     it('should not update when game state is null', () => {
@@ -461,15 +461,12 @@ describe('gameStore', () => {
     it('should handle loading -> error -> success flow', () => {
       const { setLoading, setError, setGameState } = useGameStore.getState()
 
-      // Start loading
       setLoading(true)
       expect(useGameStore.getState().isLoading).toBe(true)
 
-      // Error occurs
       setError('Failed to load')
       expect(useGameStore.getState().error).toBe('Failed to load')
 
-      // Clear loading and error on success
       const mockState: GameState = {
         sessionId: 'session-123',
         phase: 'exploring',
@@ -483,7 +480,7 @@ describe('gameStore', () => {
       setGameState(mockState)
 
       const state = useGameStore.getState()
-      expect(state.isLoading).toBe(true) // Loading needs to be cleared separately
+      expect(state.isLoading).toBe(true)
       expect(state.error).toBeNull()
     })
 
@@ -503,11 +500,8 @@ describe('gameStore', () => {
       }
 
       setGameState(initialState)
-
-      // Update just the phase
       updateGameState({ phase: 'combat' })
 
-      // Other fields should remain unchanged
       const state = useGameStore.getState()
       expect(state.gameState?.phase).toBe('combat')
       expect(state.gameState?.currentMapId).toBe('map-1')

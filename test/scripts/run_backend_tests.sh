@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Backend Test Runner for DND Agent
-# This script runs all Go backend tests
+# This script runs all Go backend tests from the test directory
 
 set -e
 
@@ -15,23 +15,29 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BACKEND_DIR="$PROJECT_ROOT/apps/server"
+TEST_DIR="$PROJECT_ROOT/test/backend"
 
 echo -e "${YELLOW}Running Backend Tests${NC}"
 echo "====================================="
 echo ""
 
-# Check if we're in the backend directory
+# Check if directories exist
 if [ ! -d "$BACKEND_DIR" ]; then
     echo -e "${RED}Error: Backend directory not found at $BACKEND_DIR${NC}"
     exit 1
 fi
 
-# Change to backend directory
+if [ ! -d "$TEST_DIR" ]; then
+    echo -e "${RED}Error: Test directory not found at $TEST_DIR${NC}"
+    exit 1
+fi
+
+# Run tests from the backend directory (tests import from backend)
+echo -e "${YELLOW}Running tests with coverage...${NC}"
 cd "$BACKEND_DIR"
 
-# Run tests with coverage
-echo -e "${YELLOW}Running tests with coverage...${NC}"
-go test -v -cover -coverprofile=coverage.out ./...
+# Run tests from test/backend directory
+go test -v -cover -coverprofile=coverage.out ./test/...
 
 # Check if tests passed
 if [ $? -eq 0 ]; then

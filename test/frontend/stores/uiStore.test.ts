@@ -1,10 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useUIStore } from './uiStore'
+import { useUIStore } from '../../../apps/web/src/stores/uiStore'
 
 describe('uiStore', () => {
-  // Reset store before each test by creating a fresh instance
   beforeEach(() => {
-    // Create a new store instance for each test
     const initialState = useUIStore.getState()
     useUIStore.setState({
       activePanel: 'character',
@@ -43,11 +41,9 @@ describe('uiStore', () => {
     it('should open panel when setting active panel', () => {
       const { setActivePanel, togglePanel } = useUIStore.getState()
 
-      // Close the panel first
       togglePanel()
       expect(useUIStore.getState().isPanelOpen).toBe(false)
 
-      // Set active panel should open it
       setActivePanel('spells')
 
       const state = useUIStore.getState()
@@ -77,7 +73,7 @@ describe('uiStore', () => {
 
       const state = useUIStore.getState()
       expect(state.activePanel).toBeNull()
-      expect(state.isPanelOpen).toBe(true) // Panel opens even for null
+      expect(state.isPanelOpen).toBe(true)
     })
   })
 
@@ -85,8 +81,7 @@ describe('uiStore', () => {
     it('should toggle panel open state', () => {
       const { togglePanel } = useUIStore.getState()
 
-      const initialState = useUIStore.getState()
-      const initialOpenState = initialState.isPanelOpen
+      const initialOpenState = useUIStore.getState().isPanelOpen
 
       togglePanel()
 
@@ -97,25 +92,17 @@ describe('uiStore', () => {
     it('should close open panel', () => {
       const { togglePanel } = useUIStore.getState()
 
-      // Start with open panel
       expect(useUIStore.getState().isPanelOpen).toBe(true)
-
-      // Toggle to close
       togglePanel()
-
       expect(useUIStore.getState().isPanelOpen).toBe(false)
     })
 
     it('should open closed panel', () => {
       const { togglePanel } = useUIStore.getState()
 
-      // Close the panel
       togglePanel()
       expect(useUIStore.getState().isPanelOpen).toBe(false)
-
-      // Toggle to open
       togglePanel()
-
       expect(useUIStore.getState().isPanelOpen).toBe(true)
     })
 
@@ -194,12 +181,8 @@ describe('uiStore', () => {
     it('should handle closing when no dialog is open', () => {
       const { closeDialog } = useUIStore.getState()
 
-      // No dialog open
       expect(useUIStore.getState().activeDialog).toBeNull()
-
-      // Should not error
       closeDialog()
-
       expect(useUIStore.getState().activeDialog).toBeNull()
     })
 
@@ -240,7 +223,7 @@ describe('uiStore', () => {
       openDialog('export')
 
       const state = useUIStore.getState()
-      expect(state.activePanel).toBe('map') // Panel unchanged
+      expect(state.activePanel).toBe('map')
       expect(state.activeDialog).toBe('export')
     })
 
@@ -251,7 +234,7 @@ describe('uiStore', () => {
       setActivePanel('inventory')
 
       const state = useUIStore.getState()
-      expect(state.activeDialog).toBe('settings') // Dialog unchanged
+      expect(state.activeDialog).toBe('settings')
       expect(state.activePanel).toBe('inventory')
     })
   })
@@ -281,30 +264,16 @@ describe('uiStore', () => {
     it('should handle rapid toggles', () => {
       const { togglePanel } = useUIStore.getState()
 
-      // After 10 toggles (even number), panel should be open again
-      // because beforeEach sets it to true
       for (let i = 0; i < 10; i++) {
         togglePanel()
       }
 
-      // After 10 toggles, state should be same as initial (10 is even)
       const finalState = useUIStore.getState()
-      expect(finalState.isPanelOpen).toBe(true) // 10 is even, so back to original
+      expect(finalState.isPanelOpen).toBe(true)
     })
   })
 
   describe('type safety', () => {
-    it('should only accept valid panel types', () => {
-      const { setActivePanel } = useUIStore.getState()
-
-      // This test verifies type safety at compile time
-      // @ts-expect-error - invalid panel type
-      setActivePanel('invalid' as any)
-
-      // At runtime, TypeScript allows it but the store accepts it
-      // In a real app, you'd want validation
-    })
-
     it('should handle null panel type', () => {
       const { setActivePanel } = useUIStore.getState()
 
@@ -319,27 +288,22 @@ describe('uiStore', () => {
     it('should maintain state during complex interactions', () => {
       const { setActivePanel, openDialog, togglePanel, closeDialog } = useUIStore.getState()
 
-      // User opens character panel
       setActivePanel('character')
       expect(useUIStore.getState().activePanel).toBe('character')
 
-      // User opens settings dialog
       openDialog('settings')
       expect(useUIStore.getState().activeDialog).toBe('settings')
 
-      // User closes panel
       togglePanel()
       expect(useUIStore.getState().isPanelOpen).toBe(false)
 
-      // User closes dialog
       closeDialog()
       expect(useUIStore.getState().activeDialog).toBeNull()
 
-      // User opens panel again - should remember last panel
       togglePanel()
       const state = useUIStore.getState()
       expect(state.isPanelOpen).toBe(true)
-      expect(state.activePanel).toBe('character') // Still character
+      expect(state.activePanel).toBe('character')
     })
   })
 })

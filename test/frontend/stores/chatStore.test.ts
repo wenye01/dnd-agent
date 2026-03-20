@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useChatStore } from './chatStore'
+import { useChatStore } from '../../../apps/web/src/stores/chatStore'
 
 describe('chatStore', () => {
   beforeEach(() => {
@@ -27,7 +27,7 @@ describe('chatStore', () => {
 
   describe('addUserMessage', () => {
     it('should add a user message', () => {
-      const { addUserMessage, messages } = useChatStore.getState()
+      const { addUserMessage } = useChatStore.getState()
 
       addUserMessage('Hello, world!')
 
@@ -183,10 +183,8 @@ describe('chatStore', () => {
     it('should handle empty streaming text', () => {
       const { finalizeStreamText, addDMMessage } = useChatStore.getState()
 
-      // Start with empty streaming text
       finalizeStreamText()
 
-      // Add a DM message
       addDMMessage('Regular message')
 
       const state = useChatStore.getState()
@@ -306,7 +304,7 @@ describe('chatStore', () => {
     it('should handle special characters in messages', () => {
       const { addUserMessage } = useChatStore.getState()
 
-      addUserMessage('Special chars: <>&"\'\\n\\t')
+      addUserMessage('Special chars: <>&"\'\n\t')
 
       const state = useChatStore.getState()
       expect(state.messages[0].content).toContain('Special chars:')
