@@ -1,6 +1,7 @@
 package state
 
 import (
+	"strconv"
 	"sync"
 	"testing"
 
@@ -264,7 +265,7 @@ func TestManager_Concurrency(t *testing.T) {
 			wg.Add(1)
 			go func(n int) {
 				defer wg.Done()
-				sessionID := "session-" + string(rune(n))
+				sessionID := "session-" + strconv.Itoa(n)
 				state := mgr.CreateSession(sessionID)
 				if state == nil {
 					errors <- &StateError{
@@ -318,7 +319,7 @@ func TestManager_Concurrency(t *testing.T) {
 			go func(n int) {
 				defer wg.Done()
 				mgr.UpdateSession("test-session", func(state *GameState) {
-					state.CurrentMapID = "map-" + string(rune(n%10))
+					state.CurrentMapID = "map-" + strconv.Itoa(n%10)
 				})
 			}(i)
 		}
@@ -338,7 +339,7 @@ func TestManager_ThreadSafety(t *testing.T) {
 			wg.Add(1)
 			go func(n int) {
 				defer wg.Done()
-				sessionID := "session-" + string(rune(n))
+				sessionID := "session-" + strconv.Itoa(n)
 				mgr.CreateSession(sessionID)
 			}(i)
 		}
@@ -348,7 +349,7 @@ func TestManager_ThreadSafety(t *testing.T) {
 			wg.Add(1)
 			go func(n int) {
 				defer wg.Done()
-				sessionID := "session-" + string(rune(n))
+				sessionID := "session-" + strconv.Itoa(n)
 				mgr.GetSession(sessionID)
 			}(i)
 		}

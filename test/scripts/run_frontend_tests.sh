@@ -3,8 +3,6 @@
 # Frontend Test Runner for DND Agent
 # This script runs all TypeScript frontend tests
 
-set -e
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,7 +30,12 @@ cd "$FRONTEND_DIR"
 # Check if node_modules exists
 if [ ! -d "node_modules" ]; then
     echo -e "${YELLOW}node_modules not found. Installing dependencies...${NC}"
-    npm install
+    # Check for package-lock.json for CI environments
+    if [ -f "package-lock.json" ]; then
+        npm ci
+    else
+        npm install
+    fi
 fi
 
 # Check if Vitest is installed
@@ -43,10 +46,12 @@ fi
 
 # Run tests
 echo -e "${YELLOW}Running tests...${NC}"
+# Capture exit code without using set -e
 npm test -- --run
+test_result=$?
 
 # Check if tests passed
-if [ $? -eq 0 ]; then
+if [ $test_result -eq 0 ]; then
     echo ""
     echo -e "${GREEN}All tests passed!${NC}"
 else

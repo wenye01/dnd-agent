@@ -1,6 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useGameStore } from '../../../apps/web/src/stores/gameStore'
-import type { GameState, Character, CombatState } from '../../../apps/web/src/types'
+import type { GameState, Character, CombatState, GameMetadata } from '../../../apps/web/src/types'
+
+// Helper function to create valid GameMetadata
+function createMockMetadata(overrides: Partial<GameMetadata> = {}): GameMetadata {
+  const now = Date.now()
+  return {
+    createdAt: now,
+    updatedAt: now,
+    playTime: 0,
+    scenarioId: 'test-scenario',
+    ...overrides,
+  }
+}
 
 describe('gameStore', () => {
   beforeEach(() => {
@@ -35,11 +47,7 @@ describe('gameStore', () => {
         phase: 'exploring',
         party: [],
         currentMapId: 'map-1',
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(mockState)
@@ -58,11 +66,7 @@ describe('gameStore', () => {
         sessionId: 'session-123',
         phase: 'exploring',
         party: [],
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(mockState)
@@ -78,22 +82,14 @@ describe('gameStore', () => {
         sessionId: 'session-1',
         phase: 'exploring',
         party: [],
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       const secondState: GameState = {
         sessionId: 'session-2',
         phase: 'combat',
         party: [],
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(firstState)
@@ -114,11 +110,7 @@ describe('gameStore', () => {
         phase: 'exploring',
         party: [],
         currentMapId: 'map-1',
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(initialState)
@@ -146,20 +138,20 @@ describe('gameStore', () => {
         sessionId: 'session-123',
         phase: 'exploring',
         party: [],
-        metadata: {
+        metadata: createMockMetadata({
           createdAt: 1000,
           updatedAt: 2000,
-          lastActivity: 2000,
-        },
+          playTime: 100,
+        }),
       }
 
       setGameState(initialState)
       updateGameState({
-        metadata: {
+        metadata: createMockMetadata({
           createdAt: 1000,
           updatedAt: 3000,
-          lastActivity: 3000,
-        } as any,
+          playTime: 200,
+        }),
       })
 
       const state = useGameStore.getState()
@@ -175,11 +167,7 @@ describe('gameStore', () => {
         sessionId: 'session-123',
         phase: 'exploring',
         party: [],
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(initialState)
@@ -252,11 +240,7 @@ describe('gameStore', () => {
             inventory: [],
           },
         ],
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(initialState)
@@ -300,11 +284,7 @@ describe('gameStore', () => {
         sessionId: 'session-123',
         phase: 'exploring',
         party: [],
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(initialState)
@@ -337,11 +317,7 @@ describe('gameStore', () => {
           participants: [],
           activeEffects: [],
         },
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(initialState)
@@ -424,11 +400,7 @@ describe('gameStore', () => {
         sessionId: 'session-123',
         phase: 'exploring',
         party: [],
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(mockState)
@@ -471,11 +443,7 @@ describe('gameStore', () => {
         sessionId: 'session-123',
         phase: 'exploring',
         party: [],
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
       setGameState(mockState)
 
@@ -492,11 +460,7 @@ describe('gameStore', () => {
         phase: 'exploring',
         party: [],
         currentMapId: 'map-1',
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          lastActivity: Date.now(),
-        },
+        metadata: createMockMetadata(),
       }
 
       setGameState(initialState)

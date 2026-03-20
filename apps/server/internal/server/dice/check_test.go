@@ -1,16 +1,14 @@
-package dice_test
+package dice
 
 import (
 	"fmt"
 	"testing"
-
-	dice "github.com/dnd-game/server/internal/server/dice"
 )
 
 // mockCheckResult creates a CheckResult with a specific roll value for deterministic testing.
 // This allows testing crit/fumble logic without relying on random rolls.
-func mockCheckResult(roll, modifier, dc int, advantage, disadvantage bool) *dice.CheckResult {
-	result := &dice.CheckResult{
+func mockCheckResult(roll, modifier, dc int, advantage, disadvantage bool) *CheckResult {
+	result := &CheckResult{
 		Roll:         roll,
 		Modifier:     modifier,
 		DC:           dc,
@@ -26,7 +24,7 @@ func mockCheckResult(roll, modifier, dc int, advantage, disadvantage bool) *dice
 }
 
 // mockAdvantageResult simulates advantage by using the higher of two rolls.
-func mockAdvantageResult(roll1, roll2, modifier, dc int) *dice.CheckResult {
+func mockAdvantageResult(roll1, roll2, modifier, dc int) *CheckResult {
 	bestRoll := roll1
 	if roll2 > roll1 {
 		bestRoll = roll2
@@ -36,7 +34,7 @@ func mockAdvantageResult(roll1, roll2, modifier, dc int) *dice.CheckResult {
 }
 
 // mockDisadvantageResult simulates disadvantage by using the lower of two rolls.
-func mockDisadvantageResult(roll1, roll2, modifier, dc int) *dice.CheckResult {
+func mockDisadvantageResult(roll1, roll2, modifier, dc int) *CheckResult {
 	worstRoll := roll1
 	if roll2 < roll1 {
 		worstRoll = roll2
@@ -47,8 +45,8 @@ func mockDisadvantageResult(roll1, roll2, modifier, dc int) *dice.CheckResult {
 
 // mockAttackResult creates a CheckResult for attack rolls with a specific roll value.
 // Natural 20 always hits regardless of AC.
-func mockAttackResult(roll, attackBonus, ac int, advantage, disadvantage bool) *dice.CheckResult {
-	result := &dice.CheckResult{
+func mockAttackResult(roll, attackBonus, ac int, advantage, disadvantage bool) *CheckResult {
+	result := &CheckResult{
 		Roll:         roll,
 		Modifier:     attackBonus,
 		DC:           ac,
@@ -66,7 +64,7 @@ func mockAttackResult(roll, attackBonus, ac int, advantage, disadvantage bool) *
 
 func TestAbilityCheck(t *testing.T) {
 	t.Run("basic ability check", func(t *testing.T) {
-		result := dice.AbilityCheck(5, 15, false, false)
+		result := AbilityCheck(5, 15, false, false)
 
 		if result.Modifier != 5 {
 			t.Errorf("Expected modifier 5, got %d", result.Modifier)
@@ -83,7 +81,7 @@ func TestAbilityCheck(t *testing.T) {
 	})
 
 	t.Run("ability check with advantage", func(t *testing.T) {
-		result := dice.AbilityCheck(5, 15, true, false)
+		result := AbilityCheck(5, 15, true, false)
 
 		if !result.Advantage {
 			t.Errorf("Expected advantage to be true")
@@ -98,7 +96,7 @@ func TestAbilityCheck(t *testing.T) {
 	})
 
 	t.Run("ability check with disadvantage", func(t *testing.T) {
-		result := dice.AbilityCheck(3, 12, false, true)
+		result := AbilityCheck(3, 12, false, true)
 
 		if !result.Disadvantage {
 			t.Errorf("Expected disadvantage to be true")
@@ -109,7 +107,7 @@ func TestAbilityCheck(t *testing.T) {
 	})
 
 	t.Run("advantage and disadvantage both set", func(t *testing.T) {
-		result := dice.AbilityCheck(0, 10, true, true)
+		result := AbilityCheck(0, 10, true, true)
 
 		if !result.Advantage || !result.Disadvantage {
 			t.Errorf("Both advantage and disadvantage flags should be set when both parameters are true")
@@ -177,7 +175,7 @@ func TestAbilityCheck(t *testing.T) {
 	})
 
 	t.Run("success calculation", func(t *testing.T) {
-		result := dice.AbilityCheck(5, 15, false, false)
+		result := AbilityCheck(5, 15, false, false)
 		expectedSuccess := result.Total >= 15
 		if result.Success != expectedSuccess {
 			t.Errorf("Success calculation incorrect: got %v, expected %v", result.Success, expectedSuccess)
@@ -225,7 +223,7 @@ func TestAbilityCheck(t *testing.T) {
 
 func TestSavingThrow(t *testing.T) {
 	t.Run("saving throw is same as ability check", func(t *testing.T) {
-		result := dice.SavingThrow(3, 14, false, false)
+		result := SavingThrow(3, 14, false, false)
 
 		if result.Modifier != 3 {
 			t.Errorf("Expected modifier 3, got %d", result.Modifier)
@@ -238,7 +236,7 @@ func TestSavingThrow(t *testing.T) {
 
 func TestAttackRoll(t *testing.T) {
 	t.Run("basic attack roll", func(t *testing.T) {
-		result := dice.AttackRoll(5, 15, false, false)
+		result := AttackRoll(5, 15, false, false)
 
 		if result.Modifier != 5 {
 			t.Errorf("Expected attack bonus 5, got %d", result.Modifier)
@@ -265,7 +263,7 @@ func TestAttackRoll(t *testing.T) {
 	})
 
 	t.Run("attack with advantage", func(t *testing.T) {
-		result := dice.AttackRoll(5, 15, true, false)
+		result := AttackRoll(5, 15, true, false)
 
 		if !result.Advantage {
 			t.Errorf("Expected advantage")
@@ -273,7 +271,7 @@ func TestAttackRoll(t *testing.T) {
 	})
 
 	t.Run("attack with disadvantage", func(t *testing.T) {
-		result := dice.AttackRoll(3, 12, false, true)
+		result := AttackRoll(3, 12, false, true)
 
 		if !result.Disadvantage {
 			t.Errorf("Expected disadvantage")
@@ -281,7 +279,7 @@ func TestAttackRoll(t *testing.T) {
 	})
 
 	t.Run("hit calculation", func(t *testing.T) {
-		result := dice.AttackRoll(5, 15, false, false)
+		result := AttackRoll(5, 15, false, false)
 		expectedHit := result.Crit || result.Total >= 15
 		if result.Success != expectedHit {
 			t.Errorf("Hit calculation incorrect: got %v, expected %v", result.Success, expectedHit)
@@ -317,7 +315,7 @@ func TestAttackRoll(t *testing.T) {
 
 func TestSkillCheck(t *testing.T) {
 	t.Run("skill without proficiency", func(t *testing.T) {
-		result := dice.SkillCheck(2, 3, false, 12, false, false)
+		result := SkillCheck(2, 3, false, 12, false, false)
 
 		if result.Modifier != 2 {
 			t.Errorf("Expected modifier 2 (no proficiency), got %d", result.Modifier)
@@ -325,7 +323,7 @@ func TestSkillCheck(t *testing.T) {
 	})
 
 	t.Run("skill with proficiency", func(t *testing.T) {
-		result := dice.SkillCheck(2, 3, true, 12, false, false)
+		result := SkillCheck(2, 3, true, 12, false, false)
 
 		if result.Modifier != 5 {
 			t.Errorf("Expected modifier 5 (2 + 3 proficiency), got %d", result.Modifier)
@@ -333,7 +331,7 @@ func TestSkillCheck(t *testing.T) {
 	})
 
 	t.Run("skill check with advantage", func(t *testing.T) {
-		result := dice.SkillCheck(1, 2, true, 10, true, false)
+		result := SkillCheck(1, 2, true, 10, true, false)
 
 		if !result.Advantage {
 			t.Errorf("Expected advantage")
@@ -365,7 +363,7 @@ func TestGetModifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("score_%d", tt.score), func(t *testing.T) {
-			result := dice.GetModifier(tt.score)
+			result := GetModifier(tt.score)
 			if result != tt.expected {
 				t.Errorf("GetModifier(%d) = %d, want %d", tt.score, result, tt.expected)
 			}
@@ -375,15 +373,15 @@ func TestGetModifier(t *testing.T) {
 
 func TestNewRand(t *testing.T) {
 	t.Run("creates random source", func(t *testing.T) {
-		rnd := dice.NewRand(42)
+		rnd := NewRand(42)
 		if rnd == nil {
 			t.Errorf("NewRand() should return non-nil")
 		}
 	})
 
 	t.Run("same seed produces same sequence", func(t *testing.T) {
-		rnd1 := dice.NewRand(123)
-		rnd2 := dice.NewRand(123)
+		rnd1 := NewRand(123)
+		rnd2 := NewRand(123)
 
 		val1 := rnd1.Intn(100)
 		val2 := rnd2.Intn(100)
@@ -394,8 +392,8 @@ func TestNewRand(t *testing.T) {
 	})
 
 	t.Run("different seeds produce different sequences", func(t *testing.T) {
-		rnd1 := dice.NewRand(111)
-		rnd2 := dice.NewRand(999)
+		rnd1 := NewRand(111)
+		rnd2 := NewRand(999)
 
 		different := false
 		for i := 0; i < 10; i++ {
@@ -415,7 +413,7 @@ func TestNewRand(t *testing.T) {
 
 func TestCheckResult(t *testing.T) {
 	t.Run("check result structure", func(t *testing.T) {
-		result := &dice.CheckResult{
+		result := &CheckResult{
 			Success:      true,
 			Roll:         15,
 			Modifier:     3,

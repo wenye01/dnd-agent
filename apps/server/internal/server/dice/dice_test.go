@@ -1,16 +1,14 @@
-package dice_test
+package dice
 
 import (
 	"math/rand"
 	"testing"
-
-	dice "github.com/dnd-game/server/internal/server/dice"
 )
 
 // mockRollerResult creates a Result with specific dice values for deterministic testing.
 // This allows testing crit/fumble logic without relying on random rolls.
-func mockRollerResult(diceValues []int, modifier int) *dice.Result {
-	result := &dice.Result{
+func mockRollerResult(diceValues []int, modifier int) *Result {
+	result := &Result{
 		Dice:     diceValues,
 		KeptDice: diceValues,
 		Modifier: modifier,
@@ -61,7 +59,7 @@ func TestParse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := dice.Parse(tt.formula)
+			_, err := Parse(tt.formula)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -74,7 +72,7 @@ func TestRoller_Roll(t *testing.T) {
 	rnd := rand.New(src)
 
 	t.Run("simple d20 roll via Service", func(t *testing.T) {
-		svc := dice.NewService()
+		svc := NewService()
 		result, err := svc.Roll("d20")
 
 		if err != nil {
@@ -89,7 +87,7 @@ func TestRoller_Roll(t *testing.T) {
 	})
 
 	t.Run("d20 with modifier", func(t *testing.T) {
-		svc := dice.NewService()
+		svc := NewService()
 		result, err := svc.Roll("1d20+5")
 
 		if err != nil {
@@ -101,7 +99,7 @@ func TestRoller_Roll(t *testing.T) {
 	})
 
 	t.Run("multiple dice 3d6", func(t *testing.T) {
-		svc := dice.NewService()
+		svc := NewService()
 		result, err := svc.Roll("3d6")
 
 		if err != nil {
@@ -122,7 +120,7 @@ func TestRoller_Roll(t *testing.T) {
 	})
 
 	t.Run("keep highest 4d6k3", func(t *testing.T) {
-		svc := dice.NewService()
+		svc := NewService()
 		result, err := svc.Roll("4d6k3")
 
 		if err != nil {
@@ -167,7 +165,7 @@ func TestRoller_Roll(t *testing.T) {
 	})
 
 	t.Run("only d20 detects crit and fumble", func(t *testing.T) {
-		svc := dice.NewService()
+		svc := NewService()
 		result, err := svc.Roll("1d6")
 		if err != nil {
 			t.Errorf("Roll() error = %v", err)
@@ -180,7 +178,7 @@ func TestRoller_Roll(t *testing.T) {
 
 	t.Run("deterministic roll with fixed seed", func(t *testing.T) {
 		// Use Roller.Roll() directly with a fixed seed for deterministic testing
-		roller, err := dice.Parse("2d6+3")
+		roller, err := Parse("2d6+3")
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
@@ -208,7 +206,7 @@ func TestRoller_Roll(t *testing.T) {
 
 func TestDieSpec(t *testing.T) {
 	t.Run("valid DieSpec", func(t *testing.T) {
-		spec := dice.DieSpec{Count: 2, Sides: 6}
+		spec := DieSpec{Count: 2, Sides: 6}
 		if spec.Count != 2 {
 			t.Errorf("Expected Count 2, got %d", spec.Count)
 		}
@@ -220,7 +218,7 @@ func TestDieSpec(t *testing.T) {
 
 func TestResult(t *testing.T) {
 	t.Run("result structure", func(t *testing.T) {
-		result := &dice.Result{
+		result := &Result{
 			Dice:     []int{3, 4, 5},
 			KeptDice: []int{4, 5},
 			Modifier: 2,

@@ -3,8 +3,6 @@
 # Backend Test Runner for DND Agent
 # This script runs all Go backend tests from the test directory
 
-set -e
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -37,10 +35,12 @@ echo -e "${YELLOW}Running tests with coverage...${NC}"
 cd "$BACKEND_DIR"
 
 # Run tests from test/backend directory
+# Capture exit code without using set -e
 go test -v -cover -coverprofile=coverage.out ./test/...
+test_result=$?
 
 # Check if tests passed
-if [ $? -eq 0 ]; then
+if [ $test_result -eq 0 ]; then
     echo ""
     echo -e "${GREEN}All tests passed!${NC}"
 
