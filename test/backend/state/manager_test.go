@@ -1,4 +1,4 @@
-package state
+package state_test
 
 import (
 	"strconv"
@@ -6,23 +6,21 @@ import (
 	"testing"
 
 	"github.com/dnd-game/server/internal/shared/models"
+	state "github.com/dnd-game/server/internal/shared/state"
 )
 
 func TestNewManager(t *testing.T) {
 	t.Run("creates new manager", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 
 		if mgr == nil {
 			t.Errorf("NewManager() should return non-nil")
 		}
-		if mgr.sessions == nil {
-			t.Errorf("Sessions map should be initialized")
-		}
 	})
 
 	t.Run("multiple managers are independent", func(t *testing.T) {
-		mgr1 := NewManager()
-		mgr2 := NewManager()
+		mgr1 := state.NewManager()
+		mgr2 := state.NewManager()
 
 		if mgr1 == mgr2 {
 			t.Errorf("NewManager() should return new instances")
@@ -32,40 +30,40 @@ func TestNewManager(t *testing.T) {
 
 func TestManager_CreateSession(t *testing.T) {
 	t.Run("creates new session", func(t *testing.T) {
-		mgr := NewManager()
-		state := mgr.CreateSession("test-session")
+		mgr := state.NewManager()
+		gameState := mgr.CreateSession("test-session")
 
-		if state == nil {
+		if gameState == nil {
 			t.Errorf("CreateSession() should return non-nil")
 		}
-		if state.SessionID != "test-session" {
-			t.Errorf("Expected session ID 'test-session', got %s", state.SessionID)
+		if gameState.SessionID != "test-session" {
+			t.Errorf("Expected session ID 'test-session', got %s", gameState.SessionID)
 		}
 
 		// Verify it's stored
 		retrieved := mgr.GetSession("test-session")
-		if retrieved != state {
+		if retrieved != gameState {
 			t.Errorf("Retrieved session should match created session")
 		}
 	})
 
 	t.Run("returns existing session if already exists", func(t *testing.T) {
-		mgr := NewManager()
-		state1 := mgr.CreateSession("test-session")
+		mgr := state.NewManager()
+		gameState1 := mgr.CreateSession("test-session")
 
 		// Create a character to verify we get the same session
-		state1.Party = append(state1.Party, &models.Character{
+		gameState1.Party = append(gameState1.Party, &models.Character{
 			ID:   "char-1",
 			Name: "Test Character",
 		})
 
 		// Create session again with same ID
-		state2 := mgr.CreateSession("test-session")
+		gameState2 := mgr.CreateSession("test-session")
 
-		if state1 != state2 {
+		if gameState1 != gameState2 {
 			t.Errorf("Should return existing session")
 		}
-		if len(state2.Party) != 1 {
+		if len(gameState2.Party) != 1 {
 			t.Errorf("Existing session should preserve its state")
 		}
 	})
@@ -73,7 +71,7 @@ func TestManager_CreateSession(t *testing.T) {
 
 func TestManager_GetSession(t *testing.T) {
 	t.Run("retrieves existing session", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		created := mgr.CreateSession("test-session")
 
 		retrieved := mgr.GetSession("test-session")
@@ -87,7 +85,7 @@ func TestManager_GetSession(t *testing.T) {
 	})
 
 	t.Run("returns nil for non-existent session", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		retrieved := mgr.GetSession("non-existent")
 
 		if retrieved != nil {
@@ -98,7 +96,7 @@ func TestManager_GetSession(t *testing.T) {
 
 func TestManager_DeleteSession(t *testing.T) {
 	t.Run("deletes existing session", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		mgr.CreateSession("test-session")
 
 		// Verify it exists
@@ -116,7 +114,7 @@ func TestManager_DeleteSession(t *testing.T) {
 	})
 
 	t.Run("deleting non-existent session is safe", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 
 		// Should not panic
 		mgr.DeleteSession("non-existent")
@@ -125,12 +123,12 @@ func TestManager_DeleteSession(t *testing.T) {
 
 func TestManager_UpdateSession(t *testing.T) {
 	t.Run("updates existing session", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		mgr.CreateSession("test-session")
 
-		err := mgr.UpdateSession("test-session", func(state *GameState) {
-			state.Phase = PhaseCombat
-			state.CurrentMapID = "dungeon-1"
+		err := mgr.UpdateSession("test-session", func(gameState *state.GameState) {
+			gameState.Phase = state.PhaseCombat
+			gameState.CurrentMapID = "dungeon-1"
 		})
 
 		if err != nil {
@@ -138,31 +136,31 @@ func TestManager_UpdateSession(t *testing.T) {
 		}
 
 		// Verify updates
-		state := mgr.GetSession("test-session")
-		if state.Phase != PhaseCombat {
-			t.Errorf("Expected phase 'combat', got %s", state.Phase)
+		gameState := mgr.GetSession("test-session")
+		if gameState.Phase != state.PhaseCombat {
+			t.Errorf("Expected phase 'combat', got %s", gameState.Phase)
 		}
-		if state.CurrentMapID != "dungeon-1" {
-			t.Errorf("Expected map ID 'dungeon-1', got %s", state.CurrentMapID)
+		if gameState.CurrentMapID != "dungeon-1" {
+			t.Errorf("Expected map ID 'dungeon-1', got %s", gameState.CurrentMapID)
 		}
 	})
 
 	t.Run("returns error for non-existent session", func(t *testing.T) {
-		mgr := NewManager()
-		err := mgr.UpdateSession("non-existent", func(state *GameState) {
-			state.Phase = PhaseCombat
+		mgr := state.NewManager()
+		err := mgr.UpdateSession("non-existent", func(gameState *state.GameState) {
+			gameState.Phase = state.PhaseCombat
 		})
 
-		if err != ErrSessionNotFound {
+		if err != state.ErrSessionNotFound {
 			t.Errorf("Expected ErrSessionNotFound, got %v", err)
 		}
 	})
 
 	t.Run("update adds party member", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		mgr.CreateSession("test-session")
 
-		err := mgr.UpdateSession("test-session", func(state *GameState) {
+		err := mgr.UpdateSession("test-session", func(gameState *state.GameState) {
 			char := &models.Character{
 				ID:    "char-1",
 				Name:  "Hero",
@@ -170,51 +168,51 @@ func TestManager_UpdateSession(t *testing.T) {
 				Class: "Fighter",
 				Level: 1,
 			}
-			state.Party = append(state.Party, char)
+			gameState.Party = append(gameState.Party, char)
 		})
 
 		if err != nil {
 			t.Errorf("UpdateSession() error: %v", err)
 		}
 
-		state := mgr.GetSession("test-session")
-		if len(state.Party) != 1 {
-			t.Errorf("Expected 1 party member, got %d", len(state.Party))
+		gameState := mgr.GetSession("test-session")
+		if len(gameState.Party) != 1 {
+			t.Errorf("Expected 1 party member, got %d", len(gameState.Party))
 		}
 	})
 }
 
 func TestManager_UpdateSessionInterface(t *testing.T) {
 	t.Run("updates with interface function", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		mgr.CreateSession("test-session")
 
-		err := mgr.UpdateSessionInterface("test-session", func(state interface{}) {
-			gs, ok := state.(*GameState)
+		err := mgr.UpdateSessionInterface("test-session", func(gameState interface{}) {
+			gs, ok := gameState.(*state.GameState)
 			if !ok {
 				t.Errorf("Expected *GameState")
 				return
 			}
-			gs.Phase = PhaseDialog
+			gs.Phase = state.PhaseDialog
 		})
 
 		if err != nil {
 			t.Errorf("UpdateSessionInterface() error: %v", err)
 		}
 
-		state := mgr.GetSession("test-session")
-		if state.Phase != PhaseDialog {
-			t.Errorf("Expected phase 'dialog', got %s", state.Phase)
+		gameState := mgr.GetSession("test-session")
+		if gameState.Phase != state.PhaseDialog {
+			t.Errorf("Expected phase 'dialog', got %s", gameState.Phase)
 		}
 	})
 
 	t.Run("returns error for non-existent session", func(t *testing.T) {
-		mgr := NewManager()
-		err := mgr.UpdateSessionInterface("non-existent", func(state interface{}) {
+		mgr := state.NewManager()
+		err := mgr.UpdateSessionInterface("non-existent", func(gameState interface{}) {
 			// This should not be called
 		})
 
-		if err != ErrSessionNotFound {
+		if err != state.ErrSessionNotFound {
 			t.Errorf("Expected ErrSessionNotFound, got %v", err)
 		}
 	})
@@ -222,7 +220,7 @@ func TestManager_UpdateSessionInterface(t *testing.T) {
 
 func TestManager_ListSessions(t *testing.T) {
 	t.Run("empty manager returns empty list", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		ids := mgr.ListSessions()
 
 		if len(ids) != 0 {
@@ -231,7 +229,7 @@ func TestManager_ListSessions(t *testing.T) {
 	})
 
 	t.Run("lists all sessions", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		mgr.CreateSession("session-1")
 		mgr.CreateSession("session-2")
 		mgr.CreateSession("session-3")
@@ -256,7 +254,7 @@ func TestManager_ListSessions(t *testing.T) {
 
 func TestManager_Concurrency(t *testing.T) {
 	t.Run("concurrent session creation", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		var wg sync.WaitGroup
 		errors := make(chan error, 100)
 		done := make(chan bool, 100)
@@ -266,9 +264,9 @@ func TestManager_Concurrency(t *testing.T) {
 			go func(n int) {
 				defer wg.Done()
 				sessionID := "session-" + strconv.Itoa(n)
-				state := mgr.CreateSession(sessionID)
-				if state == nil {
-					errors <- &StateError{
+				gameState := mgr.CreateSession(sessionID)
+				if gameState == nil {
+					errors <- &state.StateError{
 						Code:    "CREATE_FAILED",
 						Message: "Failed to create session",
 					}
@@ -288,7 +286,7 @@ func TestManager_Concurrency(t *testing.T) {
 		}
 
 		completed := 0
-		for _ = range done {
+		for range done {
 			completed++
 		}
 		if completed != 100 {
@@ -297,7 +295,7 @@ func TestManager_Concurrency(t *testing.T) {
 	})
 
 	t.Run("concurrent reads and writes", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		mgr.CreateSession("test-session")
 
 		var wg sync.WaitGroup
@@ -318,8 +316,8 @@ func TestManager_Concurrency(t *testing.T) {
 			wg.Add(1)
 			go func(n int) {
 				defer wg.Done()
-				mgr.UpdateSession("test-session", func(state *GameState) {
-					state.CurrentMapID = "map-" + strconv.Itoa(n%10)
+				mgr.UpdateSession("test-session", func(gameState *state.GameState) {
+					gameState.CurrentMapID = "map-" + strconv.Itoa(n%10)
 				})
 			}(i)
 		}
@@ -331,7 +329,7 @@ func TestManager_Concurrency(t *testing.T) {
 
 func TestManager_ThreadSafety(t *testing.T) {
 	t.Run("safe concurrent access", func(t *testing.T) {
-		mgr := NewManager()
+		mgr := state.NewManager()
 		var wg sync.WaitGroup
 
 		// Create sessions

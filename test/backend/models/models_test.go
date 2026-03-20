@@ -1,20 +1,22 @@
-package models
+package models_test
 
 import (
 	"encoding/json"
 	"testing"
+
+	models "github.com/dnd-game/server/internal/shared/models"
 )
 
 func TestClientMessage(t *testing.T) {
 	t.Run("create client message", func(t *testing.T) {
-		msg := &ClientMessage{
-			Type:      MsgTypeUserInput,
+		msg := &models.ClientMessage{
+			Type:      models.MsgTypeUserInput,
 			Payload:   json.RawMessage(`{"text":"hello"}`),
 			RequestID: "req-123",
 		}
 
-		if msg.Type != MsgTypeUserInput {
-			t.Errorf("Expected type %s, got %s", MsgTypeUserInput, msg.Type)
+		if msg.Type != models.MsgTypeUserInput {
+			t.Errorf("Expected type %s, got %s", models.MsgTypeUserInput, msg.Type)
 		}
 		if msg.RequestID != "req-123" {
 			t.Errorf("Expected request ID 'req-123', got %s", msg.RequestID)
@@ -22,8 +24,8 @@ func TestClientMessage(t *testing.T) {
 	})
 
 	t.Run("client message without request ID", func(t *testing.T) {
-		msg := &ClientMessage{
-			Type:    MsgTypePing,
+		msg := &models.ClientMessage{
+			Type:    models.MsgTypePing,
 			Payload: json.RawMessage(`{}`),
 		}
 
@@ -35,15 +37,15 @@ func TestClientMessage(t *testing.T) {
 
 func TestServerMessage(t *testing.T) {
 	t.Run("create server message", func(t *testing.T) {
-		msg := &ServerMessage{
-			Type:      MsgTypeNarration,
+		msg := &models.ServerMessage{
+			Type:      models.MsgTypeNarration,
 			Payload:   map[string]string{"text": "Hello!"},
 			RequestID: "req-123",
 			Timestamp: 1234567890,
 		}
 
-		if msg.Type != MsgTypeNarration {
-			t.Errorf("Expected type %s", MsgTypeNarration)
+		if msg.Type != models.MsgTypeNarration {
+			t.Errorf("Expected type %s", models.MsgTypeNarration)
 		}
 		if msg.Timestamp != 1234567890 {
 			t.Errorf("Expected timestamp 1234567890")
@@ -51,8 +53,8 @@ func TestServerMessage(t *testing.T) {
 	})
 
 	t.Run("server message without request ID", func(t *testing.T) {
-		msg := &ServerMessage{
-			Type:      MsgTypePong,
+		msg := &models.ServerMessage{
+			Type:      models.MsgTypePong,
 			Payload:   nil,
 			Timestamp: 1234567890,
 		}
@@ -65,13 +67,13 @@ func TestServerMessage(t *testing.T) {
 
 func TestEncodeServerMessage(t *testing.T) {
 	t.Run("encode to JSON", func(t *testing.T) {
-		msg := &ServerMessage{
-			Type:      MsgTypeNarration,
+		msg := &models.ServerMessage{
+			Type:      models.MsgTypeNarration,
 			Payload:   map[string]string{"text": "Hello!"},
 			Timestamp: 1234567890,
 		}
 
-		data, err := EncodeServerMessage(msg)
+		data, err := models.EncodeServerMessage(msg)
 		if err != nil {
 			t.Errorf("EncodeServerMessage() error: %v", err)
 		}
@@ -92,13 +94,13 @@ func TestEncodeServerMessage(t *testing.T) {
 			"text": "You enter a dark room.",
 			"choices": []string{"look around", "leave"},
 		}
-		msg := &ServerMessage{
-			Type:      MsgTypeNarration,
+		msg := &models.ServerMessage{
+			Type:      models.MsgTypeNarration,
 			Payload:   payload,
 			Timestamp: 1234567890,
 		}
 
-		data, err := EncodeServerMessage(msg)
+		data, err := models.EncodeServerMessage(msg)
 		if err != nil {
 			t.Errorf("EncodeServerMessage() error: %v", err)
 		}
@@ -114,13 +116,13 @@ func TestDecodeClientMessage(t *testing.T) {
 	t.Run("decode valid JSON", func(t *testing.T) {
 		data := []byte(`{"type":"user_input","payload":{"text":"hello"},"requestId":"req-123"}`)
 
-		msg, err := DecodeClientMessage(data)
+		msg, err := models.DecodeClientMessage(data)
 		if err != nil {
 			t.Errorf("DecodeClientMessage() error: %v", err)
 		}
 
-		if msg.Type != MsgTypeUserInput {
-			t.Errorf("Expected type %s", MsgTypeUserInput)
+		if msg.Type != models.MsgTypeUserInput {
+			t.Errorf("Expected type %s", models.MsgTypeUserInput)
 		}
 		if msg.RequestID != "req-123" {
 			t.Errorf("Expected request ID 'req-123'")
@@ -130,20 +132,20 @@ func TestDecodeClientMessage(t *testing.T) {
 	t.Run("decode without request ID", func(t *testing.T) {
 		data := []byte(`{"type":"ping","payload":{}}`)
 
-		msg, err := DecodeClientMessage(data)
+		msg, err := models.DecodeClientMessage(data)
 		if err != nil {
 			t.Errorf("DecodeClientMessage() error: %v", err)
 		}
 
-		if msg.Type != MsgTypePing {
-			t.Errorf("Expected type %s", MsgTypePing)
+		if msg.Type != models.MsgTypePing {
+			t.Errorf("Expected type %s", models.MsgTypePing)
 		}
 	})
 
 	t.Run("decode invalid JSON returns error", func(t *testing.T) {
 		data := []byte(`not valid json`)
 
-		_, err := DecodeClientMessage(data)
+		_, err := models.DecodeClientMessage(data)
 		if err == nil {
 			t.Errorf("Expected error for invalid JSON")
 		}
@@ -152,13 +154,13 @@ func TestDecodeClientMessage(t *testing.T) {
 	t.Run("decode empty payload", func(t *testing.T) {
 		data := []byte(`{"type":"ping","payload":null}`)
 
-		msg, err := DecodeClientMessage(data)
+		msg, err := models.DecodeClientMessage(data)
 		if err != nil {
 			t.Errorf("DecodeClientMessage() error: %v", err)
 		}
 
-		if msg.Type != MsgTypePing {
-			t.Errorf("Expected type %s", MsgTypePing)
+		if msg.Type != models.MsgTypePing {
+			t.Errorf("Expected type %s", models.MsgTypePing)
 		}
 	})
 }
@@ -169,11 +171,11 @@ func TestMessageConstants(t *testing.T) {
 			name  string
 			value string
 		}{
-			{"MsgTypeUserInput", MsgTypeUserInput},
-			{"MsgTypeMapAction", MsgTypeMapAction},
-			{"MsgTypeCombatAction", MsgTypeCombatAction},
-			{"MsgTypeManagement", MsgTypeManagement},
-			{"MsgTypePing", MsgTypePing},
+			{"MsgTypeUserInput", models.MsgTypeUserInput},
+			{"MsgTypeMapAction", models.MsgTypeMapAction},
+			{"MsgTypeCombatAction", models.MsgTypeCombatAction},
+			{"MsgTypeManagement", models.MsgTypeManagement},
+			{"MsgTypePing", models.MsgTypePing},
 		}
 
 		for _, c := range constants {
@@ -188,12 +190,12 @@ func TestMessageConstants(t *testing.T) {
 			name  string
 			value string
 		}{
-			{"MsgTypeNarration", MsgTypeNarration},
-			{"MsgTypeStateUpdate", MsgTypeStateUpdate},
-			{"MsgTypeDiceResult", MsgTypeDiceResult},
-			{"MsgTypeCombatEvent", MsgTypeCombatEvent},
-			{"MsgTypeError", MsgTypeError},
-			{"MsgTypePong", MsgTypePong},
+			{"MsgTypeNarration", models.MsgTypeNarration},
+			{"MsgTypeStateUpdate", models.MsgTypeStateUpdate},
+			{"MsgTypeDiceResult", models.MsgTypeDiceResult},
+			{"MsgTypeCombatEvent", models.MsgTypeCombatEvent},
+			{"MsgTypeError", models.MsgTypeError},
+			{"MsgTypePong", models.MsgTypePong},
 		}
 
 		for _, c := range constants {
@@ -204,13 +206,13 @@ func TestMessageConstants(t *testing.T) {
 	})
 
 	t.Run("constants have correct values", func(t *testing.T) {
-		if MsgTypeUserInput != "user_input" {
+		if models.MsgTypeUserInput != "user_input" {
 			t.Errorf("MsgTypeUserInput should be 'user_input'")
 		}
-		if MsgTypePing != "ping" {
+		if models.MsgTypePing != "ping" {
 			t.Errorf("MsgTypePing should be 'ping'")
 		}
-		if MsgTypePong != "pong" {
+		if models.MsgTypePong != "pong" {
 			t.Errorf("MsgTypePong should be 'pong'")
 		}
 	})
@@ -218,7 +220,7 @@ func TestMessageConstants(t *testing.T) {
 
 func TestDiceResult(t *testing.T) {
 	t.Run("create dice result", func(t *testing.T) {
-		result := &DiceResult{
+		result := &models.DiceResult{
 			Formula:  "2d6+3",
 			Dice:     []int{4, 5},
 			Modifier: 3,
@@ -236,7 +238,7 @@ func TestDiceResult(t *testing.T) {
 	})
 
 	t.Run("critical hit", func(t *testing.T) {
-		result := &DiceResult{
+		result := &models.DiceResult{
 			Formula:  "1d20",
 			Dice:     []int{20},
 			Modifier: 5,
@@ -254,7 +256,7 @@ func TestDiceResult(t *testing.T) {
 	})
 
 	t.Run("fumble", func(t *testing.T) {
-		result := &DiceResult{
+		result := &models.DiceResult{
 			Formula:  "1d20",
 			Dice:     []int{1},
 			Modifier: 0,
@@ -274,7 +276,7 @@ func TestDiceResult(t *testing.T) {
 
 func TestCheckResult(t *testing.T) {
 	t.Run("successful check", func(t *testing.T) {
-		result := &CheckResult{
+		result := &models.CheckResult{
 			Success:      true,
 			Roll:         15,
 			Modifier:     3,
@@ -294,7 +296,7 @@ func TestCheckResult(t *testing.T) {
 	})
 
 	t.Run("failed check", func(t *testing.T) {
-		result := &CheckResult{
+		result := &models.CheckResult{
 			Success:      false,
 			Roll:         5,
 			Modifier:     2,
@@ -311,7 +313,7 @@ func TestCheckResult(t *testing.T) {
 	})
 
 	t.Run("check with advantage", func(t *testing.T) {
-		result := &CheckResult{
+		result := &models.CheckResult{
 			Success:      true,
 			Roll:         14,
 			Modifier:     3,
@@ -331,7 +333,7 @@ func TestCheckResult(t *testing.T) {
 	})
 
 	t.Run("critical success", func(t *testing.T) {
-		result := &CheckResult{
+		result := &models.CheckResult{
 			Success:      true,
 			Roll:         20,
 			Modifier:     0,
@@ -353,9 +355,9 @@ func TestCheckResult(t *testing.T) {
 
 func TestMessageJSONSerialization(t *testing.T) {
 	t.Run("server message serialization", func(t *testing.T) {
-		msg := &ServerMessage{
-			Type:      MsgTypeDiceResult,
-			Payload: &DiceResult{
+		msg := &models.ServerMessage{
+			Type: models.MsgTypeDiceResult,
+			Payload: &models.DiceResult{
 				Formula:  "2d6+3",
 				Dice:     []int{4, 5},
 				Modifier: 3,
@@ -369,19 +371,19 @@ func TestMessageJSONSerialization(t *testing.T) {
 			t.Errorf("Marshal error: %v", err)
 		}
 
-		var decoded ServerMessage
+		var decoded models.ServerMessage
 		if err := json.Unmarshal(data, &decoded); err != nil {
 			t.Errorf("Unmarshal error: %v", err)
 		}
 
-		if decoded.Type != MsgTypeDiceResult {
+		if decoded.Type != models.MsgTypeDiceResult {
 			t.Errorf("Type mismatch after round-trip")
 		}
 	})
 
 	t.Run("client message serialization", func(t *testing.T) {
-		msg := &ClientMessage{
-			Type:      MsgTypeUserInput,
+		msg := &models.ClientMessage{
+			Type:      models.MsgTypeUserInput,
 			Payload:   json.RawMessage(`{"text":"attack the goblin"}`),
 			RequestID: "req-456",
 		}
@@ -391,12 +393,12 @@ func TestMessageJSONSerialization(t *testing.T) {
 			t.Errorf("Marshal error: %v", err)
 		}
 
-		var decoded ClientMessage
+		var decoded models.ClientMessage
 		if err := json.Unmarshal(data, &decoded); err != nil {
 			t.Errorf("Unmarshal error: %v", err)
 		}
 
-		if decoded.Type != MsgTypeUserInput {
+		if decoded.Type != models.MsgTypeUserInput {
 			t.Errorf("Type mismatch after round-trip")
 		}
 		if decoded.RequestID != "req-456" {

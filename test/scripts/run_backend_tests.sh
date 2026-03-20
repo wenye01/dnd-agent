@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Backend Test Runner for DND Agent
-# This script runs all Go backend tests from the test directory
+# This script runs all Go backend tests from the test/backend directory
 
 # Colors for output
 RED='\033[0;31m'
@@ -12,31 +12,25 @@ NC='\033[0m' # No Color
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-BACKEND_DIR="$PROJECT_ROOT/apps/server"
-TEST_DIR="$PROJECT_ROOT/test/backend"
+BACKEND_TEST_DIR="$PROJECT_ROOT/test/backend"
 
 echo -e "${YELLOW}Running Backend Tests${NC}"
 echo "====================================="
 echo ""
 
-# Check if directories exist
-if [ ! -d "$BACKEND_DIR" ]; then
-    echo -e "${RED}Error: Backend directory not found at $BACKEND_DIR${NC}"
+# Check if test directory exists
+if [ ! -d "$BACKEND_TEST_DIR" ]; then
+    echo -e "${RED}Error: Test directory not found at $BACKEND_TEST_DIR${NC}"
     exit 1
 fi
 
-if [ ! -d "$TEST_DIR" ]; then
-    echo -e "${RED}Error: Test directory not found at $TEST_DIR${NC}"
-    exit 1
-fi
+# Change to test directory
+cd "$BACKEND_TEST_DIR"
 
-# Run tests from the backend directory (tests import from backend)
+# Run tests with coverage
+# Use -coverpkg to cover the actual source packages in apps/server
 echo -e "${YELLOW}Running tests with coverage...${NC}"
-cd "$BACKEND_DIR"
-
-# Run tests from test/backend directory
-# Capture exit code without using set -e
-go test -v -cover -coverprofile=coverage.out ./test/...
+go test -v -cover -coverprofile=coverage.out -coverpkg=github.com/dnd-game/server/... ./...
 test_result=$?
 
 # Check if tests passed
@@ -45,15 +39,17 @@ if [ $test_result -eq 0 ]; then
     echo -e "${GREEN}All tests passed!${NC}"
 
     # Generate coverage report
-    echo ""
-    echo -e "${YELLOW}Coverage Report:${NC}"
-    go tool cover -func=coverage.out | tail -1
+    if [ -f coverage.out ]; then
+        echo ""
+        echo -e "${YELLOW}Coverage Report:${NC}"
+        go tool cover -func=coverage.out | tail -1
 
-    # Generate HTML coverage report
-    echo ""
-    echo -e "${YELLOW}Generating HTML coverage report...${NC}"
-    go tool cover -html=coverage.out -o coverage.html
-    echo -e "${GREEN}Coverage report generated: coverage.html${NC}"
+        # Generate HTML coverage report
+        echo ""
+        echo -e "${YELLOW}Generating HTML coverage report...${NC}"
+        go tool cover -html=coverage.out -o coverage.html
+        echo -e "${GREEN}Coverage report generated: $BACKEND_TEST_DIR/coverage.html${NC}"
+    fi
 else
     echo ""
     echo -e "${RED}Tests failed!${NC}"

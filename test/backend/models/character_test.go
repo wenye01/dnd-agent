@@ -1,14 +1,15 @@
-package models
+package models_test
 
 import (
 	"testing"
 
+	models "github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/types"
 )
 
 func TestCharacter(t *testing.T) {
 	t.Run("create character", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:    "char-1",
 			Name:  "Aldric",
 			Race:  "Human",
@@ -31,10 +32,10 @@ func TestCharacter(t *testing.T) {
 	})
 
 	t.Run("character with ability scores", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:   "char-1",
 			Name: "Hero",
-			Stats: AbilityScores{
+			Stats: models.AbilityScores{
 				Strength:     16,
 				Dexterity:    14,
 				Constitution: 15,
@@ -53,7 +54,7 @@ func TestCharacter(t *testing.T) {
 	})
 
 	t.Run("character with skills", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:     "char-1",
 			Name:   "Rogue",
 			Skills: map[types.Skill]bool{
@@ -72,10 +73,10 @@ func TestCharacter(t *testing.T) {
 	})
 
 	t.Run("character with inventory", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:    "char-1",
 			Name:  "Adventurer",
-			Inventory: []Item{
+			Inventory: []models.Item{
 				{ID: "item-1", Name: "Longsword", Type: "weapon"},
 				{ID: "item-2", Name: "Health Potion", Type: "consumable"},
 			},
@@ -90,7 +91,7 @@ func TestCharacter(t *testing.T) {
 	})
 
 	t.Run("character with conditions", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:         "char-1",
 			Name:       "Unfortunate Hero",
 			Conditions: []types.Condition{types.ConditionPoisoned, types.ConditionFrightened},
@@ -107,7 +108,7 @@ func TestCharacter(t *testing.T) {
 
 func TestAbilityScores(t *testing.T) {
 	t.Run("get strength modifier", func(t *testing.T) {
-		stats := AbilityScores{Strength: 16}
+		stats := models.AbilityScores{Strength: 16}
 		modifier := stats.GetModifier(types.Strength)
 
 		if modifier != 3 {
@@ -116,7 +117,7 @@ func TestAbilityScores(t *testing.T) {
 	})
 
 	t.Run("get dexterity modifier", func(t *testing.T) {
-		stats := AbilityScores{Dexterity: 14}
+		stats := models.AbilityScores{Dexterity: 14}
 		modifier := stats.GetModifier(types.Dexterity)
 
 		if modifier != 2 {
@@ -125,7 +126,7 @@ func TestAbilityScores(t *testing.T) {
 	})
 
 	t.Run("get constitution modifier", func(t *testing.T) {
-		stats := AbilityScores{Constitution: 18}
+		stats := models.AbilityScores{Constitution: 18}
 		modifier := stats.GetModifier(types.Constitution)
 
 		if modifier != 4 {
@@ -134,7 +135,7 @@ func TestAbilityScores(t *testing.T) {
 	})
 
 	t.Run("get intelligence modifier", func(t *testing.T) {
-		stats := AbilityScores{Intelligence: 10}
+		stats := models.AbilityScores{Intelligence: 10}
 		modifier := stats.GetModifier(types.Intelligence)
 
 		if modifier != 0 {
@@ -143,7 +144,7 @@ func TestAbilityScores(t *testing.T) {
 	})
 
 	t.Run("get wisdom modifier", func(t *testing.T) {
-		stats := AbilityScores{Wisdom: 8}
+		stats := models.AbilityScores{Wisdom: 8}
 		modifier := stats.GetModifier(types.Wisdom)
 
 		if modifier != -1 {
@@ -152,7 +153,7 @@ func TestAbilityScores(t *testing.T) {
 	})
 
 	t.Run("get charisma modifier", func(t *testing.T) {
-		stats := AbilityScores{Charisma: 20}
+		stats := models.AbilityScores{Charisma: 20}
 		modifier := stats.GetModifier(types.Charisma)
 
 		if modifier != 5 {
@@ -173,7 +174,7 @@ func TestAbilityScores(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			stats := AbilityScores{Strength: tt.score}
+			stats := models.AbilityScores{Strength: tt.score}
 			modifier := stats.GetModifier(types.Strength)
 			if modifier != tt.expected {
 				t.Errorf("Score %d should give %d modifier, got %d", tt.score, tt.expected, modifier)
@@ -194,7 +195,7 @@ func TestAbilityScores(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			stats := AbilityScores{Strength: tt.score}
+			stats := models.AbilityScores{Strength: tt.score}
 			modifier := stats.GetModifier(types.Strength)
 			if modifier != tt.expected {
 				t.Errorf("Score %d should give %d modifier, got %d", tt.score, tt.expected, modifier)
@@ -204,7 +205,7 @@ func TestAbilityScores(t *testing.T) {
 
 	t.Run("zero score gives negative modifier", func(t *testing.T) {
 		// Test with a valid ability that has 0 score
-		stats := AbilityScores{}
+		stats := models.AbilityScores{}
 		modifier := stats.GetModifier(types.Strength)
 		if modifier != -5 {
 			t.Errorf("Strength 0 should give -5 modifier, got %d", modifier)
@@ -214,7 +215,7 @@ func TestAbilityScores(t *testing.T) {
 
 func TestItem(t *testing.T) {
 	t.Run("create item", func(t *testing.T) {
-		item := Item{
+		item := models.Item{
 			ID:          "item-1",
 			Name:        "Longsword",
 			Description: "A versatile melee weapon",
@@ -233,7 +234,7 @@ func TestItem(t *testing.T) {
 	})
 
 	t.Run("create potion", func(t *testing.T) {
-		item := Item{
+		item := models.Item{
 			ID:          "potion-1",
 			Name:        "Health Potion",
 			Description: "Restores 2d4+2 HP when consumed",
@@ -248,7 +249,7 @@ func TestItem(t *testing.T) {
 
 func TestCharacterProficiency(t *testing.T) {
 	t.Run("proficient skills", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:   "char-1",
 			Name: "Rogue",
 			Skills: map[types.Skill]bool{
@@ -272,7 +273,7 @@ func TestCharacterProficiency(t *testing.T) {
 	})
 
 	t.Run("empty skill map", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:     "char-1",
 			Name:   "Commoner",
 			Skills: map[types.Skill]bool{},
@@ -286,7 +287,7 @@ func TestCharacterProficiency(t *testing.T) {
 
 func TestCharacterHealth(t *testing.T) {
 	t.Run("full health", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:    "char-1",
 			Name:  "Healthy Hero",
 			HP:    27,
@@ -299,7 +300,7 @@ func TestCharacterHealth(t *testing.T) {
 	})
 
 	t.Run("damaged character", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:    "char-1",
 			Name:  "Wounded Hero",
 			HP:    5,
@@ -316,7 +317,7 @@ func TestCharacterHealth(t *testing.T) {
 	})
 
 	t.Run("unconscious character", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:    "char-1",
 			Name:  "Fallen Hero",
 			HP:    0,
@@ -331,7 +332,7 @@ func TestCharacterHealth(t *testing.T) {
 
 func TestCharacterArmorClass(t *testing.T) {
 	t.Run("light armor", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:    "char-1",
 			Name:  "Rogue",
 			AC:    12, // Leather armor + high dex
@@ -343,7 +344,7 @@ func TestCharacterArmorClass(t *testing.T) {
 	})
 
 	t.Run("heavy armor", func(t *testing.T) {
-		char := &Character{
+		char := &models.Character{
 			ID:    "char-1",
 			Name:  "Paladin",
 			AC:    18, // Plate armor

@@ -11,11 +11,21 @@ const projectRoot = resolve(__dirname, '../..')
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // Ensure single React instance across the project
+      react: resolve(__dirname, 'node_modules/react'),
+      'react-dom': resolve(__dirname, 'node_modules/react-dom'),
+    },
+  },
   test: {
     globals: true,
     environment: 'happy-dom',
     setupFiles: [resolve(projectRoot, 'test/frontend/setup.ts')],
     include: [resolve(projectRoot, 'test/frontend/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}')],
     exclude: ['node_modules', 'dist', 'build', '.vitest'],
+    deps: {
+      inline: ['react', 'react-dom', 'zustand'],
+    },
   },
 })
