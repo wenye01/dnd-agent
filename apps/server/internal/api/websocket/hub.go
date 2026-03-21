@@ -85,7 +85,8 @@ func (h *Hub) unregisterClient(client *Client) {
 
 	if _, ok := h.clients[client]; ok {
 		delete(h.clients, client)
-		close(client.send)
+		// Note: client.send channel is already closed in ReadPump's defer
+		// so we don't close it here to avoid "close of closed channel" panic
 		h.logger.Info().
 			Str("session_id", client.SessionID).
 			Msg("client disconnected")
