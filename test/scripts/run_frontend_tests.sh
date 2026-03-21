@@ -30,24 +30,20 @@ cd "$FRONTEND_DIR"
 # Check if node_modules exists
 if [ ! -d "node_modules" ]; then
     echo -e "${YELLOW}node_modules not found. Installing dependencies...${NC}"
-    # Check for package-lock.json for CI environments
-    if [ -f "package-lock.json" ]; then
-        npm ci
-    else
-        npm install
-    fi
+    # Use pnpm for this monorepo project
+    pnpm install --frozen-lockfile
 fi
 
 # Check if Vitest is installed
-if ! npm list vitest >/dev/null 2>&1; then
+if ! pnpm list vitest >/dev/null 2>&1; then
     echo -e "${YELLOW}Vitest not found. Installing...${NC}"
-    npm install --save-dev vitest @vitest/ui jsdom
+    pnpm add --save-dev vitest @vitest/ui happy-dom
 fi
 
 # Run tests
 echo -e "${YELLOW}Running tests...${NC}"
 # Capture exit code without using set -e
-npm test -- --run
+pnpm test -- --run
 test_result=$?
 
 # Check if tests passed

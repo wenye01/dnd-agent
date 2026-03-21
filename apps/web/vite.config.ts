@@ -22,7 +22,7 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: [resolve(projectRoot, 'test/frontend/setup.ts')],
-    include: [resolve(projectRoot, 'test/frontend/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}')],
+    include: ['../../test/frontend/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist', 'build', '.vitest'],
     deps: {
       inline: ['react', 'react-dom', 'zustand'],
