@@ -2,6 +2,7 @@ package character
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/dnd-game/server/internal/shared/models"
@@ -192,7 +193,7 @@ func TestCreateBasic_InvalidClass(t *testing.T) {
 	}
 }
 
-// TestAbilityModifier tests the ability modifier calculation.
+// TestAbilityModifier tests the ability modifier calculation via models.AbilityScores.
 func TestAbilityModifier(t *testing.T) {
 	tests := []struct {
 		score    int
@@ -209,9 +210,11 @@ func TestAbilityModifier(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		result := AbilityModifier(tt.score)
+		// Use models.AbilityScores.GetModifier() to avoid code duplication
+		stats := models.AbilityScores{Strength: tt.score}
+		result := stats.GetModifier(types.Strength)
 		if result != tt.expected {
-			t.Errorf("AbilityModifier(%d) = %d; expected %d", tt.score, result, tt.expected)
+			t.Errorf("GetModifier(Strength=%d) = %d; expected %d", tt.score, result, tt.expected)
 		}
 	}
 }
@@ -462,6 +465,50 @@ func TestCreateBasic_StartingGold(t *testing.T) {
 
 			if char.Gold != expected {
 				t.Errorf("Expected starting gold %d for %s, got %d", expected, class, char.Gold)
+			}
+		})
+	}
+}
+
+// TestCreateBasic_CaseInsensitiveRaceClass tests that race and class lookups are case-insensitive.
+func TestCreateBasic_CaseInsensitiveRaceClass(t *testing.T) {
+	tests := []struct {
+		name  string
+		race  string
+		class string
+	}{
+		{"uppercase race", "HUMAN", "fighter"},
+		{"uppercase class", "human", "FIGHTER"},
+		{"mixed case race", "ElF", "wizard"},
+		{"mixed case class", "elf", "WiZaRd"},
+		{"all uppercase", "DWARF", "ROGUE"},
+		{"with whitespace", "  human  ", "  fighter  "},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := CreateParams{
+				Name:       "Test",
+				Race:       tt.race,
+				Class:      tt.class,
+				Background: "soldier",
+				AbilityScores: map[string]int{
+					"str": 10, "dex": 10, "con": 10,
+					"int": 10, "wis": 10, "cha": 10,
+				},
+			}
+
+			char, err := CreateBasic(params)
+			if err != nil {
+				t.Fatalf("CreateBasic failed for race=%q, class=%q: %v", tt.race, tt.class, err)
+			}
+
+			// Verify race and class are normalized to lowercase
+			if char.Race != strings.ToLower(strings.TrimSpace(tt.race)) {
+				t.Errorf("Race not normalized: got %q, want %q", char.Race, strings.ToLower(strings.TrimSpace(tt.race)))
+			}
+			if char.Class != strings.ToLower(strings.TrimSpace(tt.class)) {
+				t.Errorf("Class not normalized: got %q, want %q", char.Class, strings.ToLower(strings.TrimSpace(tt.class)))
 			}
 		})
 	}

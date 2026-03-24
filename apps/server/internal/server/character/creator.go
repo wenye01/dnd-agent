@@ -24,6 +24,20 @@ const (
 	maxAbilityScore = 20
 )
 
+// Supported race names.
+const (
+	RaceHuman = "human"
+	RaceElf   = "elf"
+	RaceDwarf = "dwarf"
+)
+
+// Supported class names.
+const (
+	ClassFighter = "fighter"
+	ClassWizard  = "wizard"
+	ClassRogue   = "rogue"
+)
+
 // RaceConfig holds configuration for a playable race.
 type RaceConfig struct {
 	Name   string
@@ -112,14 +126,16 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 		return nil, fmt.Errorf("character name cannot be empty")
 	}
 
-	// Validate race
-	raceConfig, ok := raceConfigs[params.Race]
+	// Normalize and validate race (case-insensitive)
+	race := strings.ToLower(strings.TrimSpace(params.Race))
+	raceConfig, ok := raceConfigs[race]
 	if !ok {
 		return nil, fmt.Errorf("unsupported race: %s (supported: human, elf, dwarf)", params.Race)
 	}
 
-	// Validate class
-	classConfig, ok := classConfigs[params.Class]
+	// Normalize and validate class (case-insensitive)
+	class := strings.ToLower(strings.TrimSpace(params.Class))
+	classConfig, ok := classConfigs[class]
 	if !ok {
 		return nil, fmt.Errorf("unsupported class: %s (supported: fighter, wizard, rogue)", params.Class)
 	}
@@ -165,8 +181,8 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 	char := &models.Character{
 		ID:               generateID(),
 		Name:             params.Name,
-		Race:             params.Race,
-		Class:            params.Class,
+		Race:             race,  // Use normalized value
+		Class:            class, // Use normalized value
 		Level:            level,
 		HP:               maxHP,
 		MaxHP:            maxHP,
@@ -187,14 +203,9 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 }
 
 // getAbilityScore retrieves an ability score from the map with a default value.
+// Note: Validation is handled in CreateBasic, so values here are already validated.
 func getAbilityScore(scores map[string]int, key string) int {
 	if val, ok := scores[key]; ok {
-		if val < minAbilityScore {
-			return minAbilityScore
-		}
-		if val > maxAbilityScore {
-			return maxAbilityScore
-		}
 		return val
 	}
 	return defaultAbility
@@ -203,20 +214,6 @@ func getAbilityScore(scores map[string]int, key string) int {
 // generateID generates a unique ID for the character using UUID.
 func generateID() string {
 	return fmt.Sprintf("char-%s", uuid.New().String())
-}
-
-// AbilityModifier calculates the ability modifier from a score.
-// Formula: (score - 10) / 2, rounded toward negative infinity.
-// This matches D&D 5e rules where odd scores round down.
-func AbilityModifier(score int) int {
-	mod := (score - 10) / 2
-	// In Go, integer division truncates toward zero.
-	// We need floor division for negative numbers.
-	// E.g., (1-10)/2 = -9/2 = -4, but should be -5.
-	if (score-10)%2 != 0 && (score-10) < 0 {
-		mod -= 1
-	}
-	return mod
 }
 
 // ProficiencyBonusForLevel calculates the proficiency bonus for a given level.
