@@ -3,72 +3,138 @@ package character
 
 import (
 	"fmt"
-	"time"
+	"strings"
 
 	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/types"
+	"github.com/google/uuid"
 )
 
-// Supported races for character creation.
-var supportedRaces = map[string]bool{
-	"human": true,
-	"elf":   true,
-	"dwarf": true,
+// Default values for character creation.
+const (
+	defaultBaseHP   = 8  // Default base HP when class hit dice lookup fails
+	defaultSpeed    = 30 // Default movement speed in feet
+	minHP           = 1  // Minimum HP for any character
+	defaultAbility  = 10 // Default ability score
+)
+
+// Ability score limits.
+const (
+	minAbilityScore = 1
+	maxAbilityScore = 20
+)
+
+// RaceConfig holds configuration for a playable race.
+type RaceConfig struct {
+	Name   string
+	Speed  int
+	Traits []models.RaceTrait
 }
 
-// Supported classes for character creation.
-var supportedClasses = map[string]bool{
-	"fighter": true,
-	"wizard":  true,
-	"rogue":   true,
+// ClassConfig holds configuration for a playable class.
+type ClassConfig struct {
+	Name              string
+	HitDice           int
+	SavingThrows      []types.Ability
+	StartingGoldDice  string // D&D 5e starting wealth formula
+	StartingGoldAvg   int    // Simplified average for quick creation
 }
 
-// Class hit dice and base HP values.
-var classHitDice = map[string]int{
-	"fighter": 10,
-	"wizard":  6,
-	"rogue":   8,
+// Supported races configuration with traits.
+var raceConfigs = map[string]RaceConfig{
+	"human": {
+		Name:  "human",
+		Speed: 30,
+		Traits: []models.RaceTrait{
+			{Name: "Ability Score Increase", Description: "+1 to all ability scores"},
+			{Name: "Languages", Description: "Common, one extra language"},
+		},
+	},
+	"elf": {
+		Name:  "elf",
+		Speed: 30,
+		Traits: []models.RaceTrait{
+			{Name: "Darkvision", Description: "60 feet"},
+			{Name: "Keen Senses", Description: "Proficiency in Perception"},
+			{Name: "Fey Ancestry", Description: "Advantage on saves against charm, immunity to sleep"},
+		},
+	},
+	"dwarf": {
+		Name:  "dwarf",
+		Speed: 25,
+		Traits: []models.RaceTrait{
+			{Name: "Darkvision", Description: "60 feet"},
+			{Name: "Dwarven Resilience", Description: "Advantage on saves against poison, resistance to poison damage"},
+			{Name: "Stonecunning", Description: "Double proficiency on History checks related to stonework"},
+		},
+	},
 }
 
-// Race speed values in feet.
-var raceSpeed = map[string]int{
-	"human": 30,
-	"elf":   30,
-	"dwarf": 25,
+// Supported classes configuration.
+var classConfigs = map[string]ClassConfig{
+	"fighter": {
+		Name:              "fighter",
+		HitDice:           10,
+		SavingThrows:      []types.Ability{types.Strength, types.Constitution},
+		StartingGoldDice:  "5d4 x 10 gp",
+		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+	},
+	"wizard": {
+		Name:              "wizard",
+		HitDice:           6,
+		SavingThrows:      []types.Ability{types.Intelligence, types.Wisdom},
+		StartingGoldDice:  "3d6 x 10 gp",
+		StartingGoldAvg:   105, // Average of 3d6 is 10.5, x 10 = 105
+	},
+	"rogue": {
+		Name:              "rogue",
+		HitDice:           8,
+		SavingThrows:      []types.Ability{types.Dexterity, types.Intelligence},
+		StartingGoldDice:  "4d4 x 10 gp",
+		StartingGoldAvg:   100, // Average of 4d4 is 10, x 10 = 100
+	},
 }
 
 // CreateParams defines the parameters for creating a basic character.
 type CreateParams struct {
-	Name          string            `json:"name"`
-	Race          string            `json:"race"`
-	Class         string            `json:"class"`
-	Background    string            `json:"background"`
-	AbilityScores map[string]int    `json:"abilityScores"`
+	Name          string         `json:"name"`
+	Race          string         `json:"race"`
+	Class         string         `json:"class"`
+	Background    string         `json:"background"`
+	AbilityScores map[string]int `json:"abilityScores"`
 }
 
 // CreateBasic creates a new character with the given parameters.
 // It calculates derived stats including HP, AC, proficiency bonus, and speed.
 func CreateBasic(params CreateParams) (*models.Character, error) {
+	// Validate name
+	if strings.TrimSpace(params.Name) == "" {
+		return nil, fmt.Errorf("character name cannot be empty")
+	}
+
 	// Validate race
-	if !supportedRaces[params.Race] {
+	raceConfig, ok := raceConfigs[params.Race]
+	if !ok {
 		return nil, fmt.Errorf("unsupported race: %s (supported: human, elf, dwarf)", params.Race)
 	}
 
 	// Validate class
-	if !supportedClasses[params.Class] {
+	classConfig, ok := classConfigs[params.Class]
+	if !ok {
 		return nil, fmt.Errorf("unsupported class: %s (supported: fighter, wizard, rogue)", params.Class)
+	}
+
+	// Validate ability scores
+	for ability, score := range params.AbilityScores {
+		if score < minAbilityScore || score > maxAbilityScore {
+			return nil, fmt.Errorf("ability score %s out of range [%d, %d]: %d", ability, minAbilityScore, maxAbilityScore, score)
+		}
 	}
 
 	// Start with level 1
 	level := 1
 
-	// Get base HP from class hit dice
-	baseHP := classHitDice[params.Class]
-	if baseHP == 0 {
-		baseHP = 8 // Default fallback
-	}
-
-	// Build ability scores
+	// Build ability scores with validation
 	stats := models.AbilityScores{
 		Strength:     getAbilityScore(params.AbilityScores, "str"),
 		Dexterity:    getAbilityScore(params.AbilityScores, "dex"),
@@ -78,31 +144,23 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 		Charisma:     getAbilityScore(params.AbilityScores, "cha"),
 	}
 
-	// Calculate HP: base HP + CON modifier
-	conMod := stats.GetModifier(types.Constitution)
-	maxHP := baseHP + conMod
-	if maxHP < 1 {
-		maxHP = 1
+	// Calculate HP: class hit dice + CON modifier
+	maxHP := classConfig.HitDice + stats.GetModifier(types.Constitution)
+	if maxHP < minHP {
+		maxHP = minHP
 	}
 
 	// Calculate AC: 10 + DEX modifier (no armor)
-	dexMod := stats.GetModifier(types.Dexterity)
-	ac := 10 + dexMod
+	ac := 10 + stats.GetModifier(types.Dexterity)
 
 	// Calculate proficiency bonus for level
 	profBonus := ProficiencyBonusForLevel(level)
 
-	// Get speed from race
-	speed := raceSpeed[params.Race]
-	if speed == 0 {
-		speed = 30 // Default
-	}
-
-	// Starting gold (standard starting wealth by class)
-	gold := getStartingGold(params.Class)
-
 	// Initialize saving throws based on class
-	savingThrows := getClassSavingThrows(params.Class)
+	savingThrows := make(map[types.Ability]bool)
+	for _, ability := range classConfig.SavingThrows {
+		savingThrows[ability] = true
+	}
 
 	char := &models.Character{
 		ID:               generateID(),
@@ -120,8 +178,9 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 		Background:       params.Background,
 		ProficiencyBonus: profBonus,
 		SavingThrows:     savingThrows,
-		Speed:            speed,
-		Gold:             gold,
+		Speed:            raceConfig.Speed,
+		Gold:             classConfig.StartingGoldAvg,
+		RacialTraits:     raceConfig.Traits,
 	}
 
 	return char, nil
@@ -130,53 +189,20 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 // getAbilityScore retrieves an ability score from the map with a default value.
 func getAbilityScore(scores map[string]int, key string) int {
 	if val, ok := scores[key]; ok {
-		if val < 1 {
-			return 1
+		if val < minAbilityScore {
+			return minAbilityScore
 		}
-		if val > 20 {
-			return 20
+		if val > maxAbilityScore {
+			return maxAbilityScore
 		}
 		return val
 	}
-	return 10 // Default
+	return defaultAbility
 }
 
-// generateID generates a simple unique ID for the character.
+// generateID generates a unique ID for the character using UUID.
 func generateID() string {
-	return fmt.Sprintf("char-%d", time.Now().UnixNano())
-}
-
-// getStartingGold returns the starting gold for a class.
-func getStartingGold(class string) int {
-	switch class {
-	case "fighter":
-		return 10  // 5d4 x 10 gp
-	case "wizard":
-		return 5   // 3d6 x 10 gp
-	case "rogue":
-		return 10  // 4d4 x 10 gp
-	default:
-		return 5   // Default
-	}
-}
-
-// getClassSavingThrows returns the saving throw proficiencies for a class.
-func getClassSavingThrows(class string) map[types.Ability]bool {
-	throws := make(map[types.Ability]bool)
-	
-	switch class {
-	case "fighter":
-		throws[types.Strength] = true
-		throws[types.Constitution] = true
-	case "wizard":
-		throws[types.Intelligence] = true
-		throws[types.Wisdom] = true
-	case "rogue":
-		throws[types.Dexterity] = true
-		throws[types.Intelligence] = true
-	}
-	
-	return throws
+	return fmt.Sprintf("char-%s", uuid.New().String())
 }
 
 // AbilityModifier calculates the ability modifier from a score.

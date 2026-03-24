@@ -3,25 +3,32 @@ package models
 
 import "github.com/dnd-game/server/internal/shared/types"
 
+// RaceTrait represents a racial ability or characteristic.
+type RaceTrait struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 // Character represents a D&D character.
 type Character struct {
-	ID                string               `json:"id"`
-	Name              string               `json:"name"`
-	Race              string               `json:"race"`
-	Class             string               `json:"class"`
-	Level             int                  `json:"level"`
-	HP                int                  `json:"hp"`
-	MaxHP             int                  `json:"maxHp"`
-	AC                int                  `json:"ac"`
-	Stats             AbilityScores        `json:"stats"`
-	Skills            map[types.Skill]bool `json:"skills"` // true = proficient
-	Inventory         []Item               `json:"inventory"`
-	Conditions        []types.Condition    `json:"conditions,omitempty"`
-	Background        string               `json:"background"`         // Character background
-	ProficiencyBonus  int                  `json:"proficiencyBonus"`   // Proficiency bonus
+	ID                string                 `json:"id"`
+	Name              string                 `json:"name"`
+	Race              string                 `json:"race"`
+	Class             string                 `json:"class"`
+	Level             int                    `json:"level"`
+	HP                int                    `json:"hp"`
+	MaxHP             int                    `json:"maxHp"`
+	AC                int                    `json:"ac"`
+	Stats             AbilityScores          `json:"stats"`
+	Skills            map[types.Skill]bool   `json:"skills"` // true = proficient
+	Inventory         []Item                 `json:"inventory"`
+	Conditions        []types.Condition      `json:"conditions,omitempty"`
+	Background        string                 `json:"background"`       // Character background
+	ProficiencyBonus  int                    `json:"proficiencyBonus"` // Proficiency bonus
 	SavingThrows      map[types.Ability]bool `json:"savingThrows"`     // Saving throw proficiencies
-	Speed             int                  `json:"speed"`              // Movement speed in feet
-	Gold              int                  `json:"gold"`               // Gold pieces
+	Speed             int                    `json:"speed"`            // Movement speed in feet
+	Gold              int                    `json:"gold"`             // Gold pieces
+	RacialTraits      []RaceTrait            `json:"racialTraits"`     // Racial abilities and traits
 }
 
 // AbilityScores represents the six ability scores.

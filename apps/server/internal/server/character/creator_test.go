@@ -285,3 +285,184 @@ func TestCharacterSerialization(t *testing.T) {
 		t.Errorf("Unmarshaled AC mismatch: got %d, want %d", unmarshaled.AC, char.AC)
 	}
 }
+
+// TestCreateBasic_EmptyName tests error handling for empty name.
+func TestCreateBasic_EmptyName(t *testing.T) {
+	params := CreateParams{
+		Name:       "",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "soldier",
+		AbilityScores: map[string]int{
+			"str": 16, "dex": 12, "con": 14,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+	}
+
+	_, err := CreateBasic(params)
+	if err == nil {
+		t.Error("Expected error for empty name, got nil")
+	}
+}
+
+// TestCreateBasic_WhitespaceName tests error handling for whitespace-only name.
+func TestCreateBasic_WhitespaceName(t *testing.T) {
+	params := CreateParams{
+		Name:       "   ",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "soldier",
+		AbilityScores: map[string]int{
+			"str": 16, "dex": 12, "con": 14,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+	}
+
+	_, err := CreateBasic(params)
+	if err == nil {
+		t.Error("Expected error for whitespace-only name, got nil")
+	}
+}
+
+// TestCreateBasic_AbilityScoreOutOfRange tests error handling for ability scores out of range.
+func TestCreateBasic_AbilityScoreOutOfRange(t *testing.T) {
+	// Test score below minimum
+	params := CreateParams{
+		Name:       "Test",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "soldier",
+		AbilityScores: map[string]int{
+			"str": 0, "dex": 10, "con": 10,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+	}
+
+	_, err := CreateBasic(params)
+	if err == nil {
+		t.Error("Expected error for ability score below minimum, got nil")
+	}
+
+	// Test score above maximum
+	params.AbilityScores["str"] = 25
+	_, err = CreateBasic(params)
+	if err == nil {
+		t.Error("Expected error for ability score above maximum, got nil")
+	}
+}
+
+// TestCreateBasic_RacialTraits tests that racial traits are properly assigned.
+func TestCreateBasic_RacialTraits(t *testing.T) {
+	tests := []struct {
+		race          string
+		expectedTrait string
+	}{
+		{"elf", "Darkvision"},
+		{"dwarf", "Dwarven Resilience"},
+		{"human", "Ability Score Increase"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.race, func(t *testing.T) {
+			params := CreateParams{
+				Name:       "Test",
+				Race:       tt.race,
+				Class:      "fighter",
+				Background: "soldier",
+				AbilityScores: map[string]int{
+					"str": 10, "dex": 10, "con": 10,
+					"int": 10, "wis": 10, "cha": 10,
+				},
+			}
+
+			char, err := CreateBasic(params)
+			if err != nil {
+				t.Fatalf("CreateBasic failed: %v", err)
+			}
+
+			if len(char.RacialTraits) == 0 {
+				t.Fatalf("Expected racial traits for %s, got none", tt.race)
+			}
+
+			found := false
+			for _, trait := range char.RacialTraits {
+				if trait.Name == tt.expectedTrait {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				t.Errorf("Expected trait '%s' for %s, not found", tt.expectedTrait, tt.race)
+			}
+		})
+	}
+}
+
+// TestCreateBasic_UUIDFormat tests that character ID is a valid UUID format.
+func TestCreateBasic_UUIDFormat(t *testing.T) {
+	params := CreateParams{
+		Name:       "Test",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "soldier",
+		AbilityScores: map[string]int{
+			"str": 10, "dex": 10, "con": 10,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+	}
+
+	// Create two characters and verify their IDs are different
+	char1, err := CreateBasic(params)
+	if err != nil {
+		t.Fatalf("CreateBasic failed: %v", err)
+	}
+
+	char2, err := CreateBasic(params)
+	if err != nil {
+		t.Fatalf("CreateBasic failed: %v", err)
+	}
+
+	// Verify IDs are different (UUID uniqueness)
+	if char1.ID == char2.ID {
+		t.Error("Expected different UUIDs for different characters")
+	}
+
+	// Verify ID format (char-{uuid})
+	if len(char1.ID) < 36 {
+		t.Errorf("ID too short, expected UUID format: %s", char1.ID)
+	}
+}
+
+// TestCreateBasic_StartingGold tests that starting gold is assigned correctly.
+func TestCreateBasic_StartingGold(t *testing.T) {
+	expectedGold := map[string]int{
+		"fighter": 125, // Average of 5d4 x 10
+		"wizard":  105, // Average of 3d6 x 10
+		"rogue":   100, // Average of 4d4 x 10
+	}
+
+	for class, expected := range expectedGold {
+		t.Run(class, func(t *testing.T) {
+			params := CreateParams{
+				Name:       "Test",
+				Race:       "human",
+				Class:      class,
+				Background: "soldier",
+				AbilityScores: map[string]int{
+					"str": 10, "dex": 10, "con": 10,
+					"int": 10, "wis": 10, "cha": 10,
+				},
+			}
+
+			char, err := CreateBasic(params)
+			if err != nil {
+				t.Fatalf("CreateBasic failed: %v", err)
+			}
+
+			if char.Gold != expected {
+				t.Errorf("Expected starting gold %d for %s, got %d", expected, class, char.Gold)
+			}
+		})
+	}
+}
