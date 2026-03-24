@@ -10,6 +10,16 @@ type RaceTrait struct {
 }
 
 // Character represents a D&D character.
+//
+// TODO(future): Consider adding the following fields for full D&D 5e support:
+// - ExperiencePoints (XP tracking)
+// - HitDice (current/max for healing during short rest)
+// - DeathSaves (success/failure counters)
+// - Inspiration (boolean)
+// - Features []Feature (class/racial features)
+// - Spells []Spell (for spellcasters)
+// - Equipment []Equipment (detailed equipment with weight)
+// - Proficiencies []Proficiency (tool, weapon, armor proficiencies)
 type Character struct {
 	ID                string                 `json:"id"`
 	Name              string                 `json:"name"`

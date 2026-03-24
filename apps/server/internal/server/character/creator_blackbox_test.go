@@ -26,14 +26,30 @@ func TestBlackbox_ElfWizard_PRD(t *testing.T) {
 		t.Fatalf("Failed to create character: %v", err)
 	}
 
+	// Elf gets +2 DEX: DEX 14 + 2 = 16, modifier = +3
+	// HP: 6 (wizard hit dice) + 1 (CON 12 = +1 mod) = 7
 	if char.MaxHP != 7 {
 		t.Errorf("PRD expectation failed: MaxHP should be 7, got %d", char.MaxHP)
 	}
-	if char.AC != 12 {
-		t.Errorf("PRD expectation failed: AC should be 12, got %d", char.AC)
+	// AC: 10 + 3 (DEX 16 = +3 mod) = 13
+	if char.AC != 13 {
+		t.Errorf("PRD expectation failed: AC should be 13 (elf +2 DEX bonus), got %d", char.AC)
 	}
 	if char.ProficiencyBonus != 2 {
 		t.Errorf("PRD expectation failed: ProficiencyBonus should be 2, got %d", char.ProficiencyBonus)
+	}
+
+	// Verify elf racial bonus applied
+	if char.Stats.Dexterity != 16 {
+		t.Errorf("Expected Dexterity 16 (14+2 elf bonus), got %d", char.Stats.Dexterity)
+	}
+
+	// Verify sage background skills
+	if !char.Skills[types.Arcana] {
+		t.Error("Expected Arcana skill from sage background")
+	}
+	if !char.Skills[types.History] {
+		t.Error("Expected History skill from sage background")
 	}
 }
 
@@ -134,6 +150,17 @@ func TestBlackbox_ErrorHandling(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for invalid class, got nil")
 	}
+
+	_, err = CreateBasic(CreateParams{
+		Name:          "Test",
+		Race:          "human",
+		Class:         "fighter",
+		Background:    "noble",
+		AbilityScores: map[string]int{"str": 10, "dex": 10, "con": 10, "int": 10, "wis": 10, "cha": 10},
+	})
+	if err == nil {
+		t.Error("Expected error for invalid background, got nil")
+	}
 }
 
 func TestBlackbox_AbilityModifierEdgeCases(t *testing.T) {
@@ -150,10 +177,19 @@ func TestBlackbox_AbilityModifierEdgeCases(t *testing.T) {
 		t.Fatalf("Failed to create character: %v", err)
 	}
 
-	// CON 20 should give +5 modifier
-	expectedHP := 10 + 5 // fighter base HP 10
+	// Human gets +1 to all: CON 20 + 1 = 21, modifier = +5
+	// HP: 10 (fighter base) + 5 (CON 21 mod) = 15
+	expectedHP := 10 + 5 // fighter base HP 10 + CON 21 modifier
 	if char.MaxHP != expectedHP {
-		t.Errorf("With CON 20, expected MaxHP %d, got %d", expectedHP, char.MaxHP)
+		t.Errorf("With CON 20+1 human bonus, expected MaxHP %d, got %d", expectedHP, char.MaxHP)
+	}
+
+	// Verify human racial bonuses applied
+	if char.Stats.Strength != 2 {
+		t.Errorf("Expected Strength 2 (1+1 human bonus), got %d", char.Stats.Strength)
+	}
+	if char.Stats.Constitution != 21 {
+		t.Errorf("Expected Constitution 21 (20+1 human bonus), got %d", char.Stats.Constitution)
 	}
 }
 

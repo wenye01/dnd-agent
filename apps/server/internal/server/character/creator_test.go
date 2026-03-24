@@ -41,6 +41,12 @@ func TestCreateBasic_ElfWizard(t *testing.T) {
 		t.Errorf("Expected Background 'sage', got '%s'", char.Background)
 	}
 
+	// Elf gets +2 DEX: DEX 14 + 2 = 16
+	// Verify ability scores with racial bonus
+	if char.Stats.Dexterity != 16 {
+		t.Errorf("Expected Dexterity 16 (14+2 elf bonus), got %d", char.Stats.Dexterity)
+	}
+
 	// Verify HP: 6 (base wizard HP) + 1 (CON mod from 12) = 7
 	if char.MaxHP != 7 {
 		t.Errorf("Expected MaxHP 7, got %d", char.MaxHP)
@@ -49,9 +55,9 @@ func TestCreateBasic_ElfWizard(t *testing.T) {
 		t.Errorf("Expected HP %d, got %d", char.MaxHP, char.HP)
 	}
 
-	// Verify AC: 10 + 2 (DEX mod from 14) = 12
-	if char.AC != 12 {
-		t.Errorf("Expected AC 12, got %d", char.AC)
+	// Verify AC: 10 + 3 (DEX mod from 16) = 13
+	if char.AC != 13 {
+		t.Errorf("Expected AC 13 (with elf DEX bonus), got %d", char.AC)
 	}
 
 	// Verify proficiency bonus: level 1 = 2
@@ -74,9 +80,18 @@ func TestCreateBasic_ElfWizard(t *testing.T) {
 	if char.SavingThrows[types.Strength] {
 		t.Error("Did not expect Strength saving throw proficiency")
 	}
+
+	// Verify sage background skills
+	if !char.Skills[types.Arcana] {
+		t.Error("Expected Arcana skill from sage background")
+	}
+	if !char.Skills[types.History] {
+		t.Error("Expected History skill from sage background")
+	}
 }
 
 // TestCreateBasic_HumanFighter tests creating a human fighter.
+// Human gets +1 to all ability scores, which affects HP and AC calculations.
 func TestCreateBasic_HumanFighter(t *testing.T) {
 	params := CreateParams{
 		Name:       "凯尔",
@@ -94,14 +109,23 @@ func TestCreateBasic_HumanFighter(t *testing.T) {
 		t.Fatalf("CreateBasic failed: %v", err)
 	}
 
-	// Verify HP: 10 (base fighter HP) + 2 (CON mod from 14) = 12
+	// Human +1 to all: STR 17, DEX 13, CON 15, INT 11, WIS 11, CHA 11
+	// HP: 10 (fighter hit dice) + 2 (CON 15 = +2 mod) = 12
 	if char.MaxHP != 12 {
-		t.Errorf("Expected MaxHP 12, got %d", char.MaxHP)
+		t.Errorf("Expected MaxHP 12 (with human CON bonus), got %d", char.MaxHP)
 	}
 
-	// Verify AC: 10 + 1 (DEX mod from 12) = 11
+	// AC: 10 + 1 (DEX 13 = +1 mod) = 11
 	if char.AC != 11 {
-		t.Errorf("Expected AC 11, got %d", char.AC)
+		t.Errorf("Expected AC 11 (with human DEX bonus), got %d", char.AC)
+	}
+
+	// Verify ability scores include racial bonus
+	if char.Stats.Strength != 17 {
+		t.Errorf("Expected Strength 17 (16+1 human bonus), got %d", char.Stats.Strength)
+	}
+	if char.Stats.Constitution != 15 {
+		t.Errorf("Expected Constitution 15 (14+1 human bonus), got %d", char.Stats.Constitution)
 	}
 
 	// Verify saving throws: fighter gets Strength and Constitution
@@ -110,6 +134,14 @@ func TestCreateBasic_HumanFighter(t *testing.T) {
 	}
 	if !char.SavingThrows[types.Constitution] {
 		t.Error("Expected Constitution saving throw proficiency")
+	}
+
+	// Verify background skills (soldier: Athletics, Intimidation)
+	if !char.Skills[types.Athletics] {
+		t.Error("Expected Athletics skill from soldier background")
+	}
+	if !char.Skills[types.Intimidation] {
+		t.Error("Expected Intimidation skill from soldier background")
 	}
 }
 
@@ -131,9 +163,10 @@ func TestCreateBasic_DwarfRogue(t *testing.T) {
 		t.Fatalf("CreateBasic failed: %v", err)
 	}
 
-	// Verify HP: 8 (base rogue HP) + 1 (CON mod from 12) = 9
-	if char.MaxHP != 9 {
-		t.Errorf("Expected MaxHP 9, got %d", char.MaxHP)
+	// Dwarf gets +2 CON: CON 12 + 2 = 14
+	// Verify HP: 8 (base rogue HP) + 2 (CON mod from 14) = 10
+	if char.MaxHP != 10 {
+		t.Errorf("Expected MaxHP 10 (with dwarf CON bonus), got %d", char.MaxHP)
 	}
 
 	// Verify AC: 10 + 3 (DEX mod from 16) = 13
@@ -152,6 +185,19 @@ func TestCreateBasic_DwarfRogue(t *testing.T) {
 	}
 	if !char.SavingThrows[types.Intelligence] {
 		t.Error("Expected Intelligence saving throw proficiency")
+	}
+
+	// Verify criminal background skills
+	if !char.Skills[types.Deception] {
+		t.Error("Expected Deception skill from criminal background")
+	}
+	if !char.Skills[types.Stealth] {
+		t.Error("Expected Stealth skill from criminal background")
+	}
+
+	// Verify dwarf racial bonus applied
+	if char.Stats.Constitution != 14 {
+		t.Errorf("Expected Constitution 14 (12+2 dwarf bonus), got %d", char.Stats.Constitution)
 	}
 }
 
@@ -190,6 +236,148 @@ func TestCreateBasic_InvalidClass(t *testing.T) {
 	_, err := CreateBasic(params)
 	if err == nil {
 		t.Error("Expected error for invalid class, got nil")
+	}
+}
+
+// TestCreateBasic_InvalidBackground tests error handling for invalid background.
+func TestCreateBasic_InvalidBackground(t *testing.T) {
+	params := CreateParams{
+		Name:       "测试",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "noble",
+		AbilityScores: map[string]int{
+			"str": 16, "dex": 12, "con": 14,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+	}
+
+	_, err := CreateBasic(params)
+	if err == nil {
+		t.Error("Expected error for invalid background, got nil")
+	}
+}
+
+// TestCreateBasic_ElfRacialBonus tests that elf racial DEX bonus is applied.
+func TestCreateBasic_ElfRacialBonus(t *testing.T) {
+	params := CreateParams{
+		Name:       "Test",
+		Race:       "elf",
+		Class:      "rogue",
+		Background: "criminal",
+		AbilityScores: map[string]int{
+			"str": 10, "dex": 14, "con": 10,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+	}
+
+	char, err := CreateBasic(params)
+	if err != nil {
+		t.Fatalf("CreateBasic failed: %v", err)
+	}
+
+	// Elf gets +2 DEX
+	if char.Stats.Dexterity != 16 {
+		t.Errorf("Expected Dexterity 16 (14+2 elf bonus), got %d", char.Stats.Dexterity)
+	}
+}
+
+// TestCreateBasic_DwarfRacialBonus tests that dwarf racial CON bonus is applied.
+func TestCreateBasic_DwarfRacialBonus(t *testing.T) {
+	params := CreateParams{
+		Name:       "Test",
+		Race:       "dwarf",
+		Class:      "fighter",
+		Background: "soldier",
+		AbilityScores: map[string]int{
+			"str": 14, "dex": 10, "con": 14,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+	}
+
+	char, err := CreateBasic(params)
+	if err != nil {
+		t.Fatalf("CreateBasic failed: %v", err)
+	}
+
+	// Dwarf gets +2 CON
+	if char.Stats.Constitution != 16 {
+		t.Errorf("Expected Constitution 16 (14+2 dwarf bonus), got %d", char.Stats.Constitution)
+	}
+}
+
+// TestCreateBasic_SkillChoices tests that class skill choices are applied.
+func TestCreateBasic_SkillChoices(t *testing.T) {
+	params := CreateParams{
+		Name:       "Test",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "soldier",
+		AbilityScores: map[string]int{
+			"str": 16, "dex": 12, "con": 14,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+		SkillChoices: []types.Skill{types.Survival, types.Perception},
+	}
+
+	char, err := CreateBasic(params)
+	if err != nil {
+		t.Fatalf("CreateBasic failed: %v", err)
+	}
+
+	// Background skills
+	if !char.Skills[types.Athletics] {
+		t.Error("Expected Athletics from soldier background")
+	}
+	if !char.Skills[types.Intimidation] {
+		t.Error("Expected Intimidation from soldier background")
+	}
+	// Chosen class skills
+	if !char.Skills[types.Survival] {
+		t.Error("Expected Survival from skill choices")
+	}
+	if !char.Skills[types.Perception] {
+		t.Error("Expected Perception from skill choices")
+	}
+}
+
+// TestCreateBasic_InvalidSkillChoice tests error handling for invalid skill choices.
+func TestCreateBasic_InvalidSkillChoice(t *testing.T) {
+	params := CreateParams{
+		Name:       "Test",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "soldier",
+		AbilityScores: map[string]int{
+			"str": 16, "dex": 12, "con": 14,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+		SkillChoices: []types.Skill{types.Arcana}, // Arcana is not a fighter skill
+	}
+
+	_, err := CreateBasic(params)
+	if err == nil {
+		t.Error("Expected error for invalid skill choice, got nil")
+	}
+}
+
+// TestCreateBasic_DuplicateSkillChoice tests error handling for duplicate skills.
+func TestCreateBasic_DuplicateSkillChoice(t *testing.T) {
+	params := CreateParams{
+		Name:       "Test",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "soldier", // Gives Athletics
+		AbilityScores: map[string]int{
+			"str": 16, "dex": 12, "con": 14,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+		SkillChoices: []types.Skill{types.Athletics}, // Already from background
+	}
+
+	_, err := CreateBasic(params)
+	if err == nil {
+		t.Error("Expected error for duplicate skill choice, got nil")
 	}
 }
 
@@ -511,5 +699,108 @@ func TestCreateBasic_CaseInsensitiveRaceClass(t *testing.T) {
 				t.Errorf("Class not normalized: got %q, want %q", char.Class, strings.ToLower(strings.TrimSpace(tt.class)))
 			}
 		})
+	}
+}
+
+// TestGetSupportedRaces tests that GetSupportedRaces returns all races.
+func TestGetSupportedRaces(t *testing.T) {
+	races := GetSupportedRaces()
+	if len(races) != 3 {
+		t.Errorf("Expected 3 supported races, got %d", len(races))
+	}
+
+	// Check that expected races are present
+	raceMap := make(map[string]bool)
+	for _, r := range races {
+		raceMap[r] = true
+	}
+	if !raceMap["human"] || !raceMap["elf"] || !raceMap["dwarf"] {
+		t.Error("Missing expected races in GetSupportedRaces")
+	}
+}
+
+// TestGetSupportedClasses tests that GetSupportedClasses returns all classes.
+func TestGetSupportedClasses(t *testing.T) {
+	classes := GetSupportedClasses()
+	if len(classes) != 3 {
+		t.Errorf("Expected 3 supported classes, got %d", len(classes))
+	}
+
+	classMap := make(map[string]bool)
+	for _, c := range classes {
+		classMap[c] = true
+	}
+	if !classMap["fighter"] || !classMap["wizard"] || !classMap["rogue"] {
+		t.Error("Missing expected classes in GetSupportedClasses")
+	}
+}
+
+// TestGetSupportedBackgrounds tests that GetSupportedBackgrounds returns all backgrounds.
+func TestGetSupportedBackgrounds(t *testing.T) {
+	backgrounds := GetSupportedBackgrounds()
+	if len(backgrounds) != 4 {
+		t.Errorf("Expected 4 supported backgrounds, got %d", len(backgrounds))
+	}
+
+	bgMap := make(map[string]bool)
+	for _, b := range backgrounds {
+		bgMap[b] = true
+	}
+	if !bgMap["sage"] || !bgMap["soldier"] || !bgMap["criminal"] || !bgMap["commoner"] {
+		t.Error("Missing expected backgrounds in GetSupportedBackgrounds")
+	}
+}
+
+// TestGetRaceConfig tests that GetRaceConfig returns correct configuration.
+func TestGetRaceConfig(t *testing.T) {
+	config, ok := GetRaceConfig("human")
+	if !ok {
+		t.Fatal("Expected to find human race config")
+	}
+	if config.Speed != 30 {
+		t.Errorf("Expected human speed 30, got %d", config.Speed)
+	}
+	if config.AbilityBonus[types.Strength] != 1 {
+		t.Errorf("Expected human +1 STR bonus, got %d", config.AbilityBonus[types.Strength])
+	}
+
+	_, ok = GetRaceConfig("invalid")
+	if ok {
+		t.Error("Expected false for invalid race config")
+	}
+}
+
+// TestGetClassConfig tests that GetClassConfig returns correct configuration.
+func TestGetClassConfig(t *testing.T) {
+	config, ok := GetClassConfig("fighter")
+	if !ok {
+		t.Fatal("Expected to find fighter class config")
+	}
+	if config.HitDice != 10 {
+		t.Errorf("Expected fighter hit dice 10, got %d", config.HitDice)
+	}
+	if config.StartingGoldAvg != 125 {
+		t.Errorf("Expected fighter starting gold 125, got %d", config.StartingGoldAvg)
+	}
+
+	_, ok = GetClassConfig("invalid")
+	if ok {
+		t.Error("Expected false for invalid class config")
+	}
+}
+
+// TestGetBackgroundConfig tests that GetBackgroundConfig returns correct configuration.
+func TestGetBackgroundConfig(t *testing.T) {
+	config, ok := GetBackgroundConfig("sage")
+	if !ok {
+		t.Fatal("Expected to find sage background config")
+	}
+	if len(config.Skills) != 2 {
+		t.Errorf("Expected sage to have 2 skills, got %d", len(config.Skills))
+	}
+
+	_, ok = GetBackgroundConfig("invalid")
+	if ok {
+		t.Error("Expected false for invalid background config")
 	}
 }
