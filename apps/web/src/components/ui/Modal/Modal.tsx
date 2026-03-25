@@ -69,13 +69,12 @@ export function Modal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm p-4"
       onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={title ? 'modal-title' : undefined}
     >
       <div
         className={`${sizeStyles[size]} w-full bg-parchment rounded-lg shadow-xl border border-ink/20 ${className}`}
-        role="document"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'modal-title' : undefined}
       >
         {(title || showCloseButton) && (
           <div className="flex items-center justify-between px-4 py-3 border-b border-ink/10">

@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, useEffect, useRef, type TextareaHTMLAttributes } from 'react'
+import { forwardRef, useId, useEffect, useRef, type TextareaHTMLAttributes } from 'react'
 
 export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string
@@ -25,7 +25,8 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
     },
     ref
   ) => {
-    const inputId = useMemo(() => id || `textarea-${crypto.randomUUID()}`, [id])
+    const generatedId = useId()
+    const inputId = id || generatedId
     const errorId = error ? `${inputId}-error` : undefined
     const helperId = helperText ? `${inputId}-helper` : undefined
 

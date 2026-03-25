@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, type InputHTMLAttributes } from 'react'
+import { forwardRef, useId, type InputHTMLAttributes } from 'react'
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string
@@ -25,7 +25,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
-    const inputId = useMemo(() => id || `input-${crypto.randomUUID()}`, [id])
+    const generatedId = useId()
+    const inputId = id || generatedId
     const errorId = error ? `${inputId}-error` : undefined
     const helperId = helperText ? `${inputId}-helper` : undefined
 
