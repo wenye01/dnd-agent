@@ -1,0 +1,16 @@
+  Traceback (most recent call last):
+    File "C:\Code\dnd\dnd-agent\.trellis\scripts\multi_agent\watchdog.py", line 273, in <module>
+      sys.exit(main())
+               ^^^^^^
+    File "C:\Code\dnd\dnd-agent\.trellis\scripts\multi_agent\watchdog.py", line 262, in main
+      return cmd_check(task_id)
+             ^^^^^^^^^^^^^^^^^^
+    File "C:\Code\dnd\dnd-agent\.trellis\scripts\multi_agent\watchdog.py", line 126, in cmd_check
+      worktree_path = _get_worktree_path(task_id, repo_root)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "C:\Code\dnd\dnd-agent\.trellis\scripts\multi_agent\watchdog.py", line 59, in _get_worktree_path
+      from common.worktree import get_agents_dir
+  ModuleNotFoundError: No module named 'common'
+[watchdog_loop] task_id='v0.2-phase2-frontend-ui' starting, check_interval=180s
+[watchdog_loop] check result: exit=1
+[watchdog_loop] task_id='v0.2-phase2-frontend-ui': agent stuck, exiting
