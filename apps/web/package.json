@@ -15,10 +15,12 @@
   },
   "dependencies": {
     "@testing-library/user-event": "^14.6.1",
+    "clsx": "^2.1.1",
     "phaser": "^3.90.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1",
+    "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

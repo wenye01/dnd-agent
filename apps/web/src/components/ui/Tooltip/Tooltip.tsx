@@ -33,6 +33,13 @@ export function Tooltip({
     setIsVisible(false)
   }
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
   // Position the tooltip
   useEffect(() => {
     if (isVisible && triggerRef.current && tooltipRef.current) {

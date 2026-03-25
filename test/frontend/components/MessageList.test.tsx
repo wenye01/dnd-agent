@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { useChatStore } from '../../../apps/web/src/stores/chatStore'
 import MessageList from '../../../apps/web/src/components/chat/MessageList'
@@ -267,7 +267,3 @@ describe('MessageList', () => {
     })
   })
 })
-
-function afterEach(callback: () => void) {
-  callback()
-}

@@ -1,3 +1,5 @@
+import { cn } from '../../lib/utils'
+
 export interface HealthBarProps {
   current: number
   max: number
@@ -17,15 +19,18 @@ export function HealthBar({
   className = '',
   label,
 }: HealthBarProps) {
-  const effectiveCurrent = Math.max(0, Math.min(current + temporary, max + temporary))
-  const effectiveTotal = max + temporary
+  // Clamp current HP to valid range for display
+  const clampedCurrent = Math.max(0, current)
+  const hasTemporary = temporary > 0
 
-  const percentage = (effectiveCurrent / effectiveTotal) * 100
+  // Calculate percentages
+  const basePercentage = max > 0 ? Math.min(100, (clampedCurrent / max) * 100) : 0
+  const tempPercentage = max > 0 ? Math.min(100 - basePercentage, (temporary / max) * 100) : 0
 
-  // Determine color based on health percentage
-  const getColor = () => {
-    if (percentage > 50) return 'bg-green-500'
-    if (percentage > 25) return 'bg-yellow-500'
+  // Determine color based on base HP percentage
+  const getBaseColor = () => {
+    if (basePercentage > 50) return 'bg-green-500'
+    if (basePercentage > 25) return 'bg-yellow-500'
     return 'bg-red-500'
   }
 
@@ -36,23 +41,31 @@ export function HealthBar({
   }
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={cn('w-full', className)}>
       {(label || showText) && (
         <div className="flex justify-between text-xs text-ink/70 mb-1">
           {label && <span>{label}</span>}
           {showText && (
             <span>
               {current}
-              {temporary > 0 && ` (+${temporary})`} / {max}
+              {hasTemporary && <span className="text-blue-600"> (+{temporary})</span>} / {max}
             </span>
           )}
         </div>
       )}
-      <div className={`w-full bg-stone-200 rounded-full overflow-hidden ${sizeStyles[size]}`}>
+      <div className={cn('w-full bg-stone-200 rounded-full overflow-hidden flex', sizeStyles[size])}>
+        {/* Base HP bar */}
         <div
-          className={`${getColor()} ${sizeStyles[size]} transition-all duration-300`}
-          style={{ width: `${Math.max(0, Math.min(100, percentage))}%` }}
+          className={cn(getBaseColor(), 'transition-all duration-300')}
+          style={{ width: `${basePercentage}%` }}
         />
+        {/* Temporary HP bar (separate segment) */}
+        {hasTemporary && (
+          <div
+            className="bg-blue-400 transition-all duration-300"
+            style={{ width: `${tempPercentage}%` }}
+          />
+        )}
       </div>
     </div>
   )
