@@ -166,7 +166,7 @@ func TestAbilityScores(t *testing.T) {
 			score    int
 			expected int
 		}{
-			{1, -4},   // (1-10)/2 = -4.5 -> -4 (truncates toward zero)
+			{1, -5},   // (1-10)/2 = -4.5 -> -5 (floor division)
 			{2, -4},   // (2-10)/2 = -4
 			{4, -3},   // (4-10)/2 = -3
 			{6, -2},   // (6-10)/2 = -2
