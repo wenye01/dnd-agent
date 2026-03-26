@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import '@testing-library/jest-dom'
+import React from 'react'
 
 // Mock crypto.randomUUID for tests
 Object.defineProperty(global, 'crypto', {
@@ -25,3 +26,28 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 })
+
+// Mock WebSocketContext for tests that use hooks that depend on it
+vi.mock('../contexts/WebSocketContext', () => ({
+  WebSocketProvider: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+  useWebSocket: () => ({
+    client: null,
+    connected: false,
+    send: vi.fn(),
+    subscribe: vi.fn((handler: (message: unknown) => void) => {
+      // Store handler for test access
+      ;(global as unknown as Record<string, unknown>).__wsTestHandler = handler
+      return vi.fn()
+    }),
+  }),
+}))
+
+// Helper function to get the WebSocket handler for testing
+export function getWebSocketHandler() {
+  return (global as unknown as Record<string, ((message: unknown) => void) | undefined>).__wsTestHandler
+}
+
+// Helper function to reset the WebSocket handler between tests
+export function resetWebSocketHandler() {
+  ;(global as unknown as Record<string, unknown>).__wsTestHandler = undefined
+}

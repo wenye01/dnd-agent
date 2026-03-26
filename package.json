@@ -17,6 +17,8 @@
     "lint:server": "turbo run lint --filter=server",
     "type-check": "turbo run type-check",
     "test": "turbo run test",
+    "test:e2e": "vitest --config test/vitest.config.ts --run",
+    "test:all": "turbo run test && pnpm test:e2e",
     "clean": "turbo run clean",
     "clean:all": "rm -rf apps/web/dist apps/server/node_modules apps/web/node_modules node_modules"
   },
@@ -24,6 +26,7 @@
     "@types/ws": "^8.18.1",
     "npm-run-all": "^4.1.5",
     "turbo": "^2.0.0",
+    "vitest": "^4.1.0",
     "ws": "^8.19.0"
   },
   "engines": {
