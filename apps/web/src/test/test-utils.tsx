@@ -1,8 +1,8 @@
 import React, { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
-import { useChatStore } from '../../../apps/web/src/stores/chatStore'
-import { useUIStore } from '../../../apps/web/src/stores/uiStore'
-import { useGameStore } from '../../../apps/web/src/stores/gameStore'
+import { useChatStore } from '@/stores/chatStore'
+import { useUIStore } from '@/stores/uiStore'
+import { useGameStore } from '@/stores/gameStore'
 
 // Wrapper component that provides all necessary contexts and stores
 function TestProviders({ children }: { children: React.ReactNode }) {

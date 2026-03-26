@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useChatStore } from '../../../apps/web/src/stores/chatStore'
+import { useChatStore } from '@/stores/chatStore'
 
 describe('chatStore', () => {
   beforeEach(() => {

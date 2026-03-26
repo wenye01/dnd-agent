@@ -1,21 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useGameMessages } from '../../../apps/web/src/hooks/useGameMessages'
-import { useGameStore } from '../../../apps/web/src/stores/gameStore'
-import { useChatStore } from '../../../apps/web/src/stores/chatStore'
-import type { ServerMessage } from '../../../apps/web/src/types'
-
-// Mock the WebSocketContext
-const mockSubscribe = vi.fn()
-const mockSend = vi.fn()
-
-vi.mock('../../../apps/web/src/contexts/WebSocketContext', () => ({
-  useWebSocket: () => ({
-    subscribe: mockSubscribe,
-    send: mockSend,
-    connected: true,
-    client: null,
-  }),
-}))
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useGameStore } from '@/stores/gameStore'
+import { useChatStore } from '@/stores/chatStore'
 
 // Helper to reset all stores to initial state
 function resetStores() {
@@ -24,36 +9,9 @@ function resetStores() {
 }
 
 describe('useGameMessages', () => {
-  let messageHandler: ((message: ServerMessage) => void) | null = null
-
   beforeEach(() => {
     vi.clearAllMocks()
     resetStores()
-
-    // Capture the message handler when subscribe is called
-    mockSubscribe.mockImplementation((handler: (message: ServerMessage) => void) => {
-      messageHandler = handler
-      return () => {
-        messageHandler = null
-      }
-    })
-  })
-
-  afterEach(() => {
-    messageHandler = null
-  })
-
-  describe('hook initialization', () => {
-    it('should subscribe to WebSocket messages on mount', () => {
-      // The hook should call subscribe when used
-      // This is tested indirectly through the message handling tests
-      expect(mockSubscribe).toBeDefined()
-    })
-
-    it('should return an unsubscribe function', () => {
-      const unsubscribe = mockSubscribe(() => {})
-      expect(unsubscribe).toBeInstanceOf(Function)
-    })
   })
 
   describe('narration message handling', () => {

@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useUIStore } from '../../../apps/web/src/stores/uiStore'
+import { useUIStore } from '@/stores/uiStore'
 
 describe('uiStore', () => {
   beforeEach(() => {
-    const initialState = useUIStore.getState()
     useUIStore.setState({
       activePanel: 'character',
       isPanelOpen: true,
