@@ -47,3 +47,15 @@ data/saves/
 
 # Resources (large files, PDFs)
 resource/
+
+# Test coverage
+coverage/
+*.lcov
+
+# Lock files (project uses pnpm)
+package-lock.json
+
+# Agent logs
+.agent-log
+.session-id
+.watchdog-log

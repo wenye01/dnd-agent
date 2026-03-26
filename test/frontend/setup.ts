@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import '@testing-library/jest-dom'
 
 // Mock crypto.randomUUID for tests
 Object.defineProperty(global, 'crypto', {

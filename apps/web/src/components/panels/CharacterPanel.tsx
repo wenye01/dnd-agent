@@ -1,4 +1,5 @@
 import { useGameStore } from '../../stores/gameStore'
+import { Panel, HealthBar } from '../ui'
 
 interface AbilityScoreProps {
   name: string
@@ -23,17 +24,14 @@ export default function CharacterPanel() {
 
   if (!party || party.length === 0) {
     return (
-      <div className="p-4 bg-parchment rounded-lg border border-ink/10">
-        <h2 className="font-display text-lg font-semibold text-ink mb-4">Party</h2>
+      <Panel title="Party" variant="parchment">
         <p className="text-ink/50 text-sm italic">No characters yet. Start your adventure!</p>
-      </div>
+      </Panel>
     )
   }
 
   return (
-    <div className="p-4 bg-parchment rounded-lg border border-ink/10">
-      <h2 className="font-display text-lg font-semibold text-ink mb-4">Party</h2>
-
+    <Panel title="Party" variant="parchment">
       <div className="space-y-4">
         {party.map((character) => (
           <div key={character.id} className="bg-stone-50 rounded-lg p-3 border border-ink/10">
@@ -47,27 +45,13 @@ export default function CharacterPanel() {
 
             {/* HP Bar */}
             <div className="mb-2">
-              <div className="flex justify-between text-xs text-ink/70 mb-1">
-                <span>HP</span>
-                <span>
-                  {character.currentHitPoints}
-                  {character.temporaryHitPoints > 0 && ` (+${character.temporaryHitPoints})`} /{' '}
-                  {character.maxHitPoints}
-                </span>
-              </div>
-              <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary-500 transition-all"
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      ((character.currentHitPoints + character.temporaryHitPoints) /
-                        character.maxHitPoints) *
-                        100
-                    )}%`,
-                  }}
-                />
-              </div>
+              <HealthBar
+                current={character.currentHitPoints}
+                max={character.maxHitPoints}
+                temporary={character.temporaryHitPoints}
+                size="sm"
+                label="HP"
+              />
             </div>
 
             {/* AC and Speed */}
@@ -106,6 +90,6 @@ export default function CharacterPanel() {
           </div>
         ))}
       </div>
-    </div>
+    </Panel>
   )
 }

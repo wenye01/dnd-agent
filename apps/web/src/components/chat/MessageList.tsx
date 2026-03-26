@@ -31,6 +31,9 @@ function MessageItem({ message }: { message: ChatMessage }) {
           </span>
         )}
         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+        <div className="text-xs opacity-50 mt-1">
+          {new Date(message.timestamp).toLocaleTimeString()}
+        </div>
       </div>
     </div>
   )
@@ -38,18 +41,16 @@ function MessageItem({ message }: { message: ChatMessage }) {
 
 export default function MessageList() {
   const messages = useChatStore((s) => s.messages)
-  const streamingText = useChatStore((s) => s.streamingText)
-  const isStreaming = useChatStore((s) => s.isStreaming)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingText])
+  }, [messages])
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3">
-      {messages.length === 0 && !isStreaming && (
+    <>
+      {messages.length === 0 && (
         <div className="flex items-center justify-center h-full">
           <p className="text-ink/50 italic">
             Welcome, adventurer. Your journey begins...
@@ -61,22 +62,7 @@ export default function MessageList() {
         <MessageItem key={message.id} message={message} />
       ))}
 
-      {/* Streaming message */}
-      {isStreaming && streamingText && (
-        <div className="flex justify-start mb-3">
-          <div className="max-w-[75%] rounded-lg px-4 py-2 bg-stone-200 text-ink rounded-bl-sm">
-            <span className="text-xs font-semibold text-primary-700 block mb-1">
-              Dungeon Master
-            </span>
-            <p className="text-sm whitespace-pre-wrap break-words">
-              {streamingText}
-              <span className="inline-block w-2 h-4 bg-ink/30 ml-1 animate-pulse" />
-            </p>
-          </div>
-        </div>
-      )}
-
       <div ref={scrollRef} />
-    </div>
+    </>
   )
 }
