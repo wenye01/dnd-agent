@@ -1,21 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useGameMessages } from '../../../apps/web/src/hooks/useGameMessages'
-import { useGameStore } from '../../../apps/web/src/stores/gameStore'
-import { useChatStore } from '../../../apps/web/src/stores/chatStore'
-import type { ServerMessage } from '../../../apps/web/src/types'
-
-// Mock the WebSocketContext
-const mockSubscribe = vi.fn()
-const mockSend = vi.fn()
-
-vi.mock('../../../apps/web/src/contexts/WebSocketContext', () => ({
-  useWebSocket: () => ({
-    subscribe: mockSubscribe,
-    send: mockSend,
-    connected: true,
-    client: null,
-  }),
-}))
+import { renderHook, cleanup } from '@testing-library/react'
+import { useGameMessages } from '@/hooks/useGameMessages'
+import { useGameStore } from '@/stores/gameStore'
+import { useChatStore } from '@/stores/chatStore'
+import { getWebSocketHandler, resetWebSocketHandler } from '@/test/setup'
+import type { ServerMessage } from '@/types'
 
 // Helper to reset all stores to initial state
 function resetStores() {
@@ -24,39 +13,66 @@ function resetStores() {
 }
 
 describe('useGameMessages', () => {
-  let messageHandler: ((message: ServerMessage) => void) | null = null
-
   beforeEach(() => {
     vi.clearAllMocks()
     resetStores()
-
-    // Capture the message handler when subscribe is called
-    mockSubscribe.mockImplementation((handler: (message: ServerMessage) => void) => {
-      messageHandler = handler
-      return () => {
-        messageHandler = null
-      }
-    })
+    resetWebSocketHandler()
   })
 
   afterEach(() => {
-    messageHandler = null
+    cleanup()
+    resetWebSocketHandler()
   })
 
-  describe('hook initialization', () => {
+  describe('WebSocket subscription', () => {
     it('should subscribe to WebSocket messages on mount', () => {
-      // The hook should call subscribe when used
-      // This is tested indirectly through the message handling tests
-      expect(mockSubscribe).toBeDefined()
+      renderHook(() => useGameMessages())
+
+      // The handler should be set after mount
+      const handler = getWebSocketHandler()
+      expect(handler).toBeDefined()
+      expect(typeof handler).toBe('function')
     })
 
     it('should return an unsubscribe function', () => {
-      const unsubscribe = mockSubscribe(() => {})
-      expect(unsubscribe).toBeInstanceOf(Function)
+      const { unmount } = renderHook(() => useGameMessages())
+
+      // Handler should exist while mounted
+      expect(getWebSocketHandler()).toBeDefined()
+
+      // After unmount, the cleanup should run
+      unmount()
+
+      // Note: The actual unsubscribe is called, but we can't easily verify
+      // the mock was called without spying. The important thing is that
+      // the useEffect cleanup returns the unsubscribe function.
     })
   })
 
   describe('narration message handling', () => {
+    it('should handle narration message through WebSocket', () => {
+      renderHook(() => useGameMessages())
+
+      const handler = getWebSocketHandler()
+      expect(handler).toBeDefined()
+
+      // Simulate receiving a narration message
+      const message: ServerMessage = {
+        type: 'narration',
+        payload: {
+          text: 'You enter a dark room.',
+          isStreaming: false,
+        },
+        timestamp: Date.now(),
+      }
+      handler!(message)
+
+      const messages = useChatStore.getState().messages
+      expect(messages).toHaveLength(1)
+      expect(messages[0].type).toBe('dm')
+      expect(messages[0].content).toBe('You enter a dark room.')
+    })
+
     it('should add complete narration message to chat store', () => {
       // Directly manipulate the chat store to verify it works
       const { addDMMessage } = useChatStore.getState()

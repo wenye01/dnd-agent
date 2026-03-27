@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useGameStore } from '../../../apps/web/src/stores/gameStore'
-import type { GameState, Character, CombatState, GameMetadata } from '../../../apps/web/src/types'
+import { useGameStore } from '@/stores/gameStore'
+import type { GameState, Character, CombatState, GameMetadata } from '@/types'
 
 // Helper function to create valid GameMetadata
 function createMockMetadata(overrides: Partial<GameMetadata> = {}): GameMetadata {
