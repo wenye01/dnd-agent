@@ -169,48 +169,107 @@ func TestRoller_Roll(t *testing.T) {
 		}
 	})
 
-	t.Run("crit detection on d20", func(t *testing.T) {
-		// We need to mock or use a fixed seed that produces 20
-		// Since we can't guarantee this, we'll just verify the logic exists
-		_, err := Parse("d20")
+	t.Run("crit detection on natural 20", func(t *testing.T) {
+		roller, err := Parse("d20")
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
 
-		// Create a result directly with a crit to verify the structure
-		result := &Result{
-			Dice:     []int{20},
-			KeptDice: []int{20},
-			Modifier: 0,
-			Total:    20,
-			IsCrit:   true,
-			IsFumble: false,
+		// Find a seed that produces natural 20
+		var critResult *Result
+		for seed := int64(0); seed < 10000; seed++ {
+			rnd := rand.New(rand.NewSource(seed))
+			result := roller.Roll(rnd)
+			if result.IsCrit {
+				critResult = result
+				break
+			}
 		}
 
-		if !result.IsCrit {
+		if critResult == nil {
+			t.Fatal("Failed to find a seed that produces natural 20 in 10000 attempts")
+		}
+		if critResult.Dice[0] != 20 {
+			t.Errorf("Crit roll should be 20, got %d", critResult.Dice[0])
+		}
+		if !critResult.IsCrit {
 			t.Errorf("Expected IsCrit to be true")
 		}
-		if result.IsFumble {
+		if critResult.IsFumble {
 			t.Errorf("Expected IsFumble to be false")
+		}
+		if critResult.Total != 20 {
+			t.Errorf("Crit total should be 20, got %d", critResult.Total)
 		}
 	})
 
-	t.Run("fumble detection on d20", func(t *testing.T) {
-		// Create a result directly with a fumble to verify the structure
-		result := &Result{
-			Dice:     []int{1},
-			KeptDice: []int{1},
-			Modifier: 0,
-			Total:    1,
-			IsCrit:   false,
-			IsFumble: true,
+	t.Run("fumble detection on natural 1", func(t *testing.T) {
+		roller, err := Parse("d20")
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
 		}
 
-		if !result.IsFumble {
+		// Find a seed that produces natural 1
+		var fumbleResult *Result
+		for seed := int64(0); seed < 10000; seed++ {
+			rnd := rand.New(rand.NewSource(seed))
+			result := roller.Roll(rnd)
+			if result.IsFumble {
+				fumbleResult = result
+				break
+			}
+		}
+
+		if fumbleResult == nil {
+			t.Fatal("Failed to find a seed that produces natural 1 in 10000 attempts")
+		}
+		if fumbleResult.Dice[0] != 1 {
+			t.Errorf("Fumble roll should be 1, got %d", fumbleResult.Dice[0])
+		}
+		if !fumbleResult.IsFumble {
 			t.Errorf("Expected IsFumble to be true")
 		}
-		if result.IsCrit {
+		if fumbleResult.IsCrit {
 			t.Errorf("Expected IsCrit to be false")
+		}
+		if fumbleResult.Total != 1 {
+			t.Errorf("Fumble total should be 1, got %d", fumbleResult.Total)
+		}
+	})
+
+	t.Run("non-d20 rolls never have crit or fumble", func(t *testing.T) {
+		roller, err := Parse("d6")
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+
+		rnd := rand.New(rand.NewSource(42))
+		for i := 0; i < 100; i++ {
+			result := roller.Roll(rnd)
+			if result.IsCrit {
+				t.Errorf("d6 roll should never be crit, got roll %d", result.Dice[0])
+			}
+			if result.IsFumble {
+				t.Errorf("d6 roll should never be fumble, got roll %d", result.Dice[0])
+			}
+		}
+	})
+
+	t.Run("multi-d20 rolls do not trigger crit/fumble", func(t *testing.T) {
+		roller, err := Parse("2d20")
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+
+		rnd := rand.New(rand.NewSource(42))
+		for i := 0; i < 100; i++ {
+			result := roller.Roll(rnd)
+			if result.IsCrit {
+				t.Errorf("2d20 roll should never be crit (only single d20)")
+			}
+			if result.IsFumble {
+				t.Errorf("2d20 roll should never be fumble (only single d20)")
+			}
 		}
 	})
 
@@ -240,37 +299,6 @@ func TestRoller_Roll(t *testing.T) {
 
 		if len(result.KeptDice) != 4 {
 			t.Errorf("Expected 4 kept dice, got %d", len(result.KeptDice))
-		}
-	})
-}
-
-func TestDieSpec(t *testing.T) {
-	t.Run("valid DieSpec", func(t *testing.T) {
-		spec := DieSpec{Count: 2, Sides: 6}
-		if spec.Count != 2 {
-			t.Errorf("Expected Count 2, got %d", spec.Count)
-		}
-		if spec.Sides != 6 {
-			t.Errorf("Expected Sides 6, got %d", spec.Sides)
-		}
-	})
-}
-
-func TestResult(t *testing.T) {
-	t.Run("result structure", func(t *testing.T) {
-		result := &Result{
-			Dice:     []int{3, 4, 5},
-			KeptDice: []int{4, 5},
-			Modifier: 2,
-			Total:    11,
-			IsCrit:   false,
-			IsFumble: false,
-		}
-		if len(result.Dice) != 3 {
-			t.Errorf("Expected 3 dice, got %d", len(result.Dice))
-		}
-		if result.Total != 11 {
-			t.Errorf("Expected total 11, got %d", result.Total)
 		}
 	})
 }

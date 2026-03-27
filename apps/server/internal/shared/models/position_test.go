@@ -55,6 +55,7 @@ func TestPosition_Add(t *testing.T) {
 }
 
 func TestPosition_Distance(t *testing.T) {
+	// Distance uses Manhattan distance: |dx| + |dy|
 	tests := []struct {
 		name     string
 		p1       Position
