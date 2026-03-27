@@ -80,6 +80,9 @@ func TestClientMessage_Serialization(t *testing.T) {
 			if unmarshaled.RequestID != tt.message.RequestID {
 				t.Errorf("RequestID mismatch: got %s, want %s", unmarshaled.RequestID, tt.message.RequestID)
 			}
+			if string(unmarshaled.Payload) != string(tt.message.Payload) {
+				t.Errorf("Payload mismatch: got %s, want %s", string(unmarshaled.Payload), string(tt.message.Payload))
+			}
 		})
 	}
 }
@@ -169,6 +172,12 @@ func TestServerMessage_Serialization(t *testing.T) {
 			}
 			if unmarshaled.RequestID != tt.message.RequestID {
 				t.Errorf("RequestID mismatch: got %s, want %s", unmarshaled.RequestID, tt.message.RequestID)
+			}
+			// Verify payload round-trips correctly
+			payloadData, _ := json.Marshal(tt.message.Payload)
+			unmarshaledPayloadData, _ := json.Marshal(unmarshaled.Payload)
+			if string(payloadData) != string(unmarshaledPayloadData) {
+				t.Errorf("Payload mismatch: got %s, want %s", string(unmarshaledPayloadData), string(payloadData))
 			}
 		})
 	}
@@ -290,6 +299,12 @@ func TestEncodeServerMessage(t *testing.T) {
 				}
 				if decoded.Timestamp != tt.message.Timestamp {
 					t.Errorf("Timestamp = %d, want %d", decoded.Timestamp, tt.message.Timestamp)
+				}
+				// Verify payload round-trips correctly
+				payloadData, _ := json.Marshal(tt.message.Payload)
+				decodedPayloadData, _ := json.Marshal(decoded.Payload)
+				if string(payloadData) != string(decodedPayloadData) {
+					t.Errorf("Payload mismatch: got %s, want %s", string(decodedPayloadData), string(payloadData))
 				}
 			}
 		})
