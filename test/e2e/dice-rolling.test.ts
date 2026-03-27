@@ -8,7 +8,6 @@
  * Set API_BASE_URL environment variable to configure the server address.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import {
   serverAvailable,
   apiRequest,

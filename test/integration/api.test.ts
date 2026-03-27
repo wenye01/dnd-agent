@@ -7,12 +7,13 @@
  * Note: Tests will be skipped if the server is not available.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest'
-
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:8080'
-
-// Check if server is available
-let serverAvailable = false
+import {
+  API_BASE,
+  serverAvailable,
+  apiRequest,
+  itIfServer,
+  checkServerAvailability,
+} from '../e2e/helpers'
 
 interface SessionResponse {
   sessionId: string
@@ -39,23 +40,6 @@ interface ErrorResponse {
 }
 
 /**
- * Helper to make API requests
- */
-async function apiRequest(endpoint: string, options?: RequestInit) {
-  const url = `${API_BASE}/api${endpoint}`
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  })
-
-  const data = await response.json()
-  return { response, data }
-}
-
-/**
  * Helper to create a test session
  */
 async function createTestSession(sessionId?: string): Promise<SessionResponse> {
@@ -74,21 +58,8 @@ async function createTestSession(sessionId?: string): Promise<SessionResponse> {
 }
 
 beforeAll(async () => {
-  // Check if server is available
-  try {
-    const response = await fetch(`${API_BASE}/api/health`, {
-      signal: AbortSignal.timeout(2000),
-    })
-    serverAvailable = response.ok
-  } catch {
-    serverAvailable = false
-  }
+  await checkServerAvailability()
 })
-
-// Helper to conditionally run tests
-const itIfServer = (title: string, fn: () => void | Promise<void>) => {
-  return serverAvailable ? it(title, fn) : it.skip(title, fn)
-}
 
 describe('API Integration Tests', () => {
   describe('Health Check', () => {
