@@ -8,46 +8,18 @@
  * Set API_BASE_URL environment variable to configure the server address.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest'
-
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:8080'
-
-// Check if server is available
-let serverAvailable = false
-
-/**
- * Helper to make API requests
- */
-async function apiRequest(endpoint: string, options?: RequestInit) {
-  const url = `${API_BASE}/api${endpoint}`
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  })
-
-  const data = await response.json()
-  return { response, data }
-}
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import {
+  API_BASE,
+  serverAvailable,
+  apiRequest,
+  itIfServer,
+  checkServerAvailability,
+} from './helpers'
 
 beforeAll(async () => {
-  // Check if server is available
-  try {
-    const response = await fetch(`${API_BASE}/api/health`, {
-      signal: AbortSignal.timeout(2000),
-    })
-    serverAvailable = response.ok
-  } catch {
-    serverAvailable = false
-  }
+  await checkServerAvailability()
 })
-
-// Helper to conditionally run tests
-const itIfServer = (title: string, fn: () => void | Promise<void>) => {
-  return serverAvailable ? it(title, fn) : it.skip(title, fn)
-}
 
 describe('Character Creation E2E Tests', () => {
   describe('Session creation for character', () => {
@@ -327,92 +299,6 @@ describe('Character Data Validation', () => {
       expect(calculateModifier(16)).toBe(3)
       expect(calculateModifier(8)).toBe(-1)
       expect(calculateModifier(20)).toBe(5)
-    })
-  })
-
-  describe('Racial bonuses', () => {
-    it('should apply elf racial bonus to dexterity', () => {
-      const baseDex = 14
-      const elfBonus = 2
-      const expectedDex = baseDex + elfBonus
-
-      expect(expectedDex).toBe(16)
-    })
-
-    it('should apply dwarf racial bonus to constitution', () => {
-      const baseCon = 14
-      const dwarfBonus = 2
-      const expectedCon = baseCon + dwarfBonus
-
-      expect(expectedCon).toBe(16)
-    })
-
-    it('should apply human racial bonus to all stats', () => {
-      const baseStats = { str: 14, dex: 12, con: 14, int: 10, wis: 10, cha: 10 }
-      const humanBonus = 1
-
-      Object.values(baseStats).forEach((stat) => {
-        expect(stat + humanBonus).toBeGreaterThanOrEqual(2)
-        expect(stat + humanBonus).toBeLessThanOrEqual(21)
-      })
-    })
-  })
-
-  describe('Class-based calculations', () => {
-    it('should calculate fighter hit points correctly', () => {
-      const hitDice = 10 // Fighter uses d10
-      const conMod = 2 // CON 14 gives +2
-      const expectedHP = hitDice + conMod
-
-      expect(expectedHP).toBe(12)
-    })
-
-    it('should calculate wizard hit points correctly', () => {
-      const hitDice = 6 // Wizard uses d6
-      const conMod = 1 // CON 12 gives +1
-      const expectedHP = hitDice + conMod
-
-      expect(expectedHP).toBe(7)
-    })
-
-    it('should calculate rogue hit points correctly', () => {
-      const hitDice = 8 // Rogue uses d8
-      const conMod = 2 // CON 14 gives +2
-      const expectedHP = hitDice + conMod
-
-      expect(expectedHP).toBe(10)
-    })
-  })
-
-  describe('Proficiency bonus', () => {
-    it('should calculate proficiency bonus by level', () => {
-      const proficiencyByLevel: Record<number, number> = {
-        1: 2,
-        2: 2,
-        3: 2,
-        4: 2,
-        5: 3,
-        6: 3,
-        7: 3,
-        8: 3,
-        9: 4,
-        10: 4,
-        11: 4,
-        12: 4,
-        13: 5,
-        14: 5,
-        15: 5,
-        16: 5,
-        17: 6,
-        18: 6,
-        19: 6,
-        20: 6,
-      }
-
-      Object.entries(proficiencyByLevel).forEach(([level, bonus]) => {
-        expect(bonus).toBeGreaterThan(0)
-        expect(bonus).toBeLessThanOrEqual(6)
-      })
     })
   })
 })

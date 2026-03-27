@@ -2,6 +2,9 @@ import { vi } from 'vitest'
 import '@testing-library/jest-dom'
 import React from 'react'
 
+// Module-level variable to store WebSocket handler (avoids global pollution)
+let wsTestHandler: ((message: unknown) => void) | undefined
+
 // Mock crypto.randomUUID for tests
 Object.defineProperty(global, 'crypto', {
   value: {
@@ -35,8 +38,8 @@ vi.mock('../contexts/WebSocketContext', () => ({
     connected: false,
     send: vi.fn(),
     subscribe: vi.fn((handler: (message: unknown) => void) => {
-      // Store handler for test access
-      ;(global as unknown as Record<string, unknown>).__wsTestHandler = handler
+      // Store handler for test access (module-level, not global)
+      wsTestHandler = handler
       return vi.fn()
     }),
   }),
@@ -44,10 +47,10 @@ vi.mock('../contexts/WebSocketContext', () => ({
 
 // Helper function to get the WebSocket handler for testing
 export function getWebSocketHandler() {
-  return (global as unknown as Record<string, ((message: unknown) => void) | undefined>).__wsTestHandler
+  return wsTestHandler
 }
 
 // Helper function to reset the WebSocket handler between tests
 export function resetWebSocketHandler() {
-  ;(global as unknown as Record<string, unknown>).__wsTestHandler = undefined
+  wsTestHandler = undefined
 }

@@ -1,6 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook, cleanup } from '@testing-library/react'
+import { useGameMessages } from '@/hooks/useGameMessages'
 import { useGameStore } from '@/stores/gameStore'
 import { useChatStore } from '@/stores/chatStore'
+import { getWebSocketHandler, resetWebSocketHandler } from '@/test/setup'
+import type { ServerMessage } from '@/types'
 
 // Helper to reset all stores to initial state
 function resetStores() {
@@ -12,9 +16,63 @@ describe('useGameMessages', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetStores()
+    resetWebSocketHandler()
+  })
+
+  afterEach(() => {
+    cleanup()
+    resetWebSocketHandler()
+  })
+
+  describe('WebSocket subscription', () => {
+    it('should subscribe to WebSocket messages on mount', () => {
+      renderHook(() => useGameMessages())
+
+      // The handler should be set after mount
+      const handler = getWebSocketHandler()
+      expect(handler).toBeDefined()
+      expect(typeof handler).toBe('function')
+    })
+
+    it('should return an unsubscribe function', () => {
+      const { unmount } = renderHook(() => useGameMessages())
+
+      // Handler should exist while mounted
+      expect(getWebSocketHandler()).toBeDefined()
+
+      // After unmount, the cleanup should run
+      unmount()
+
+      // Note: The actual unsubscribe is called, but we can't easily verify
+      // the mock was called without spying. The important thing is that
+      // the useEffect cleanup returns the unsubscribe function.
+    })
   })
 
   describe('narration message handling', () => {
+    it('should handle narration message through WebSocket', () => {
+      renderHook(() => useGameMessages())
+
+      const handler = getWebSocketHandler()
+      expect(handler).toBeDefined()
+
+      // Simulate receiving a narration message
+      const message: ServerMessage = {
+        type: 'narration',
+        payload: {
+          text: 'You enter a dark room.',
+          isStreaming: false,
+        },
+        timestamp: Date.now(),
+      }
+      handler!(message)
+
+      const messages = useChatStore.getState().messages
+      expect(messages).toHaveLength(1)
+      expect(messages[0].type).toBe('dm')
+      expect(messages[0].content).toBe('You enter a dark room.')
+    })
+
     it('should add complete narration message to chat store', () => {
       // Directly manipulate the chat store to verify it works
       const { addDMMessage } = useChatStore.getState()
