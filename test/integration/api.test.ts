@@ -13,71 +13,17 @@ import {
   apiRequest,
   itIfServer,
   checkServerAvailability,
+  createTestSession,
 } from '../e2e/helpers'
-
-interface SessionResponse {
-  sessionId: string
-}
-
-interface GameStateResponse {
-  sessionId: string
-  phase: string
-  party: unknown[]
-  metadata: {
-    createdAt: number
-    updatedAt: number
-    playTime: number
-    scenarioId: string
-  }
-}
-
-interface ErrorResponse {
-  status: string
-  error?: {
-    code: string
-    message: string
-  }
-}
-
-interface SessionListResponse {
-  sessions: string[]
-  count: number
-}
-
-interface HealthResponse {
-  status: string
-  service: string
-}
-
-interface ConfigResponse {
-  status: string
-  data: {
-    features: string[]
-  }
-}
-
-interface DeleteSessionResponse {
-  sessionId: string
-  deleted: boolean
-}
-
-/**
- * Helper to create a test session
- */
-async function createTestSession(sessionId?: string): Promise<SessionResponse> {
-  const body = sessionId ? { sessionId } : {}
-
-  const { response, data } = await apiRequest<SessionResponse>('/sessions', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
-
-  if (!response.ok || !data) {
-    throw new Error(`Failed to create session: ${JSON.stringify(data)}`)
-  }
-
-  return data
-}
+import type {
+  SessionResponse,
+  GameStateResponse,
+  ErrorResponse,
+  SessionListResponse,
+  HealthResponse,
+  ConfigResponse,
+  DeleteSessionResponse,
+} from '../types'
 
 beforeAll(async () => {
   await checkServerAvailability()

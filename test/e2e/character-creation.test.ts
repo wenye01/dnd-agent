@@ -14,25 +14,7 @@ import {
   itIfServer,
   checkServerAvailability,
 } from './helpers'
-
-// Type definitions for API responses
-interface SessionResponse {
-  sessionId: string
-}
-
-interface SessionListResponse {
-  sessions: string[]
-}
-
-interface SessionStateResponse {
-  sessionId: string
-  phase: string
-  party: unknown[]
-  metadata: {
-    createdAt: number
-    updatedAt: number
-  }
-}
+import type { SessionResponse, GameStateResponse, SessionListResponse } from '../types'
 
 beforeAll(async () => {
   await checkServerAvailability()
@@ -65,7 +47,7 @@ describe('Character Creation E2E Tests', () => {
       expect(testSessionId).toMatch(/^sess_/)
 
       // Step 2: Retrieve and verify full session state structure
-      const { response: getResponse, data: sessionData } = await apiRequest<SessionStateResponse>(`/sessions/${testSessionId}`)
+      const { response: getResponse, data: sessionData } = await apiRequest<GameStateResponse>(`/sessions/${testSessionId}`)
 
       expect(getResponse.status).toBe(200)
       expect(sessionData).not.toBeNull()
@@ -83,7 +65,7 @@ describe('Character Creation E2E Tests', () => {
       expect(listData!.sessions).toContain(testSessionId)
 
       // Step 4: State persists across requests
-      const { data: secondFetch } = await apiRequest<SessionStateResponse>(`/sessions/${testSessionId}`)
+      const { data: secondFetch } = await apiRequest<GameStateResponse>(`/sessions/${testSessionId}`)
       expect(secondFetch).not.toBeNull()
       expect(secondFetch!.sessionId).toBe(testSessionId)
 

@@ -4,6 +4,8 @@
  * Shared utilities for end-to-end tests that interact with the server API.
  */
 
+import type { SessionResponse } from '../types'
+
 /**
  * Base URL for API requests
  */
@@ -34,12 +36,14 @@ export async function apiRequest<T = unknown>(
   options?: RequestInit,
 ): Promise<{ response: Response; data: T | null }> {
   const url = `${API_BASE}/api${endpoint}`
+  const { headers: customHeaders, ...restOptions } = options ?? {}
+
   const response = await fetch(url, {
+    ...restOptions,
     headers: {
       'Content-Type': 'application/json',
-      ...options?.headers,
+      ...customHeaders,
     },
-    ...options,
   })
 
   // Handle non-JSON responses
@@ -84,4 +88,23 @@ export async function checkServerAvailability(): Promise<void> {
       `Set API_BASE_URL to configure the server address.`,
     )
   }
+}
+
+/**
+ * Helper to create a test session via POST /api/sessions.
+ * Throws if the server fails to create the session.
+ */
+export async function createTestSession(sessionId?: string): Promise<SessionResponse> {
+  const body = sessionId ? { sessionId } : {}
+
+  const { response, data } = await apiRequest<SessionResponse>('/sessions', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok || !data) {
+    throw new Error(`Failed to create session: ${JSON.stringify(data)}`)
+  }
+
+  return data
 }

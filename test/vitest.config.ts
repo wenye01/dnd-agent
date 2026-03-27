@@ -9,7 +9,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['**/*.test.ts'],
+    include: ['e2e/**/*.test.ts', 'integration/**/*.test.ts'],
     exclude: ['node_modules', 'dist', 'build', '.vitest'],
     testTimeout: 10000,
     hookTimeout: 10000,
