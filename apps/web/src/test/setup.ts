@@ -6,9 +6,11 @@ import React from 'react'
 let wsTestHandler: ((message: unknown) => void) | undefined
 let wsTestUnsubscribe: ReturnType<typeof vi.fn> | undefined
 
-// Mock crypto.randomUUID for tests
+// Mock crypto.randomUUID for tests (preserve other crypto APIs like subtle)
+const originalCrypto = global.crypto
 Object.defineProperty(global, 'crypto', {
   value: {
+    ...originalCrypto,
     randomUUID: () => {
       return 'test-uuid-' + Math.random().toString(36).substring(2, 15)
     },

@@ -1,8 +1,8 @@
 /**
  * Character Creation End-to-End Tests
  *
- * These tests verify the character creation flow works correctly
- * by testing the backend API directly.
+ * These tests verify complete user workflows that span multiple API calls.
+ * For individual API endpoint testing, see test/integration/api.test.ts.
  *
  * Note: These tests require the server to be running.
  * Set API_BASE_URL environment variable to configure the server address.
@@ -20,7 +20,7 @@ beforeAll(async () => {
 })
 
 describe('Character Creation E2E Tests', () => {
-  describe('Session creation for character', () => {
+  describe('Complete character creation workflow', () => {
     let testSessionId: string
 
     afterAll(async () => {
@@ -33,20 +33,53 @@ describe('Character Creation E2E Tests', () => {
       }
     })
 
-    itIfServer('should create a new session for character', async () => {
-      const { response, data } = await apiRequest('/sessions', {
+    itIfServer('should create session, verify state, list, and delete', async () => {
+      // Step 1: Create a new session
+      const { response: createResponse, data: createData } = await apiRequest('/sessions', {
         method: 'POST',
         body: JSON.stringify({}),
       })
 
-      expect(response.status).toBe(201)
-      expect(data).toHaveProperty('sessionId')
-
-      testSessionId = (data as { sessionId: string }).sessionId
+      expect(createResponse.status).toBe(201)
+      testSessionId = (createData as { sessionId: string }).sessionId
       expect(testSessionId).toMatch(/^sess_/)
-    })
 
-    itIfServer('should create session with custom name for character', async () => {
+      // Step 2: Retrieve and verify full session state structure
+      const { response: getResponse, data: sessionData } = await apiRequest(`/sessions/${testSessionId}`)
+
+      expect(getResponse.status).toBe(200)
+      expect((sessionData as { sessionId: string }).sessionId).toBe(testSessionId)
+      expect(sessionData).toHaveProperty('phase')
+      expect(sessionData).toHaveProperty('party')
+      expect(Array.isArray((sessionData as { party: unknown[] }).party)).toBe(true)
+      expect(sessionData).toHaveProperty('metadata')
+      const metadata = (sessionData as { metadata: { createdAt: number; updatedAt: number } }).metadata
+      expect(metadata).toHaveProperty('createdAt')
+      expect(metadata).toHaveProperty('updatedAt')
+
+      // Step 3: Verify session appears in session list
+      const { data: listData } = await apiRequest('/sessions')
+      const sessions = (listData as { sessions: string[] }).sessions
+      expect(sessions).toContain(testSessionId)
+
+      // Step 4: State persists across requests
+      const { data: secondFetch } = await apiRequest(`/sessions/${testSessionId}`)
+      expect((secondFetch as { sessionId: string }).sessionId).toBe(testSessionId)
+
+      // Step 5: Delete session
+      const { response: deleteResponse } = await apiRequest(`/sessions/${testSessionId}`, {
+        method: 'DELETE',
+      })
+      expect(deleteResponse.status).toBe(200)
+
+      // Step 6: Verify session is gone
+      const { response: notFoundResponse } = await apiRequest(`/sessions/${testSessionId}`)
+      expect(notFoundResponse.status).toBe(404)
+    })
+  })
+
+  describe('Named session workflow', () => {
+    itIfServer('should create named session and clean up', async () => {
       const characterName = 'test-character-' + Date.now()
 
       const { response, data } = await apiRequest('/sessions', {
@@ -59,127 +92,6 @@ describe('Character Creation E2E Tests', () => {
 
       // Clean up
       await apiRequest(`/sessions/${characterName}`, { method: 'DELETE' })
-    })
-  })
-
-  describe('Character state persistence', () => {
-    let sessionId: string
-
-    beforeAll(async () => {
-      if (!serverAvailable) return
-
-      const { data } = await apiRequest('/sessions', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      })
-      sessionId = (data as { sessionId: string }).sessionId
-    })
-
-    afterAll(async () => {
-      if (sessionId && serverAvailable) {
-        await apiRequest(`/sessions/${sessionId}`, { method: 'DELETE' })
-      }
-    })
-
-    itIfServer('should store and retrieve character data', async () => {
-      const { response, data } = await apiRequest(`/sessions/${sessionId}`)
-
-      expect(response.status).toBe(200)
-      expect((data as { sessionId: string }).sessionId).toBe(sessionId)
-      expect(data).toHaveProperty('phase')
-    })
-
-    itIfServer('should maintain character data across requests', async () => {
-      const { data: firstFetch } = await apiRequest(`/sessions/${sessionId}`)
-      const { data: secondFetch } = await apiRequest(`/sessions/${sessionId}`)
-
-      expect((firstFetch as { sessionId: string }).sessionId).toBe(
-        (secondFetch as { sessionId: string }).sessionId,
-      )
-    })
-  })
-
-  describe('Character data structure', () => {
-    itIfServer('should validate session state structure', async () => {
-      const { data } = await apiRequest('/sessions', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      })
-
-      const sessionId = (data as { sessionId: string }).sessionId
-
-      const { response, data: sessionData } = await apiRequest(`/sessions/${sessionId}`)
-
-      expect(response.status).toBe(200)
-      expect(sessionData).toHaveProperty('sessionId')
-      expect(sessionData).toHaveProperty('phase')
-      expect(sessionData).toHaveProperty('party')
-      expect(sessionData).toHaveProperty('metadata')
-      expect(Array.isArray((sessionData as { party: unknown[] }).party)).toBe(true)
-
-      const metadata = (sessionData as { metadata: { createdAt: number; updatedAt: number } }).metadata
-      expect(metadata).toHaveProperty('createdAt')
-      expect(metadata).toHaveProperty('updatedAt')
-
-      // Clean up
-      await apiRequest(`/sessions/${sessionId}`, { method: 'DELETE' })
-    })
-  })
-
-  describe('Error handling', () => {
-    itIfServer('should handle invalid session ID gracefully', async () => {
-      const { response, data } = await apiRequest('/sessions/invalid-session-format')
-
-      expect(response.status).toBe(404)
-      expect(data).toHaveProperty('status', 'error')
-      expect(data).toHaveProperty('error')
-    })
-
-    itIfServer('should handle duplicate session creation', async () => {
-      const duplicateId = 'duplicate-test-' + Date.now()
-
-      await apiRequest('/sessions', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId: duplicateId }),
-      })
-
-      const { response, data } = await apiRequest('/sessions', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId: duplicateId }),
-      })
-
-      expect(response.status).toBe(400)
-      expect((data as { error?: { code: string } }).error?.code).toBe('BAD_REQUEST')
-
-      // Clean up
-      await apiRequest(`/sessions/${duplicateId}`, { method: 'DELETE' })
-    })
-  })
-
-  describe('Character creation workflow', () => {
-    itIfServer('should support complete character creation workflow', async () => {
-      const { data: createData } = await apiRequest('/sessions', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      })
-
-      const sessionId = (createData as { sessionId: string }).sessionId
-      expect(sessionId).toBeTruthy()
-
-      const { response: getResponse } = await apiRequest(`/sessions/${sessionId}`)
-      expect(getResponse.status).toBe(200)
-
-      const { data: listData } = await apiRequest('/sessions')
-      const sessions = (listData as { sessions: string[] }).sessions
-      expect(sessions).toContain(sessionId)
-
-      const { response: deleteResponse } = await apiRequest(`/sessions/${sessionId}`, {
-        method: 'DELETE',
-      })
-      expect(deleteResponse.status).toBe(200)
-
-      const { response: notFoundResponse } = await apiRequest(`/sessions/${sessionId}`)
-      expect(notFoundResponse.status).toBe(404)
     })
   })
 })
