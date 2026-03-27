@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import { useChatStore } from '../../../apps/web/src/stores/chatStore'
-import MessageList from '../../../apps/web/src/components/chat/MessageList'
+import { useChatStore } from '@/stores/chatStore'
+import MessageList from './MessageList'
 
 describe('MessageList', () => {
   beforeEach(() => {

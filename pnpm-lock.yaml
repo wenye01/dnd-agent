@@ -17,6 +17,9 @@ importers:
       turbo:
         specifier: ^2.0.0
         version: 2.8.19
+      vitest:
+        specifier: ^4.1.0
+        version: 4.1.0(@types/node@24.12.0)(@vitest/ui@4.1.0)(happy-dom@20.8.4)(vite@8.0.1(@types/node@24.12.0))
       ws:
         specifier: ^8.19.0
         version: 8.19.0
