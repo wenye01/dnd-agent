@@ -404,19 +404,3 @@ func TestGameMetadata(t *testing.T) {
 	})
 }
 
-func TestPosition_InStatePackage(t *testing.T) {
-	t.Run("position in state package", func(t *testing.T) {
-		pos := &Position{
-			X: 10,
-			Y: 20,
-		}
-
-		if pos.X != 10 {
-			t.Errorf("X = %d, want 10", pos.X)
-		}
-
-		if pos.Y != 20 {
-			t.Errorf("Y = %d, want 20", pos.Y)
-		}
-	})
-}

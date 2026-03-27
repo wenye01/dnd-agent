@@ -175,7 +175,9 @@ func TestRoller_Roll(t *testing.T) {
 			t.Fatalf("Parse() error = %v", err)
 		}
 
-		// Find a seed that produces natural 20
+		// Use seed search instead of mocking to exercise the real Roll() code path.
+		// A d20 has a 5% chance of rolling 20, so finding one within 10000 seeds is
+		// virtually guaranteed. If this fails, check whether the RNG or dice logic changed.
 		var critResult *Result
 		for seed := int64(0); seed < 10000; seed++ {
 			rnd := rand.New(rand.NewSource(seed))
@@ -209,7 +211,7 @@ func TestRoller_Roll(t *testing.T) {
 			t.Fatalf("Parse() error = %v", err)
 		}
 
-		// Find a seed that produces natural 1
+		// Same seed-search approach as crit test — see crit detection comment above.
 		var fumbleResult *Result
 		for seed := int64(0); seed < 10000; seed++ {
 			rnd := rand.New(rand.NewSource(seed))
