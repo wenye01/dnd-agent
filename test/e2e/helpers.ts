@@ -15,9 +15,24 @@ export const API_BASE = process.env.API_BASE_URL || 'http://localhost:8080'
 export let serverAvailable = false
 
 /**
- * Helper to make API requests
+ * Helper to make API requests with typed response data.
+ *
+ * @typeParam T - The expected type of the response data (defaults to unknown)
+ * @param endpoint - API endpoint (without /api prefix)
+ * @param options - Fetch options
+ * @returns Object containing response and typed data (data is null for non-JSON responses)
+ *
+ * @example
+ * // With typed response
+ * const { response, data } = await apiRequest<SessionResponse>('/sessions')
+ * if (response.ok && data) {
+ *   console.log(data.sessionId) // TypeScript knows data is SessionResponse
+ * }
  */
-export async function apiRequest(endpoint: string, options?: RequestInit) {
+export async function apiRequest<T = unknown>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<{ response: Response; data: T | null }> {
   const url = `${API_BASE}/api${endpoint}`
   const response = await fetch(url, {
     headers: {
@@ -27,8 +42,14 @@ export async function apiRequest(endpoint: string, options?: RequestInit) {
     ...options,
   })
 
+  // Handle non-JSON responses
+  const contentType = response.headers.get('content-type')
+  if (!contentType || !contentType.includes('application/json')) {
+    return { response, data: null }
+  }
+
   const data = await response.json()
-  return { response, data }
+  return { response, data: data as T }
 }
 
 /**

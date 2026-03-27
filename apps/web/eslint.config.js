@@ -24,7 +24,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/test-utils.{ts,tsx}', '**/test/**/*.ts', '**/test/**/*.tsx'],
+    files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/test-utils.{ts,tsx}'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },

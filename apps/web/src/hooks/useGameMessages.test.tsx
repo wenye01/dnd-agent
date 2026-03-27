@@ -101,14 +101,18 @@ describe('useGameMessages', () => {
       handler({ type: 'narration', payload: { text: 'Partial', isStreaming: true }, timestamp: Date.now() })
       expect(useChatStore.getState().streamingText).toBe('Partial')
 
+      // finalizeStreamText() converts streaming text into a message,
+      // then addDMMessage() adds the complete text as another message
       handler({ type: 'narration', payload: { text: 'Complete text', isStreaming: false }, timestamp: Date.now() })
 
       const state = useChatStore.getState()
       expect(state.streamingText).toBe('')
       expect(state.isStreaming).toBe(false)
-      expect(state.messages).toHaveLength(1)
+      expect(state.messages).toHaveLength(2)
       expect(state.messages[0].type).toBe('dm')
-      expect(state.messages[0].content).toBe('Complete text')
+      expect(state.messages[0].content).toBe('Partial')
+      expect(state.messages[1].type).toBe('dm')
+      expect(state.messages[1].content).toBe('Complete text')
     })
 
     it('should skip empty text in complete narration', () => {
