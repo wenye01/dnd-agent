@@ -2,8 +2,9 @@ import { vi } from 'vitest'
 import '@testing-library/jest-dom'
 import React from 'react'
 
-// Module-level variable to store WebSocket handler (avoids global pollution)
+// Module-level variables to store WebSocket handler and unsubscribe mock (avoids global pollution)
 let wsTestHandler: ((message: unknown) => void) | undefined
+let wsTestUnsubscribe: ReturnType<typeof vi.fn> | undefined
 
 // Mock crypto.randomUUID for tests
 Object.defineProperty(global, 'crypto', {
@@ -40,7 +41,8 @@ vi.mock('../contexts/WebSocketContext', () => ({
     subscribe: vi.fn((handler: (message: unknown) => void) => {
       // Store handler for test access (module-level, not global)
       wsTestHandler = handler
-      return vi.fn()
+      wsTestUnsubscribe = vi.fn()
+      return wsTestUnsubscribe
     }),
   }),
 }))
@@ -50,7 +52,13 @@ export function getWebSocketHandler() {
   return wsTestHandler
 }
 
+// Helper function to get the unsubscribe mock for testing
+export function getWebSocketUnsubscribe() {
+  return wsTestUnsubscribe
+}
+
 // Helper function to reset the WebSocket handler between tests
 export function resetWebSocketHandler() {
   wsTestHandler = undefined
+  wsTestUnsubscribe = undefined
 }

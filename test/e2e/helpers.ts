@@ -43,7 +43,8 @@ export const itIfServer = (
 }
 
 /**
- * Check server availability - should be called in beforeAll
+ * Check server availability - should be called in beforeAll.
+ * Outputs a warning when the server is not reachable.
  */
 export async function checkServerAvailability(): Promise<void> {
   try {
@@ -53,5 +54,13 @@ export async function checkServerAvailability(): Promise<void> {
     serverAvailable = response.ok
   } catch {
     serverAvailable = false
+  }
+
+  if (!serverAvailable) {
+    console.warn(
+      `[e2e] Server not available at ${API_BASE}/api/health. ` +
+      `All server-dependent tests will be skipped. ` +
+      `Set API_BASE_URL to configure the server address.`,
+    )
   }
 }

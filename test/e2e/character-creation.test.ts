@@ -10,7 +10,6 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import {
-  API_BASE,
   serverAvailable,
   apiRequest,
   itIfServer,
@@ -26,7 +25,6 @@ describe('Character Creation E2E Tests', () => {
     let testSessionId: string
 
     afterAll(async () => {
-      // Clean up test session
       if (testSessionId && serverAvailable) {
         try {
           await apiRequest(`/sessions/${testSessionId}`, { method: 'DELETE' })
@@ -71,7 +69,6 @@ describe('Character Creation E2E Tests', () => {
     beforeAll(async () => {
       if (!serverAvailable) return
 
-      // Create a session for character tests
       const { data } = await apiRequest('/sessions', {
         method: 'POST',
         body: JSON.stringify({}),
@@ -80,31 +77,23 @@ describe('Character Creation E2E Tests', () => {
     })
 
     afterAll(async () => {
-      // Clean up
       if (sessionId && serverAvailable) {
         await apiRequest(`/sessions/${sessionId}`, { method: 'DELETE' })
       }
     })
 
     itIfServer('should store and retrieve character data', async () => {
-      // First, get the session to verify it exists
       const { response, data } = await apiRequest(`/sessions/${sessionId}`)
 
       expect(response.status).toBe(200)
       expect((data as { sessionId: string }).sessionId).toBe(sessionId)
-
-      // The session should have initial game state
       expect(data).toHaveProperty('phase')
     })
 
     itIfServer('should maintain character data across requests', async () => {
-      // Get session state
       const { data: firstFetch } = await apiRequest(`/sessions/${sessionId}`)
-
-      // Get it again
       const { data: secondFetch } = await apiRequest(`/sessions/${sessionId}`)
 
-      // Session IDs should match
       expect((firstFetch as { sessionId: string }).sessionId).toBe(
         (secondFetch as { sessionId: string }).sessionId,
       )
@@ -120,21 +109,15 @@ describe('Character Creation E2E Tests', () => {
 
       const sessionId = (data as { sessionId: string }).sessionId
 
-      // Get the full session state
       const { response, data: sessionData } = await apiRequest(`/sessions/${sessionId}`)
 
       expect(response.status).toBe(200)
-
-      // Validate expected properties
       expect(sessionData).toHaveProperty('sessionId')
       expect(sessionData).toHaveProperty('phase')
       expect(sessionData).toHaveProperty('party')
       expect(sessionData).toHaveProperty('metadata')
-
-      // Party should be an array
       expect(Array.isArray((sessionData as { party: unknown[] }).party)).toBe(true)
 
-      // Metadata should have required fields
       const metadata = (sessionData as { metadata: { createdAt: number; updatedAt: number } }).metadata
       expect(metadata).toHaveProperty('createdAt')
       expect(metadata).toHaveProperty('updatedAt')
@@ -156,13 +139,11 @@ describe('Character Creation E2E Tests', () => {
     itIfServer('should handle duplicate session creation', async () => {
       const duplicateId = 'duplicate-test-' + Date.now()
 
-      // Create first session
       await apiRequest('/sessions', {
         method: 'POST',
         body: JSON.stringify({ sessionId: duplicateId }),
       })
 
-      // Try to create duplicate
       const { response, data } = await apiRequest('/sessions', {
         method: 'POST',
         body: JSON.stringify({ sessionId: duplicateId }),
@@ -178,7 +159,6 @@ describe('Character Creation E2E Tests', () => {
 
   describe('Character creation workflow', () => {
     itIfServer('should support complete character creation workflow', async () => {
-      // 1. Create a session (simulating starting character creation)
       const { data: createData } = await apiRequest('/sessions', {
         method: 'POST',
         body: JSON.stringify({}),
@@ -187,118 +167,20 @@ describe('Character Creation E2E Tests', () => {
       const sessionId = (createData as { sessionId: string }).sessionId
       expect(sessionId).toBeTruthy()
 
-      // 2. Verify session is accessible
       const { response: getResponse } = await apiRequest(`/sessions/${sessionId}`)
       expect(getResponse.status).toBe(200)
 
-      // 3. List sessions to verify our session is included
       const { data: listData } = await apiRequest('/sessions')
       const sessions = (listData as { sessions: string[] }).sessions
       expect(sessions).toContain(sessionId)
 
-      // 4. Clean up (simulating character deletion)
       const { response: deleteResponse } = await apiRequest(`/sessions/${sessionId}`, {
         method: 'DELETE',
       })
       expect(deleteResponse.status).toBe(200)
 
-      // 5. Verify session is gone
       const { response: notFoundResponse } = await apiRequest(`/sessions/${sessionId}`)
       expect(notFoundResponse.status).toBe(404)
-    })
-  })
-})
-
-/**
- * Character data validation tests
- *
- * These tests verify the character data structure matches
- * the expected format from the backend.
- */
-describe('Character Data Validation', () => {
-  interface Character {
-    id: string
-    name: string
-    race: string
-    class: string
-    background?: string
-    level: number
-    hp: number
-    maxHp: number
-    ac: number
-    stats: {
-      strength: number
-      dexterity: number
-      constitution: number
-      intelligence: number
-      wisdom: number
-      charisma: number
-    }
-    skills?: Record<string, boolean>
-    savingThrows?: Record<string, boolean>
-    gold?: number
-    proficiencyBonus?: number
-    speed?: number
-  }
-
-  describe('Character structure validation', () => {
-    it('should accept valid character structure', () => {
-      const character: Character = {
-        id: 'char-123',
-        name: 'Test Character',
-        race: 'human',
-        class: 'fighter',
-        level: 1,
-        hp: 10,
-        maxHp: 10,
-        ac: 15,
-        stats: {
-          strength: 16,
-          dexterity: 12,
-          constitution: 14,
-          intelligence: 10,
-          wisdom: 10,
-          charisma: 10,
-        },
-        skills: {
-          athletics: true,
-          intimidation: true,
-        },
-        savingThrows: {
-          strength: true,
-          constitution: true,
-        },
-        gold: 125,
-        proficiencyBonus: 2,
-        speed: 30,
-      }
-
-      // Verify all required fields are present
-      expect(character.id).toBeTruthy()
-      expect(character.name).toBeTruthy()
-      expect(character.race).toBeTruthy()
-      expect(character.class).toBeTruthy()
-      expect(character.level).toBeGreaterThan(0)
-      expect(character.hp).toBeGreaterThan(0)
-      expect(character.maxHp).toBeGreaterThan(0)
-      expect(character.ac).toBeGreaterThan(0)
-
-      // Verify stats are valid
-      Object.values(character.stats).forEach((stat) => {
-        expect(stat).toBeGreaterThanOrEqual(1)
-        expect(stat).toBeLessThanOrEqual(20)
-      })
-    })
-
-    it('should calculate ability modifier correctly', () => {
-      const calculateModifier = (score: number): number => Math.floor((score - 10) / 2)
-
-      expect(calculateModifier(10)).toBe(0)
-      expect(calculateModifier(12)).toBe(1)
-      expect(calculateModifier(14)).toBe(2)
-      expect(calculateModifier(16)).toBe(3)
-      expect(calculateModifier(8)).toBe(-1)
-      expect(calculateModifier(20)).toBe(5)
     })
   })
 })

@@ -3,7 +3,7 @@ import { renderHook, cleanup } from '@testing-library/react'
 import { useGameMessages } from '@/hooks/useGameMessages'
 import { useGameStore } from '@/stores/gameStore'
 import { useChatStore } from '@/stores/chatStore'
-import { getWebSocketHandler, resetWebSocketHandler } from '@/test/setup'
+import { getWebSocketHandler, getWebSocketUnsubscribe, resetWebSocketHandler } from '@/test/setup'
 import type { ServerMessage } from '@/types'
 
 // Helper to reset all stores to initial state
@@ -34,18 +34,18 @@ describe('useGameMessages', () => {
       expect(typeof handler).toBe('function')
     })
 
-    it('should return an unsubscribe function', () => {
+    it('should call unsubscribe on unmount', () => {
       const { unmount } = renderHook(() => useGameMessages())
 
-      // Handler should exist while mounted
+      // Handler and unsubscribe should exist while mounted
       expect(getWebSocketHandler()).toBeDefined()
+      const unsubscribe = getWebSocketUnsubscribe()
+      expect(unsubscribe).toBeDefined()
 
-      // After unmount, the cleanup should run
+      // After unmount, the cleanup should call unsubscribe
       unmount()
 
-      // Note: The actual unsubscribe is called, but we can't easily verify
-      // the mock was called without spying. The important thing is that
-      // the useEffect cleanup returns the unsubscribe function.
+      expect(unsubscribe).toHaveBeenCalledOnce()
     })
   })
 
