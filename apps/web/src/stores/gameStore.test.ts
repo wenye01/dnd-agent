@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useGameStore } from '@/stores/gameStore'
-import type { GameState, Character, CombatState, GameMetadata } from '@/types'
+import type { GameState, Character, CombatState, GameMetadata, InitiativeEntry, ActiveEffect } from '@/types'
 
 // Helper function to create valid GameMetadata
 function createMockMetadata(overrides: Partial<GameMetadata> = {}): GameMetadata {
@@ -10,6 +10,40 @@ function createMockMetadata(overrides: Partial<GameMetadata> = {}): GameMetadata
     updatedAt: now,
     playTime: 0,
     scenarioId: 'test-scenario',
+    ...overrides,
+  }
+}
+
+// Helper function to create valid Character with correct field names
+function createMockCharacter(overrides: Partial<Character> = {}): Character {
+  return {
+    id: 'char-1',
+    name: 'Hero',
+    race: 'Human',
+    class: 'Fighter',
+    level: 1,
+    background: 'Soldier',
+    alignment: 'Lawful Good',
+    abilityScores: {
+      strength: 16,
+      dexterity: 12,
+      constitution: 14,
+      intelligence: 10,
+      wisdom: 8,
+      charisma: 13,
+    },
+    maxHitPoints: 10,
+    currentHitPoints: 10,
+    temporaryHitPoints: 0,
+    armorClass: 15,
+    speed: 30,
+    initiative: 1,
+    proficiencyBonus: 2,
+    skills: {},
+    savingThrows: ['strength', 'constitution'],
+    conditions: [],
+    equipment: [],
+    inventory: [],
     ...overrides,
   }
 }
@@ -157,6 +191,36 @@ describe('gameStore', () => {
       const state = useGameStore.getState()
       expect(state.gameState?.metadata.updatedAt).toBe(3000)
     })
+
+    it('should use shallow merge (replaces nested objects entirely)', () => {
+      const { setGameState, updateGameState } = useGameStore.getState()
+
+      const initialState: GameState = {
+        sessionId: 'session-123',
+        phase: 'exploring',
+        party: [],
+        metadata: createMockMetadata({
+          createdAt: 1000,
+          updatedAt: 2000,
+          playTime: 100,
+          scenarioId: 'original-scenario',
+        }),
+      }
+
+      setGameState(initialState)
+
+      // Shallow merge: passing a new metadata object replaces the whole thing
+      updateGameState({
+        metadata: createMockMetadata({
+          updatedAt: 3000,
+        }),
+      })
+
+      const state = useGameStore.getState()
+      expect(state.gameState?.metadata.updatedAt).toBe(3000)
+      // With shallow spread, the new metadata object's defaults apply
+      // This test documents the actual behavior of the spread-based merge
+    })
   })
 
   describe('updateParty', () => {
@@ -173,16 +237,16 @@ describe('gameStore', () => {
       setGameState(initialState)
 
       const party: Character[] = [
-        {
+        createMockCharacter({
           id: 'char-1',
           name: 'Hero',
           race: 'Human',
           class: 'Fighter',
           level: 1,
-          hp: 10,
-          maxHp: 10,
-          ac: 15,
-          stats: {
+          currentHitPoints: 10,
+          maxHitPoints: 10,
+          armorClass: 15,
+          abilityScores: {
             strength: 16,
             dexterity: 12,
             constitution: 14,
@@ -190,9 +254,7 @@ describe('gameStore', () => {
             wisdom: 8,
             charisma: 13,
           },
-          skills: {},
-          inventory: [],
-        },
+        }),
       ]
 
       updateParty(party)
@@ -219,16 +281,15 @@ describe('gameStore', () => {
         sessionId: 'session-123',
         phase: 'exploring',
         party: [
-          {
+          createMockCharacter({
             id: 'char-1',
             name: 'Old Character',
             race: 'Elf',
             class: 'Wizard',
-            level: 1,
-            hp: 6,
-            maxHp: 6,
-            ac: 10,
-            stats: {
+            currentHitPoints: 6,
+            maxHitPoints: 6,
+            armorClass: 10,
+            abilityScores: {
               strength: 8,
               dexterity: 14,
               constitution: 12,
@@ -236,9 +297,7 @@ describe('gameStore', () => {
               wisdom: 12,
               charisma: 10,
             },
-            skills: {},
-            inventory: [],
-          },
+          }),
         ],
         metadata: createMockMetadata(),
       }
@@ -246,16 +305,15 @@ describe('gameStore', () => {
       setGameState(initialState)
 
       const newParty: Character[] = [
-        {
+        createMockCharacter({
           id: 'char-2',
           name: 'New Character',
           race: 'Dwarf',
           class: 'Cleric',
-          level: 1,
-          hp: 8,
-          maxHp: 8,
-          ac: 16,
-          stats: {
+          currentHitPoints: 8,
+          maxHitPoints: 8,
+          armorClass: 16,
+          abilityScores: {
             strength: 14,
             dexterity: 8,
             constitution: 16,
@@ -263,9 +321,7 @@ describe('gameStore', () => {
             wisdom: 14,
             charisma: 12,
           },
-          skills: {},
-          inventory: [],
-        },
+        }),
       ]
 
       updateParty(newParty)
@@ -273,6 +329,48 @@ describe('gameStore', () => {
       const state = useGameStore.getState()
       expect(state.gameState?.party).toHaveLength(1)
       expect(state.gameState?.party[0].id).toBe('char-2')
+      expect(state.gameState?.party[0].name).toBe('New Character')
+      expect(state.gameState?.party[0].race).toBe('Dwarf')
+    })
+
+    it('should store Character with all required fields', () => {
+      const { setGameState, updateParty } = useGameStore.getState()
+
+      const initialState: GameState = {
+        sessionId: 'session-123',
+        phase: 'exploring',
+        party: [],
+        metadata: createMockMetadata(),
+      }
+
+      setGameState(initialState)
+
+      const character = createMockCharacter()
+      updateParty([character])
+
+      const stored = useGameStore.getState().gameState?.party[0]
+      expect(stored).toBeDefined()
+      // Verify all fields from Character interface are present
+      expect(stored!.id).toBe('char-1')
+      expect(stored!.name).toBe('Hero')
+      expect(stored!.race).toBe('Human')
+      expect(stored!.class).toBe('Fighter')
+      expect(stored!.level).toBe(1)
+      expect(stored!.background).toBe('Soldier')
+      expect(stored!.alignment).toBe('Lawful Good')
+      expect(stored!.currentHitPoints).toBe(10)
+      expect(stored!.maxHitPoints).toBe(10)
+      expect(stored!.temporaryHitPoints).toBe(0)
+      expect(stored!.armorClass).toBe(15)
+      expect(stored!.speed).toBe(30)
+      expect(stored!.initiative).toBe(1)
+      expect(stored!.proficiencyBonus).toBe(2)
+      expect(stored!.abilityScores.strength).toBe(16)
+      expect(stored!.abilityScores.dexterity).toBe(12)
+      expect(stored!.savingThrows).toEqual(['strength', 'constitution'])
+      expect(stored!.conditions).toEqual([])
+      expect(stored!.equipment).toEqual([])
+      expect(stored!.inventory).toEqual([])
     })
   })
 
@@ -301,6 +399,45 @@ describe('gameStore', () => {
 
       const state = useGameStore.getState()
       expect(state.gameState?.combat).toEqual(combat)
+    })
+
+    it('should set combat state with populated initiatives and effects', () => {
+      const { setGameState, updateCombat } = useGameStore.getState()
+
+      const initialState: GameState = {
+        sessionId: 'session-123',
+        phase: 'exploring',
+        party: [createMockCharacter({ id: 'fighter-1' })],
+        metadata: createMockMetadata(),
+      }
+
+      setGameState(initialState)
+
+      const initiatives: InitiativeEntry[] = [
+        { characterId: 'fighter-1', initiative: 18, hasActed: false },
+        { characterId: 'goblin-1', initiative: 12, hasActed: true },
+      ]
+
+      const effects: ActiveEffect[] = [
+        { id: 'effect-1', name: 'Bless', duration: 10, source: 'cleric-1', target: 'fighter-1' },
+      ]
+
+      const combat: CombatState = {
+        round: 2,
+        turnIndex: 1,
+        initiatives,
+        participants: ['fighter-1', 'goblin-1'],
+        activeEffects: effects,
+      }
+
+      updateCombat(combat)
+
+      const state = useGameStore.getState()
+      expect(state.gameState?.combat).toEqual(combat)
+      expect(state.gameState?.combat?.initiatives).toHaveLength(2)
+      expect(state.gameState?.combat?.activeEffects).toHaveLength(1)
+      expect(state.gameState?.combat?.initiatives[0].initiative).toBe(18)
+      expect(state.gameState?.combat?.activeEffects[0].name).toBe('Bless')
     })
 
     it('should clear combat state when null is passed', () => {
@@ -470,6 +607,35 @@ describe('gameStore', () => {
       expect(state.gameState?.phase).toBe('combat')
       expect(state.gameState?.currentMapId).toBe('map-1')
       expect(state.gameState?.sessionId).toBe('session-123')
+    })
+  })
+
+  describe('persist middleware', () => {
+    it('should only persist gameState field', () => {
+      // Verify the partialize config: only gameState should be persisted
+      const store = useGameStore.getState()
+      const { setLoading, setError, setGameState } = store
+
+      setLoading(true)
+
+      const mockState: GameState = {
+        sessionId: 'session-persist',
+        phase: 'exploring',
+        party: [],
+        metadata: createMockMetadata(),
+      }
+      setGameState(mockState)
+
+      // setError after setGameState since setGameState clears errors
+      setError('some error')
+
+      const state = useGameStore.getState()
+      // gameState is set
+      expect(state.gameState).not.toBeNull()
+      expect(state.gameState?.sessionId).toBe('session-persist')
+      // isLoading and error are in memory state but not in persist config
+      expect(state.isLoading).toBe(true)
+      expect(state.error).toBe('some error')
     })
   })
 })

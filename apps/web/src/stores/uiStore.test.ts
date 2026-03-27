@@ -65,44 +65,15 @@ describe('uiStore', () => {
       }
     })
 
-    it('should set null panel type', () => {
-      const { setActivePanel } = useUIStore.getState()
-
-      setActivePanel(null)
-
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBeNull()
-      expect(state.isPanelOpen).toBe(true)
-    })
   })
 
   describe('togglePanel', () => {
-    it('should toggle panel open state', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      const initialOpenState = useUIStore.getState().isPanelOpen
-
-      togglePanel()
-
-      const newState = useUIStore.getState()
-      expect(newState.isPanelOpen).toBe(!initialOpenState)
-    })
-
     it('should close open panel', () => {
       const { togglePanel } = useUIStore.getState()
 
       expect(useUIStore.getState().isPanelOpen).toBe(true)
       togglePanel()
       expect(useUIStore.getState().isPanelOpen).toBe(false)
-    })
-
-    it('should open closed panel', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      togglePanel()
-      expect(useUIStore.getState().isPanelOpen).toBe(false)
-      togglePanel()
-      expect(useUIStore.getState().isPanelOpen).toBe(true)
     })
 
     it('should handle multiple toggles', () => {

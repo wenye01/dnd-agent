@@ -98,4 +98,28 @@ describe('Character Creation E2E Tests', () => {
       await apiRequest(`/sessions/${characterName}`, { method: 'DELETE' })
     })
   })
+
+  describe('Character attributes in session', () => {
+    itIfServer('should create session and verify initial empty party state', async () => {
+      // Create a session and verify the party starts empty
+      const { data: createData } = await apiRequest<SessionResponse>('/sessions', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+
+      expect(createData).not.toBeNull()
+      const sessionId = createData!.sessionId
+
+      // Retrieve the full game state
+      const { data: stateData } = await apiRequest<GameStateResponse>(`/sessions/${sessionId}`)
+
+      expect(stateData).not.toBeNull()
+      expect(stateData!.sessionId).toBe(sessionId)
+      expect(Array.isArray(stateData!.party)).toBe(true)
+      expect(stateData!.party).toHaveLength(0)
+
+      // Clean up
+      await apiRequest(`/sessions/${sessionId}`, { method: 'DELETE' })
+    })
+  })
 })
