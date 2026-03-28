@@ -304,13 +304,31 @@ describe('WebSocketClient', () => {
 
   describe('send (queueing)', () => {
     it('should queue messages when not connected', () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
       const message = { type: 'user_input' as const, payload: { text: 'Hello' } }
-      expect(() => client.send(message)).not.toThrow()
+
+      client.send(message)
+
+      // Verify message was actually queued (not silently dropped)
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Message queued (not connected):',
+        message,
+      )
+      consoleSpy.mockRestore()
     })
 
     it('should queue sendMessage when not connected', () => {
-      expect(() => client.sendMessage('Hello world')).not.toThrow()
-      expect(() => client.sendMessage('Hello', 'char-1')).not.toThrow()
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+      client.sendMessage('Hello world')
+      client.sendMessage('Hello', 'char-1')
+
+      // Both messages should be queued (logged as queued)
+      const queuedCalls = consoleSpy.mock.calls.filter(
+        (call) => call[0] === 'Message queued (not connected):',
+      )
+      expect(queuedCalls).toHaveLength(2)
+      consoleSpy.mockRestore()
     })
 
     it('should reject empty and whitespace-only messages', () => {

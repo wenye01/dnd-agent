@@ -234,6 +234,9 @@ describe('API Integration Tests', () => {
   })
 
   describe('Request Validation', () => {
+    // These tests use raw fetch (not apiRequest helper) because they test
+    // edge cases where the Content-Type or body format is intentionally wrong,
+    // which the apiRequest helper would normalize away.
     itIfServer('should handle malformed JSON body gracefully', async () => {
       const response = await fetch(`${API_BASE}/api/sessions`, {
         method: 'POST',

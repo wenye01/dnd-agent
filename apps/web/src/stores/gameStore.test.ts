@@ -42,6 +42,7 @@ function createMockCharacter(overrides: Partial<Character> = {}): Character {
     skills: {},
     savingThrows: ['strength', 'constitution'],
     conditions: [],
+    deathSaves: { successes: 0, failures: 0 },
     equipment: [],
     inventory: [],
     ...overrides,
@@ -218,8 +219,11 @@ describe('gameStore', () => {
 
       const state = useGameStore.getState()
       expect(state.gameState?.metadata.updatedAt).toBe(3000)
-      // With shallow spread, the new metadata object's defaults apply
-      // This test documents the actual behavior of the spread-based merge
+      // Original createdAt (1000) and scenarioId ('original-scenario') are LOST
+      // because spread ({ ...state, ...updates }) replaces metadata entirely
+      expect(state.gameState?.metadata.createdAt).not.toBe(1000)
+      expect(state.gameState?.metadata.scenarioId).toBe('test-scenario') // default from createMockMetadata
+      // This documents the shallow merge gotcha: nested objects must be fully specified
     })
   })
 
@@ -591,7 +595,10 @@ describe('gameStore', () => {
 
   describe('persist middleware', () => {
     it('should only persist gameState field', () => {
-      // Verify partialize: the persisted snapshot should contain only gameState
+      // Use getOptions() to access the actual partialize function from Zustand persist config
+      const options = useGameStore.persist.getOptions()
+      expect(options.partialize).toBeDefined()
+
       const { setLoading, setError, setGameState } = useGameStore.getState()
 
       setLoading(true)
@@ -605,14 +612,15 @@ describe('gameStore', () => {
       }
       setGameState(mockState)
 
-      // Read what Zustand persist would serialize via partialize
+      // Call the actual partialize to see what Zustand would serialize
       const fullState = useGameStore.getState()
-      const persisted = { gameState: fullState.gameState }
+      const persisted = options.partialize!(fullState)
 
       // isLoading and error exist in memory but should NOT be in persisted snapshot
+      expect(persisted).toHaveProperty('gameState')
       expect(persisted).not.toHaveProperty('isLoading')
       expect(persisted).not.toHaveProperty('error')
-      expect(persisted.gameState?.sessionId).toBe('session-persist')
+      expect((persisted as { gameState: GameState | null }).gameState?.sessionId).toBe('session-persist')
     })
   })
 })
