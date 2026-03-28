@@ -412,28 +412,3 @@ func TestNewRand(t *testing.T) {
 		}
 	})
 }
-
-func TestCheckResult(t *testing.T) {
-	t.Run("check result structure", func(t *testing.T) {
-		result := &dice.CheckResult{
-			Success:      true,
-			Roll:         15,
-			Modifier:     3,
-			Total:        18,
-			DC:           15,
-			Advantage:    false,
-			Disadvantage: false,
-			Crit:         false,
-		}
-
-		if !result.Success {
-			t.Errorf("Expected success")
-		}
-		if result.Roll != 15 {
-			t.Errorf("Expected roll 15")
-		}
-		if result.Total != 18 {
-			t.Errorf("Expected total 18")
-		}
-	})
-}

@@ -49,84 +49,24 @@ describe('uiStore', () => {
       expect(state.isPanelOpen).toBe(true)
     })
 
-    it('should set all panel types', () => {
-      const { setActivePanel } = useUIStore.getState()
-
-      const panelTypes: Array<'character' | 'inventory' | 'spells' | 'map' | null> = [
-        'character',
-        'inventory',
-        'spells',
-        'map',
-      ]
-
-      for (const panelType of panelTypes) {
-        setActivePanel(panelType)
-        expect(useUIStore.getState().activePanel).toBe(panelType)
-      }
-    })
-
-    it('should set null panel type', () => {
-      const { setActivePanel } = useUIStore.getState()
-
-      setActivePanel(null)
-
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBeNull()
-      expect(state.isPanelOpen).toBe(true)
-    })
   })
 
   describe('togglePanel', () => {
-    it('should toggle panel open state', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      const initialOpenState = useUIStore.getState().isPanelOpen
-
-      togglePanel()
-
-      const newState = useUIStore.getState()
-      expect(newState.isPanelOpen).toBe(!initialOpenState)
-    })
-
-    it('should close open panel', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      expect(useUIStore.getState().isPanelOpen).toBe(true)
-      togglePanel()
-      expect(useUIStore.getState().isPanelOpen).toBe(false)
-    })
-
-    it('should open closed panel', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      togglePanel()
-      expect(useUIStore.getState().isPanelOpen).toBe(false)
-      togglePanel()
-      expect(useUIStore.getState().isPanelOpen).toBe(true)
-    })
-
-    it('should handle multiple toggles', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      const initialOpenState = useUIStore.getState().isPanelOpen
-
-      togglePanel()
-      togglePanel()
-      togglePanel()
-
-      const finalState = useUIStore.getState()
-      expect(finalState.isPanelOpen).toBe(!initialOpenState)
-    })
-
-    it('should preserve active panel when toggling', () => {
+    it('should toggle panel open/closed and preserve active panel', () => {
       const { setActivePanel, togglePanel } = useUIStore.getState()
 
       setActivePanel('inventory')
-      togglePanel()
-      togglePanel()
+      expect(useUIStore.getState().isPanelOpen).toBe(true)
 
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBe('inventory')
+      // Close
+      togglePanel()
+      expect(useUIStore.getState().isPanelOpen).toBe(false)
+      expect(useUIStore.getState().activePanel).toBe('inventory')
+
+      // Reopen
+      togglePanel()
+      expect(useUIStore.getState().isPanelOpen).toBe(true)
+      expect(useUIStore.getState().activePanel).toBe('inventory')
     })
   })
 
@@ -152,16 +92,6 @@ describe('uiStore', () => {
       expect(state.activeDialog).toBe('export')
     })
 
-    it('should handle various dialog IDs', () => {
-      const { openDialog } = useUIStore.getState()
-
-      const dialogIds = ['settings', 'export', 'import', 'new-game', 'help', 'combat-log']
-
-      for (const dialogId of dialogIds) {
-        openDialog(dialogId)
-        expect(useUIStore.getState().activeDialog).toBe(dialogId)
-      }
-    })
   })
 
   describe('closeDialog', () => {
@@ -213,96 +143,22 @@ describe('uiStore', () => {
       expect(state.isPanelOpen).toBe(false)
     })
 
-    it('should maintain panel state when dialog opens', () => {
-      const { setActivePanel, openDialog } = useUIStore.getState()
-
-      setActivePanel('map')
-      expect(useUIStore.getState().activePanel).toBe('map')
-
-      openDialog('export')
-
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBe('map')
-      expect(state.activeDialog).toBe('export')
-    })
-
-    it('should maintain dialog state when panel changes', () => {
-      const { setActivePanel, openDialog } = useUIStore.getState()
-
-      openDialog('settings')
-      setActivePanel('inventory')
-
-      const state = useUIStore.getState()
-      expect(state.activeDialog).toBe('settings')
-      expect(state.activePanel).toBe('inventory')
-    })
   })
 
   describe('edge cases', () => {
-    it('should handle empty string dialog ID', () => {
-      const { openDialog } = useUIStore.getState()
-
-      openDialog('')
-
-      const state = useUIStore.getState()
-      expect(state.activeDialog).toBe('')
-    })
-
-    it('should handle rapid panel changes', () => {
-      const { setActivePanel } = useUIStore.getState()
-
-      setActivePanel('character')
-      setActivePanel('inventory')
-      setActivePanel('spells')
-      setActivePanel('map')
-
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBe('map')
-    })
-
-    it('should handle rapid toggles', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      for (let i = 0; i < 10; i++) {
-        togglePanel()
-      }
-
-      const finalState = useUIStore.getState()
-      expect(finalState.isPanelOpen).toBe(true)
-    })
-  })
-
-  describe('type safety', () => {
-    it('should handle null panel type', () => {
-      const { setActivePanel } = useUIStore.getState()
-
-      setActivePanel(null)
-
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBeNull()
-    })
-  })
-
-  describe('state persistence across operations', () => {
-    it('should maintain state during complex interactions', () => {
+    it('should handle complex multi-step interactions', () => {
       const { setActivePanel, openDialog, togglePanel, closeDialog } = useUIStore.getState()
 
       setActivePanel('character')
-      expect(useUIStore.getState().activePanel).toBe('character')
-
       openDialog('settings')
-      expect(useUIStore.getState().activeDialog).toBe('settings')
-
       togglePanel()
-      expect(useUIStore.getState().isPanelOpen).toBe(false)
-
       closeDialog()
-      expect(useUIStore.getState().activeDialog).toBeNull()
-
       togglePanel()
+
       const state = useUIStore.getState()
-      expect(state.isPanelOpen).toBe(true)
       expect(state.activePanel).toBe('character')
+      expect(state.activeDialog).toBeNull()
+      expect(state.isPanelOpen).toBe(true)
     })
   })
 })

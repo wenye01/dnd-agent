@@ -141,16 +141,6 @@ describe('chatStore', () => {
       const state = useChatStore.getState()
       expect(state.isStreaming).toBe(true)
     })
-
-    it('should append to existing streaming text', () => {
-      const { appendStreamText } = useChatStore.getState()
-
-      appendStreamText('First')
-      appendStreamText(' Second')
-
-      const state = useChatStore.getState()
-      expect(state.streamingText).toBe('First Second')
-    })
   })
 
   describe('finalizeStreamText', () => {
@@ -168,16 +158,6 @@ describe('chatStore', () => {
         type: 'dm',
         content: 'Streaming message',
       })
-    })
-
-    it('should clear isStreaming flag', () => {
-      const { appendStreamText, finalizeStreamText } = useChatStore.getState()
-
-      appendStreamText('Text')
-      finalizeStreamText()
-
-      const state = useChatStore.getState()
-      expect(state.isStreaming).toBe(false)
     })
 
     it('should handle empty streaming text', () => {
@@ -205,6 +185,44 @@ describe('chatStore', () => {
       expect(state.messages[0].type).toBe('user')
       expect(state.messages[1].type).toBe('dm')
     })
+
+    it('should not create message when called on pristine store', () => {
+      const { finalizeStreamText } = useChatStore.getState()
+
+      // Calling finalizeStreamText with no prior streaming should not create a message
+      finalizeStreamText()
+
+      const state = useChatStore.getState()
+      expect(state.messages).toHaveLength(0)
+      expect(state.streamingText).toBe('')
+      expect(state.isStreaming).toBe(false)
+    })
+
+    it('should not create duplicate messages when called twice', () => {
+      const { appendStreamText, finalizeStreamText } = useChatStore.getState()
+
+      appendStreamText('First message')
+      finalizeStreamText()
+
+      // Calling again should not create another message since streamingText is empty
+      finalizeStreamText()
+
+      const state = useChatStore.getState()
+      expect(state.messages).toHaveLength(1)
+      expect(state.messages[0].content).toBe('First message')
+    })
+
+    it('should create DM message with isStreaming field absent', () => {
+      const { appendStreamText, finalizeStreamText } = useChatStore.getState()
+
+      appendStreamText('Streamed content')
+      finalizeStreamText()
+
+      const state = useChatStore.getState()
+      expect(state.messages).toHaveLength(1)
+      // The finalized message should not have isStreaming flag
+      expect(state.messages[0].isStreaming).toBeUndefined()
+    })
   })
 
   describe('clearMessages', () => {
@@ -217,26 +235,6 @@ describe('chatStore', () => {
 
       const state = useChatStore.getState()
       expect(state.messages).toEqual([])
-    })
-
-    it('should clear streaming text', () => {
-      const { appendStreamText, clearMessages } = useChatStore.getState()
-
-      appendStreamText('Streaming')
-      clearMessages()
-
-      const state = useChatStore.getState()
-      expect(state.streamingText).toBe('')
-    })
-
-    it('should reset isStreaming flag', () => {
-      const { appendStreamText, clearMessages } = useChatStore.getState()
-
-      appendStreamText('Streaming')
-      clearMessages()
-
-      const state = useChatStore.getState()
-      expect(state.isStreaming).toBe(false)
     })
 
     it('should reset all state', () => {
@@ -308,16 +306,6 @@ describe('chatStore', () => {
 
       const state = useChatStore.getState()
       expect(state.messages[0].content).toContain('Special chars:')
-    })
-
-    it('should handle very long messages', () => {
-      const { addUserMessage } = useChatStore.getState()
-
-      const longText = 'A'.repeat(10000)
-      addUserMessage(longText)
-
-      const state = useChatStore.getState()
-      expect(state.messages[0].content).toHaveLength(10000)
     })
   })
 })

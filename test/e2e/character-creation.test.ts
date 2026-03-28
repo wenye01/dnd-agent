@@ -98,4 +98,61 @@ describe('Character Creation E2E Tests', () => {
       await apiRequest(`/sessions/${characterName}`, { method: 'DELETE' })
     })
   })
+
+  describe('Session state verification', () => {
+    itIfServer('should create session and verify initial empty party state', async () => {
+      // Create a session and verify the party starts empty
+      const { data: createData } = await apiRequest<SessionResponse>('/sessions', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+
+      expect(createData).not.toBeNull()
+      const sessionId = createData!.sessionId
+
+      // Retrieve the full game state
+      const { data: stateData } = await apiRequest<GameStateResponse>(`/sessions/${sessionId}`)
+
+      expect(stateData).not.toBeNull()
+      expect(stateData!.sessionId).toBe(sessionId)
+
+      // Verify full game state structure
+      expect(stateData).toHaveProperty('phase')
+      expect(typeof stateData!.phase).toBe('string')
+      expect(stateData).toHaveProperty('party')
+      expect(Array.isArray(stateData!.party)).toBe(true)
+      expect(stateData!.party).toHaveLength(0)
+      expect(stateData).toHaveProperty('metadata')
+      expect(stateData!.metadata).toHaveProperty('createdAt')
+      expect(stateData!.metadata).toHaveProperty('updatedAt')
+      expect(typeof stateData!.metadata.createdAt).toBe('number')
+      expect(typeof stateData!.metadata.updatedAt).toBe('number')
+
+      // Clean up
+      await apiRequest(`/sessions/${sessionId}`, { method: 'DELETE' })
+    })
+
+    itIfServer('should verify game state is consistent across multiple fetches', async () => {
+      const { data: createData } = await apiRequest<SessionResponse>('/sessions', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+
+      expect(createData).not.toBeNull()
+      const sessionId = createData!.sessionId
+
+      // Fetch state twice and verify consistency
+      const { data: first } = await apiRequest<GameStateResponse>(`/sessions/${sessionId}`)
+      const { data: second } = await apiRequest<GameStateResponse>(`/sessions/${sessionId}`)
+
+      expect(first).not.toBeNull()
+      expect(second).not.toBeNull()
+      expect(first!.sessionId).toBe(second!.sessionId)
+      expect(first!.phase).toBe(second!.phase)
+      expect(first!.party).toHaveLength(second!.party.length)
+
+      // Clean up
+      await apiRequest(`/sessions/${sessionId}`, { method: 'DELETE' })
+    })
+  })
 })

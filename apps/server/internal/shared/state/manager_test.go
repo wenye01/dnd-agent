@@ -327,6 +327,31 @@ func TestManager_Concurrency(t *testing.T) {
 	})
 }
 
+func TestStateError(t *testing.T) {
+	t.Run("Error() returns message field", func(t *testing.T) {
+		err := &state.StateError{
+			Code:    "TEST_ERROR",
+			Message: "something went wrong",
+		}
+
+		if err.Error() != "something went wrong" {
+			t.Errorf("Error() = %q, want %q", err.Error(), "something went wrong")
+		}
+		if err.Code != "TEST_ERROR" {
+			t.Errorf("Code = %q, want %q", err.Code, "TEST_ERROR")
+		}
+	})
+
+	t.Run("ErrSessionNotFound sentinel values", func(t *testing.T) {
+		if state.ErrSessionNotFound.Code != "SESSION_NOT_FOUND" {
+			t.Errorf("Code = %q, want %q", state.ErrSessionNotFound.Code, "SESSION_NOT_FOUND")
+		}
+		if state.ErrSessionNotFound.Message != "session not found" {
+			t.Errorf("Message = %q, want %q", state.ErrSessionNotFound.Message, "session not found")
+		}
+	})
+}
+
 func TestManager_ThreadSafety(t *testing.T) {
 	t.Run("safe concurrent access", func(t *testing.T) {
 		mgr := state.NewManager()

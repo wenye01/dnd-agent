@@ -232,4 +232,35 @@ describe('API Integration Tests', () => {
       expect(data!.error).toHaveProperty('message')
     })
   })
+
+  describe('Request Validation', () => {
+    // These tests use raw fetch (not apiRequest helper) because they test
+    // edge cases where the Content-Type or body format is intentionally wrong,
+    // which the apiRequest helper would normalize away.
+    itIfServer('should handle malformed JSON body gracefully', async () => {
+      const response = await fetch(`${API_BASE}/api/sessions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: 'not-valid-json{',
+      })
+
+      // Server should not crash; it either ignores the body or returns 400
+      expect(response.status).toBeLessThan(500)
+    })
+
+    itIfServer('should handle wrong content type', async () => {
+      const response = await fetch(`${API_BASE}/api/sessions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+        body: 'this is plain text',
+      })
+
+      // Server should not crash; it should return a valid response
+      expect(response.status).toBeLessThan(500)
+    })
+  })
 })

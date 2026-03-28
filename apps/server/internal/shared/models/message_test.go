@@ -407,3 +407,142 @@ func TestClientMessage_PayloadRaw(t *testing.T) {
 		}
 	})
 }
+
+func TestMessageJSONSerialization_TypedPayload(t *testing.T) {
+	t.Run("server message with DiceResult payload round-trips", func(t *testing.T) {
+		msg := &ServerMessage{
+			Type: MsgTypeDiceResult,
+			Payload: &DiceResult{
+				Formula:  "2d6+3",
+				Dice:     []int{4, 5},
+				Modifier: 3,
+				Total:    12,
+			},
+			Timestamp: 1234567890,
+		}
+
+		data, err := json.Marshal(msg)
+		if err != nil {
+			t.Fatalf("Marshal failed: %v", err)
+		}
+
+		var decoded ServerMessage
+		if err := json.Unmarshal(data, &decoded); err != nil {
+			t.Fatalf("Unmarshal failed: %v", err)
+		}
+
+		if decoded.Type != MsgTypeDiceResult {
+			t.Errorf("Type = %s, want %s", decoded.Type, MsgTypeDiceResult)
+		}
+
+		// Verify the payload serialized the DiceResult fields correctly
+		payloadBytes, _ := json.Marshal(decoded.Payload)
+		var result DiceResult
+		if err := json.Unmarshal(payloadBytes, &result); err != nil {
+			t.Fatalf("Payload unmarshal to DiceResult failed: %v", err)
+		}
+
+		if result.Formula != "2d6+3" {
+			t.Errorf("Formula = %s, want 2d6+3", result.Formula)
+		}
+		if len(result.Dice) != 2 || result.Dice[0] != 4 || result.Dice[1] != 5 {
+			t.Errorf("Dice = %v, want [4 5]", result.Dice)
+		}
+		if result.Modifier != 3 {
+			t.Errorf("Modifier = %d, want 3", result.Modifier)
+		}
+		if result.Total != 12 {
+			t.Errorf("Total = %d, want 12", result.Total)
+		}
+	})
+
+	t.Run("server message with CheckResult payload round-trips", func(t *testing.T) {
+		msg := &ServerMessage{
+			Type: MsgTypeCombatEvent,
+			Payload: &CheckResult{
+				Success:      true,
+				Roll:         18,
+				Modifier:     5,
+				Total:        23,
+				DC:           15,
+				Advantage:    true,
+				Disadvantage: false,
+				Crit:         false,
+			},
+			RequestID: "req-combat-1",
+			Timestamp: 9999999,
+		}
+
+		data, err := json.Marshal(msg)
+		if err != nil {
+			t.Fatalf("Marshal failed: %v", err)
+		}
+
+		var decoded ServerMessage
+		if err := json.Unmarshal(data, &decoded); err != nil {
+			t.Fatalf("Unmarshal failed: %v", err)
+		}
+
+		if decoded.Type != MsgTypeCombatEvent {
+			t.Errorf("Type = %s, want %s", decoded.Type, MsgTypeCombatEvent)
+		}
+		if decoded.RequestID != "req-combat-1" {
+			t.Errorf("RequestID = %s, want req-combat-1", decoded.RequestID)
+		}
+
+		payloadBytes, _ := json.Marshal(decoded.Payload)
+		var result CheckResult
+		if err := json.Unmarshal(payloadBytes, &result); err != nil {
+			t.Fatalf("Payload unmarshal to CheckResult failed: %v", err)
+		}
+
+		if !result.Success {
+			t.Error("Success should be true")
+		}
+		if result.Roll != 18 {
+			t.Errorf("Roll = %d, want 18", result.Roll)
+		}
+		if result.Total != 23 {
+			t.Errorf("Total = %d, want 23", result.Total)
+		}
+		if !result.Advantage {
+			t.Error("Advantage should be true")
+		}
+	})
+
+	t.Run("client message with typed payload round-trips", func(t *testing.T) {
+		msg := &ClientMessage{
+			Type:      MsgTypeCombatAction,
+			Payload:   json.RawMessage(`{"targetId":"goblin-1","action":"attack","weapon":"longsword"}`),
+			RequestID: "req-player-1",
+		}
+
+		data, err := json.Marshal(msg)
+		if err != nil {
+			t.Fatalf("Marshal failed: %v", err)
+		}
+
+		var decoded ClientMessage
+		if err := json.Unmarshal(data, &decoded); err != nil {
+			t.Fatalf("Unmarshal failed: %v", err)
+		}
+
+		if decoded.Type != MsgTypeCombatAction {
+			t.Errorf("Type = %s, want %s", decoded.Type, MsgTypeCombatAction)
+		}
+		if decoded.RequestID != "req-player-1" {
+			t.Errorf("RequestID = %s, want req-player-1", decoded.RequestID)
+		}
+
+		var payload map[string]interface{}
+		if err := json.Unmarshal(decoded.Payload, &payload); err != nil {
+			t.Fatalf("Payload unmarshal failed: %v", err)
+		}
+		if payload["targetId"] != "goblin-1" {
+			t.Errorf("targetId = %v, want goblin-1", payload["targetId"])
+		}
+		if payload["action"] != "attack" {
+			t.Errorf("action = %v, want attack", payload["action"])
+		}
+	})
+}
