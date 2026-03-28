@@ -33,6 +33,33 @@ func RegisterRoutes(router *gin.Engine, sm StateManager, p Persistence, logger *
 	}
 }
 
+// RegisterRoutesWithCharacters registers all REST API routes including character management.
+// The CharacterStateManager parameter provides access to game state for character operations.
+func RegisterRoutesWithCharacters(router *gin.Engine, sm CharacterStateManager, p Persistence, logger *zerolog.Logger) {
+	handler := NewHandler(sm, p, logger)
+
+	api := router.Group("/api")
+	{
+		// Health check
+		api.GET("/health", handler.handleHealth)
+
+		// Session management
+		sessions := api.Group("/sessions")
+		{
+			sessions.POST("", handler.createSession)
+			sessions.GET("/:id", handler.getSession)
+			sessions.DELETE("/:id", handler.deleteSession)
+			sessions.GET("", handler.listSessions)
+		}
+
+		// Character management
+		RegisterCharacterRoutes(api, sm, handler)
+
+		// Configuration
+		api.GET("/config", handler.getConfig)
+	}
+}
+
 // handleHealth responds to health check requests.
 func (h *Handler) handleHealth(c *gin.Context) {
 	h.success(c, gin.H{

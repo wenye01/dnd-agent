@@ -120,6 +120,13 @@ export function useGameMessages() {
         // Map updates would be handled separately
         console.log('Map update received:', data)
         break
+      case 'notification':
+        // Server notifications (e.g. history cleared)
+        if (typeof data === 'object' && data !== null && 'status' in data) {
+          const status = (data as { status: string }).status
+          addSystemMessage(`Server: ${status}`)
+        }
+        break
       default:
         console.warn('Unknown state type:', stateType)
     }
@@ -187,6 +194,24 @@ export function useGameMessages() {
         break
       case 'turn_end':
         eventText = `Turn ends for ${characterId ?? 'unknown'}.`
+        break
+      case 'attack':
+        eventText = `Attack action${payload.target ? ` targeting ${payload.target}` : ''}.`
+        break
+      case 'spell':
+        eventText = `Cast spell${payload.target ? ` targeting ${payload.target}` : ''}.`
+        break
+      case 'item':
+        eventText = 'Use item action.'
+        break
+      case 'move':
+        eventText = 'Move action.'
+        break
+      case 'dodge':
+        eventText = 'Dodge action.'
+        break
+      case 'disengage':
+        eventText = 'Disengage action.'
         break
       default:
         eventText = `Combat event: ${eventType}`

@@ -200,8 +200,13 @@ func (h *Hub) handleManagement(client *Client, msg models.ClientMessage) {
 	case "clear_history":
 		h.sessionMgr.ClearMessages(client.SessionID)
 		client.SendMessage(&models.ServerMessage{
-			Type:      models.MsgTypeStateUpdate,
-			Payload:   map[string]string{"status": "history_cleared"},
+			Type: models.MsgTypeStateUpdate,
+			Payload: map[string]interface{}{
+				"stateType": "notification",
+				"data": map[string]string{
+					"status": "history_cleared",
+				},
+			},
 			Timestamp: getCurrentTimestamp(),
 		})
 
@@ -228,8 +233,13 @@ func (h *Hub) handleMapAction(client *Client, msg models.ClientMessage) {
 	})
 
 	client.SendMessage(&models.ServerMessage{
-		Type:      models.MsgTypeStateUpdate,
-		Payload:   map[string]string{"action": payload.Action},
+		Type: models.MsgTypeStateUpdate,
+		Payload: map[string]interface{}{
+			"stateType": "map",
+			"data": map[string]string{
+				"action": payload.Action,
+			},
+		},
 		Timestamp: getCurrentTimestamp(),
 	})
 }
@@ -247,8 +257,11 @@ func (h *Hub) handleCombatAction(client *Client, msg models.ClientMessage) {
 
 	// Handle combat actions
 	client.SendMessage(&models.ServerMessage{
-		Type:      models.MsgTypeCombatEvent,
-		Payload:   map[string]string{"action": payload.Action},
+		Type: models.MsgTypeCombatEvent,
+		Payload: map[string]interface{}{
+			"eventType": payload.Action,
+			"target":    payload.Target,
+		},
 		Timestamp: getCurrentTimestamp(),
 	})
 }

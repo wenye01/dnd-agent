@@ -133,8 +133,11 @@ func (h *Hub) SendToSession(sessionID string, message *models.ServerMessage) {
 // SendError sends an error message to a client.
 func (h *Hub) SendError(client *Client, errMsg string) {
 	message := &models.ServerMessage{
-		Type:      models.MsgTypeError,
-		Payload:   map[string]string{"error": errMsg},
+		Type: models.MsgTypeError,
+		Payload: map[string]string{
+			"code":    "SERVER_ERROR",
+			"message": errMsg,
+		},
 		Timestamp: time.Now().Unix(),
 	}
 	client.SendMessage(message)

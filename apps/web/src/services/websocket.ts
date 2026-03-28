@@ -25,7 +25,7 @@ export type ConnectionHandler = (connected: boolean) => void
 
 // State update payload type (from backend spec)
 export interface StateUpdatePayload {
-  stateType: 'game' | 'party' | 'combat' | 'map'
+  stateType: 'game' | 'party' | 'combat' | 'map' | 'notification'
   data: unknown
 }
 
@@ -270,7 +270,7 @@ export function isStateUpdatePayload(payload: unknown): payload is StateUpdatePa
   }
 
   const { stateType } = payload as { stateType: unknown }
-  const VALID_STATE_TYPES = ['game', 'party', 'combat', 'map'] as const
+  const VALID_STATE_TYPES = ['game', 'party', 'combat', 'map', 'notification'] as const
 
   return (
     typeof stateType === 'string' &&
@@ -335,10 +335,11 @@ export function isErrorPayload(payload: unknown): payload is ErrorPayload {
 
 // Combat event payload type (from backend spec)
 export interface CombatEventPayload {
-  eventType: 'turn_start' | 'turn_end' | 'round_start' | 'round_end' | 'combat_start' | 'combat_end'
+  eventType: 'turn_start' | 'turn_end' | 'round_start' | 'round_end' | 'combat_start' | 'combat_end' | 'attack' | 'spell' | 'item' | 'move' | 'dodge' | 'disengage'
   characterId?: string
   round?: number
   data?: unknown
+  target?: string
 }
 
 export function isCombatEventPayload(payload: unknown): payload is CombatEventPayload {
@@ -351,7 +352,7 @@ export function isCombatEventPayload(payload: unknown): payload is CombatEventPa
   }
 
   const { eventType } = payload as { eventType: unknown }
-  const validEventTypes = ['turn_start', 'turn_end', 'round_start', 'round_end', 'combat_start', 'combat_end']
+  const validEventTypes = ['turn_start', 'turn_end', 'round_start', 'round_end', 'combat_start', 'combat_end', 'attack', 'spell', 'item', 'move', 'dodge', 'disengage']
 
   return (
     typeof eventType === 'string' &&
