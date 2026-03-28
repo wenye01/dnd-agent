@@ -198,6 +198,67 @@ describe('useGameMessages', () => {
 
       expect(useGameStore.getState().gameState!.combat).toBeNull()
     })
+
+    it('should handle notification state update with status field', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({
+        type: 'state_update',
+        payload: { stateType: 'notification', data: { status: 'history_cleared' } },
+        timestamp: Date.now(),
+      })
+
+      const messages = useChatStore.getState().messages
+      expect(messages).toHaveLength(1)
+      expect(messages[0].type).toBe('system')
+      expect(messages[0].content).toContain('Server:')
+      expect(messages[0].content).toContain('history_cleared')
+    })
+
+    it('should handle notification state update with object data missing status', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({
+        type: 'state_update',
+        payload: { stateType: 'notification', data: { other: 'field' } },
+        timestamp: Date.now(),
+      })
+
+      // Notification without status field should not add a system message
+      const messages = useChatStore.getState().messages
+      expect(messages).toHaveLength(0)
+    })
+
+    it('should handle notification state update with non-object data', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({
+        type: 'state_update',
+        payload: { stateType: 'notification', data: 'string-data' },
+        timestamp: Date.now(),
+      })
+
+      // Notification with non-object data should not add a system message
+      const messages = useChatStore.getState().messages
+      expect(messages).toHaveLength(0)
+    })
+
+    it('should handle notification state update with null data', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({
+        type: 'state_update',
+        payload: { stateType: 'notification', data: null },
+        timestamp: Date.now(),
+      })
+
+      const messages = useChatStore.getState().messages
+      expect(messages).toHaveLength(0)
+    })
   })
 
   describe('dice result message handling', () => {
@@ -353,6 +414,75 @@ describe('useGameMessages', () => {
       handler({ type: 'combat_event', payload: { eventType: 'turn_end', characterId: 'char-2' }, timestamp: Date.now() })
 
       expect(useChatStore.getState().messages[0].content).toContain('char-2')
+    })
+
+    it('should handle attack event with target', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({ type: 'combat_event', payload: { eventType: 'attack', target: 'goblin-1' }, timestamp: Date.now() })
+
+      const content = useChatStore.getState().messages[0].content
+      expect(content).toContain('Attack action')
+      expect(content).toContain('goblin-1')
+    })
+
+    it('should handle attack event without target', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({ type: 'combat_event', payload: { eventType: 'attack' }, timestamp: Date.now() })
+
+      const content = useChatStore.getState().messages[0].content
+      expect(content).toContain('Attack action')
+      expect(content).not.toContain('targeting')
+    })
+
+    it('should handle spell event with target', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({ type: 'combat_event', payload: { eventType: 'spell', target: 'dragon' }, timestamp: Date.now() })
+
+      const content = useChatStore.getState().messages[0].content
+      expect(content).toContain('Cast spell')
+      expect(content).toContain('dragon')
+    })
+
+    it('should handle item event', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({ type: 'combat_event', payload: { eventType: 'item' }, timestamp: Date.now() })
+
+      expect(useChatStore.getState().messages[0].content).toContain('Use item action')
+    })
+
+    it('should handle move event', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({ type: 'combat_event', payload: { eventType: 'move' }, timestamp: Date.now() })
+
+      expect(useChatStore.getState().messages[0].content).toContain('Move action')
+    })
+
+    it('should handle dodge event', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({ type: 'combat_event', payload: { eventType: 'dodge' }, timestamp: Date.now() })
+
+      expect(useChatStore.getState().messages[0].content).toContain('Dodge action')
+    })
+
+    it('should handle disengage event', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({ type: 'combat_event', payload: { eventType: 'disengage' }, timestamp: Date.now() })
+
+      expect(useChatStore.getState().messages[0].content).toContain('Disengage action')
     })
   })
 
