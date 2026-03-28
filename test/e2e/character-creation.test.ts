@@ -99,7 +99,7 @@ describe('Character Creation E2E Tests', () => {
     })
   })
 
-  describe('Character attributes in session', () => {
+  describe('Session state verification', () => {
     itIfServer('should create session and verify initial empty party state', async () => {
       // Create a session and verify the party starts empty
       const { data: createData } = await apiRequest<SessionResponse>('/sessions', {

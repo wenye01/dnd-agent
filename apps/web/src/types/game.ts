@@ -48,11 +48,11 @@ export type Condition =
   | 'unconscious'
   | 'exhaustion'
 
-// 活跃效果
+// 活跃效果（与后端 state.ActiveEffect JSON 对齐）
 export interface ActiveEffect {
   id: string
   name: string
+  targetId: string
   duration: number // rounds, -1 for permanent
-  source: string
-  target: string
+  conditions?: string[]
 }

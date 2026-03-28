@@ -402,7 +402,7 @@ describe('gameStore', () => {
       ]
 
       const effects: ActiveEffect[] = [
-        { id: 'effect-1', name: 'Bless', duration: 10, source: 'cleric-1', target: 'fighter-1' },
+        { id: 'effect-1', name: 'Bless', targetId: 'fighter-1', duration: 10, conditions: [] },
       ]
 
       const combat: CombatState = {
