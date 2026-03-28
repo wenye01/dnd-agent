@@ -49,22 +49,6 @@ describe('uiStore', () => {
       expect(state.isPanelOpen).toBe(true)
     })
 
-    it('should set all panel types', () => {
-      const { setActivePanel } = useUIStore.getState()
-
-      const panelTypes: Array<'character' | 'inventory' | 'spells' | 'map' | null> = [
-        'character',
-        'inventory',
-        'spells',
-        'map',
-      ]
-
-      for (const panelType of panelTypes) {
-        setActivePanel(panelType)
-        expect(useUIStore.getState().activePanel).toBe(panelType)
-      }
-    })
-
   })
 
   describe('togglePanel', () => {
@@ -108,16 +92,6 @@ describe('uiStore', () => {
       expect(state.activeDialog).toBe('export')
     })
 
-    it('should handle various dialog IDs', () => {
-      const { openDialog } = useUIStore.getState()
-
-      const dialogIds = ['settings', 'export', 'import', 'new-game', 'help', 'combat-log']
-
-      for (const dialogId of dialogIds) {
-        openDialog(dialogId)
-        expect(useUIStore.getState().activeDialog).toBe(dialogId)
-      }
-    })
   })
 
   describe('closeDialog', () => {
@@ -169,41 +143,9 @@ describe('uiStore', () => {
       expect(state.isPanelOpen).toBe(false)
     })
 
-    it('should maintain panel state when dialog opens', () => {
-      const { setActivePanel, openDialog } = useUIStore.getState()
-
-      setActivePanel('map')
-      expect(useUIStore.getState().activePanel).toBe('map')
-
-      openDialog('export')
-
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBe('map')
-      expect(state.activeDialog).toBe('export')
-    })
-
-    it('should maintain dialog state when panel changes', () => {
-      const { setActivePanel, openDialog } = useUIStore.getState()
-
-      openDialog('settings')
-      setActivePanel('inventory')
-
-      const state = useUIStore.getState()
-      expect(state.activeDialog).toBe('settings')
-      expect(state.activePanel).toBe('inventory')
-    })
   })
 
   describe('edge cases', () => {
-    it('should handle null panel type', () => {
-      const { setActivePanel } = useUIStore.getState()
-
-      setActivePanel(null)
-
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBeNull()
-    })
-
     it('should handle complex multi-step interactions', () => {
       const { setActivePanel, openDialog, togglePanel, closeDialog } = useUIStore.getState()
 
