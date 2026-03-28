@@ -130,7 +130,7 @@ export function useGameMessages() {
       default:
         console.warn('Unknown state type:', stateType)
     }
-  }, [updateGameState, updateParty, updateCombat])
+  }, [updateGameState, updateParty, updateCombat, addSystemMessage])
 
   const handleDiceResult = useCallback((payload: unknown) => {
     if (!isDiceResultPayload(payload)) {
