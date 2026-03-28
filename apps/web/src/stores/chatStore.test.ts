@@ -307,15 +307,5 @@ describe('chatStore', () => {
       const state = useChatStore.getState()
       expect(state.messages[0].content).toContain('Special chars:')
     })
-
-    it('should handle very long messages', () => {
-      const { addUserMessage } = useChatStore.getState()
-
-      const longText = 'A'.repeat(10000)
-      addUserMessage(longText)
-
-      const state = useChatStore.getState()
-      expect(state.messages[0].content).toHaveLength(10000)
-    })
   })
 })

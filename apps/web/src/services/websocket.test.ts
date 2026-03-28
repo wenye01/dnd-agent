@@ -18,8 +18,6 @@ import {
   isCharacterArray,
   isCombatState,
 } from './websocket'
-import type { StateUpdatePayload } from './websocket'
-
 // Shared: non-object inputs that should fail every type guard
 const NON_OBJECTS: Array<{ name: string; value: unknown }> = [
   { name: 'null', value: null },

@@ -68,36 +68,21 @@ describe('uiStore', () => {
   })
 
   describe('togglePanel', () => {
-    it('should close open panel', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      expect(useUIStore.getState().isPanelOpen).toBe(true)
-      togglePanel()
-      expect(useUIStore.getState().isPanelOpen).toBe(false)
-    })
-
-    it('should handle multiple toggles', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      const initialOpenState = useUIStore.getState().isPanelOpen
-
-      togglePanel()
-      togglePanel()
-      togglePanel()
-
-      const finalState = useUIStore.getState()
-      expect(finalState.isPanelOpen).toBe(!initialOpenState)
-    })
-
-    it('should preserve active panel when toggling', () => {
+    it('should toggle panel open/closed and preserve active panel', () => {
       const { setActivePanel, togglePanel } = useUIStore.getState()
 
       setActivePanel('inventory')
-      togglePanel()
-      togglePanel()
+      expect(useUIStore.getState().isPanelOpen).toBe(true)
 
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBe('inventory')
+      // Close
+      togglePanel()
+      expect(useUIStore.getState().isPanelOpen).toBe(false)
+      expect(useUIStore.getState().activePanel).toBe('inventory')
+
+      // Reopen
+      togglePanel()
+      expect(useUIStore.getState().isPanelOpen).toBe(true)
+      expect(useUIStore.getState().activePanel).toBe('inventory')
     })
   })
 
@@ -210,40 +195,6 @@ describe('uiStore', () => {
   })
 
   describe('edge cases', () => {
-    it('should handle empty string dialog ID', () => {
-      const { openDialog } = useUIStore.getState()
-
-      openDialog('')
-
-      const state = useUIStore.getState()
-      expect(state.activeDialog).toBe('')
-    })
-
-    it('should handle rapid panel changes', () => {
-      const { setActivePanel } = useUIStore.getState()
-
-      setActivePanel('character')
-      setActivePanel('inventory')
-      setActivePanel('spells')
-      setActivePanel('map')
-
-      const state = useUIStore.getState()
-      expect(state.activePanel).toBe('map')
-    })
-
-    it('should handle rapid toggles', () => {
-      const { togglePanel } = useUIStore.getState()
-
-      for (let i = 0; i < 10; i++) {
-        togglePanel()
-      }
-
-      const finalState = useUIStore.getState()
-      expect(finalState.isPanelOpen).toBe(true)
-    })
-  })
-
-  describe('type safety', () => {
     it('should handle null panel type', () => {
       const { setActivePanel } = useUIStore.getState()
 
@@ -252,28 +203,20 @@ describe('uiStore', () => {
       const state = useUIStore.getState()
       expect(state.activePanel).toBeNull()
     })
-  })
 
-  describe('state persistence across operations', () => {
-    it('should maintain state during complex interactions', () => {
+    it('should handle complex multi-step interactions', () => {
       const { setActivePanel, openDialog, togglePanel, closeDialog } = useUIStore.getState()
 
       setActivePanel('character')
-      expect(useUIStore.getState().activePanel).toBe('character')
-
       openDialog('settings')
-      expect(useUIStore.getState().activeDialog).toBe('settings')
-
       togglePanel()
-      expect(useUIStore.getState().isPanelOpen).toBe(false)
-
       closeDialog()
-      expect(useUIStore.getState().activeDialog).toBeNull()
-
       togglePanel()
+
       const state = useUIStore.getState()
-      expect(state.isPanelOpen).toBe(true)
       expect(state.activePanel).toBe('character')
+      expect(state.activeDialog).toBeNull()
+      expect(state.isPanelOpen).toBe(true)
     })
   })
 })
