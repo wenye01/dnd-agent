@@ -292,23 +292,3 @@ func TestToRollResult(t *testing.T) {
 		}
 	})
 }
-
-func TestRollResult(t *testing.T) {
-	t.Run("roll result structure", func(t *testing.T) {
-		result := &dice.RollResult{
-			Formula:  "2d6+3",
-			Dice:     []int{4, 5},
-			Modifier: 3,
-			Total:    12,
-			IsCrit:   false,
-			IsFumble: false,
-		}
-
-		if result.Formula != "2d6+3" {
-			t.Errorf("Formula mismatch")
-		}
-		if result.Total != 12 {
-			t.Errorf("Total mismatch")
-		}
-	})
-}
