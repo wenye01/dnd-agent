@@ -170,9 +170,9 @@ func setupRouter(cfg *configs.Config, wsHub *websocket.Hub, sm *state.Manager, p
 	router.Use(loggerMiddleware())
 	router.Use(corsMiddleware(cfg))
 
-	// Register REST API routes
+	// Register REST API routes (including character management)
 	logger := &log.Logger
-	rest.RegisterRoutes(router, &stateAdapter{sm, pm, logger}, &persistenceAdapter{pm}, logger)
+	rest.RegisterRoutesWithCharacters(router, &stateAdapter{sm, pm, logger}, &persistenceAdapter{pm}, logger)
 
 	// Register WebSocket route
 	router.GET("/ws", func(c *gin.Context) {
@@ -200,6 +200,14 @@ func (a *stateAdapter) CreateSession(sessionID string) interface{} {
 
 func (a *stateAdapter) GetSession(sessionID string) interface{} {
 	return a.Manager.GetSession(sessionID)
+}
+
+func (a *stateAdapter) GetGameState(sessionID string) *state.GameState {
+	return a.Manager.GetSession(sessionID)
+}
+
+func (a *stateAdapter) UpdateGameState(sessionID string, updateFn func(*state.GameState)) error {
+	return a.Manager.UpdateSession(sessionID, updateFn)
 }
 
 // persistenceAdapter adapts *persistence.Manager to rest.Persistence interface.
