@@ -80,11 +80,15 @@ export class WebSocketClient {
       }
 
       this.ws.onmessage = (event) => {
-        try {
-          const message: ServerMessage = JSON.parse(event.data)
-          this.notifyMessageHandlers(message)
-        } catch (error) {
-          console.error('Failed to parse message:', error)
+        const data = typeof event.data === 'string' ? event.data : ''
+        const lines = data.split('\n').filter(line => line.trim())
+        for (const line of lines) {
+          try {
+            const message: ServerMessage = JSON.parse(line)
+            this.notifyMessageHandlers(message)
+          } catch (error) {
+            console.error('Failed to parse message:', error)
+          }
         }
       }
     })

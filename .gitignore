@@ -59,3 +59,14 @@ package-lock.json
 .agent-log
 .session-id
 .watchdog-log
+
+# Test temp files
+bb-*.js
+bb-*.cjs
+ws-*.js
+gen.js
+write-test.js
+build-test.cjs
+
+# Server data (local sessions)
+apps/server/data/

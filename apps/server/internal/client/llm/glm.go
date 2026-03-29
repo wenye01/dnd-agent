@@ -292,11 +292,9 @@ func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan S
 				stream <- StreamChunk{Delta: delta.Content}
 			}
 
-			// Handle reasoning_content (GLM-specific field)
-			// This is the thinking/reasoning output from GLM-4.7-Flash
-			if delta.ReasoningContent != "" {
-				stream <- StreamChunk{Delta: delta.ReasoningContent}
-			}
+			// reasoning_content (GLM-specific field) is intentionally skipped.
+			// It contains the model's internal thinking/reasoning process
+			// and should NOT be forwarded to the user-facing narration stream.
 
 			// Handle tool calls - accumulate arguments across streaming chunks
 			if len(delta.ToolCalls) > 0 {

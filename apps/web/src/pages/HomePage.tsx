@@ -1,10 +1,19 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui'
 import { CharacterCreationDialog } from '../components/character/CharacterCreationDialog'
+import { useGameStore } from '../stores/gameStore'
 
 function HomePage() {
   const [showCharacterCreation, setShowCharacterCreation] = useState(false)
+  const navigate = useNavigate()
+  const initSession = useGameStore((s) => s.initSession)
+  const isLoading = useGameStore((s) => s.isLoading)
+
+  const handleStartAdventure = async () => {
+    await initSession()
+    navigate('/game')
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-parchment">
@@ -16,11 +25,9 @@ function HomePage() {
           AI-Powered Tabletop Adventure
         </p>
         <div className="flex flex-col gap-3 items-center">
-          <Link to="/game">
-            <Button variant="primary" size="lg">
-              Start Adventure
-            </Button>
-          </Link>
+          <Button variant="primary" size="lg" onClick={handleStartAdventure} disabled={isLoading}>
+            {isLoading ? 'Initializing...' : 'Start Adventure'}
+          </Button>
           <Button
             variant="secondary"
             size="lg"

@@ -191,7 +191,7 @@ export function QuickActions() {
   return (
     <>
       <div className="p-4">
-        <Panel title="Quick Actions" variant="stone" className="space-y-2">
+        <Panel title="Quick Actions" variant="default" className="space-y-2">
           <Button variant="secondary" className="w-full" size="md" onClick={() => setShowRollCheck(true)}>
             <Dice5 className="w-5 h-5" />
             <span>Roll Check</span>

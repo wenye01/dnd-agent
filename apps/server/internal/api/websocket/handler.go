@@ -10,6 +10,7 @@ import (
 
 	"github.com/dnd-game/server/internal/client/llm"
 	"github.com/dnd-game/server/internal/shared/models"
+	"github.com/dnd-game/server/internal/shared/state"
 )
 
 // HandleMessage processes an incoming message from a client.
@@ -91,6 +92,7 @@ const maxToolLoopIterations = 5
 func (h *Hub) processStreamWithToolLoop(ctx context.Context, client *Client, stream <-chan llm.StreamChunk, tools []llm.ToolDefinition, requestID string) {
 	var fullText strings.Builder
 	var toolCalls []llm.ToolCall
+	var insideThinkBlock bool
 
 	for chunk := range stream {
 		if chunk.Error != nil {
@@ -104,15 +106,22 @@ func (h *Hub) processStreamWithToolLoop(ctx context.Context, client *Client, str
 
 		if chunk.Delta != "" {
 			fullText.WriteString(chunk.Delta)
-			client.SendMessage(&models.ServerMessage{
-				Type: models.MsgTypeNarration,
-				Payload: map[string]interface{}{
-					"text":        chunk.Delta,
-					"isStreaming": true,
-				},
-				RequestID: requestID,
-				Timestamp: getCurrentTimestamp(),
-			})
+
+			// Strip <think/> reasoning blocks that some LLM providers
+			// embed inside the content field. We track open/close tags
+			// across streaming chunks and only forward non-reasoning text.
+			filtered := filterThinkTags(chunk.Delta, &insideThinkBlock)
+			if filtered != "" {
+				client.SendMessage(&models.ServerMessage{
+					Type: models.MsgTypeNarration,
+					Payload: map[string]interface{}{
+						"text":        filtered,
+						"isStreaming": true,
+					},
+					RequestID: requestID,
+					Timestamp: getCurrentTimestamp(),
+				})
+			}
 		}
 
 		if chunk.ToolCall != nil {
@@ -139,8 +148,9 @@ func (h *Hub) processStreamWithToolLoop(ctx context.Context, client *Client, str
 		return
 	}
 
-	// No tool calls -- send final narration message and record in session
-	narrationText := fullText.String()
+	// No tool calls -- send final narration message and record in session.
+	// Strip any remaining think tags from the accumulated text.
+	narrationText := stripThinkTags(fullText.String())
 	client.SendMessage(&models.ServerMessage{
 		Type: models.MsgTypeNarration,
 		Payload: map[string]interface{}{
@@ -221,6 +231,24 @@ func (h *Hub) handleManagement(client *Client, msg models.ClientMessage) {
 			Timestamp: getCurrentTimestamp(),
 		})
 
+	case "save":
+		// Update session metadata timestamp to reflect save time
+		h.stateManager.UpdateSession(client.SessionID, func(gs *state.GameState) {
+			now := getCurrentTimestamp()
+			gs.Metadata.UpdatedAt = now
+			gs.Metadata.LastActivity = now
+		})
+		client.SendMessage(&models.ServerMessage{
+			Type: models.MsgTypeStateUpdate,
+			Payload: map[string]interface{}{
+				"stateType": "notification",
+				"data": map[string]string{
+					"status": "game_saved",
+				},
+			},
+			Timestamp: getCurrentTimestamp(),
+		})
+
 	default:
 		h.SendError(client, fmt.Sprintf("unknown management action: %s", payload.Action))
 	}
@@ -291,4 +319,70 @@ func getContext() context.Context {
 // getCurrentTimestamp returns the current Unix timestamp.
 func getCurrentTimestamp() int64 {
 	return time.Now().Unix()
+}
+
+// filterThinkTags filters <think/> reasoning blocks from streaming text.
+// It tracks whether we're inside a think block across chunks and only
+// returns text that is NOT inside <think/> tags.
+func filterThinkTags(delta string, insideThink *bool) string {
+	var result strings.Builder
+	i := 0
+	for i < len(delta) {
+		if *insideThink {
+			// Look for closing </think or <\/think>
+			closeIdx := strings.Index(delta[i:], "</think")
+			if closeIdx == -1 {
+				// Still inside think block, skip all
+				return result.String()
+			}
+			// Skip past the closing tag
+			end := i + closeIdx + len("</think")
+			if end > len(delta) {
+				end = len(delta)
+			}
+			i = end
+			*insideThink = false
+			continue
+		}
+
+		// Look for opening <think
+		openIdx := strings.Index(delta[i:], "<think")
+		if openIdx == -1 {
+			// No opening tag found, emit rest
+			result.WriteString(delta[i:])
+			break
+		}
+
+		// Emit text before the tag
+		if openIdx > 0 {
+			result.WriteString(delta[i : i+openIdx])
+		}
+
+		// Find end of opening tag (could be <think or <think\n or <think/>)
+		tagEnd := i + openIdx + len("<think")
+		if tagEnd < len(delta) && delta[tagEnd] == '>' {
+			tagEnd++ // skip >
+		}
+		*insideThink = true
+		i = tagEnd
+	}
+	return result.String()
+}
+
+// stripThinkTags removes all <think...</think > blocks from a complete string.
+func stripThinkTags(text string) string {
+	for {
+		start := strings.Index(text, "<think")
+		if start == -1 {
+			break
+		}
+		end := strings.Index(text[start:], "</think")
+		if end == -1 {
+			// Unclosed think tag, remove from start to end
+			text = text[:start]
+			break
+		}
+		text = text[:start] + text[start+end+len("</think"):]
+	}
+	return strings.TrimSpace(text)
 }

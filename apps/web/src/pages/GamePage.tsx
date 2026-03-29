@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useGameMessages } from '../hooks/useGameMessages'
 import { useUIStore } from '../stores/uiStore'
+import { useGameStore } from '../stores/gameStore'
 import { ChatPanel } from '../components/chat'
 import { CharacterPanel, QuickActions } from '../components/panels'
 import { MainLayout } from '../components/layout'
@@ -12,9 +13,39 @@ function GamePage() {
   // Set up message processing
   useGameMessages()
 
+  // Initialize session on mount
+  const initSession = useGameStore((s) => s.initSession)
+  const isLoading = useGameStore((s) => s.isLoading)
+  const error = useGameStore((s) => s.error)
+
+  useEffect(() => {
+    initSession()
+  }, [initSession])
+
   // UI state for panel toggles
   const { isPanelOpen, togglePanel } = useUIStore()
   const [showCharacterCreation, setShowCharacterCreation] = useState(false)
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-parchment">
+        <p className="text-ink/60 text-sm">Initializing game session...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-parchment">
+        <div className="text-center">
+          <p className="text-red-600 text-sm">Failed to initialize session: {error}</p>
+          <Button variant="secondary" size="sm" className="mt-4" onClick={() => initSession()}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>

@@ -282,7 +282,7 @@ function serverToClientCharacter(char: ServerCharacter): import('../../types').C
     savingThrows: Object.entries(char.savingThrows)
       .filter(([, v]) => v)
       .map(([k]) => k as import('../../types').Ability),
-    conditions: char.conditions as import('../../types').Condition[],
+    conditions: (char.conditions ?? []) as import('../../types').Condition[],
     equipment: [],
     inventory: char.inventory.map((item) => ({
       id: item.id,

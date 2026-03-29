@@ -28,7 +28,7 @@ export interface ServerCharacter {
   }
   skills: Record<string, boolean>
   inventory: Array<{ id: string; name: string; description: string; type: string }>
-  conditions: string[]
+  conditions: string[] | undefined
   background: string
   proficiencyBonus: number
   savingThrows: Record<string, boolean>
@@ -93,6 +93,22 @@ function getSessionId(): string | null {
     // Ignore parse errors
   }
   return null
+}
+
+export interface CreateSessionResponse {
+  sessionId: string
+}
+
+async function createSession(): Promise<ApiResponse<CreateSessionResponse>> {
+  return apiRequest<CreateSessionResponse>('/sessions', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+}
+
+export const sessionApi = {
+  create: createSession,
+  get: (id: string) => apiRequest<{ sessionId: string; phase: string }>(`/sessions/${id}`),
 }
 
 export const characterApi = {
