@@ -35,7 +35,8 @@ func RegisterRoutes(router *gin.Engine, sm StateManager, p Persistence, logger *
 
 // RegisterRoutesWithCharacters registers all REST API routes including character management.
 // The CharacterStateManager parameter provides access to game state for character operations.
-func RegisterRoutesWithCharacters(router *gin.Engine, sm CharacterStateManager, p Persistence, logger *zerolog.Logger) {
+// The Broadcaster parameter (optional, may be nil) enables WebSocket broadcast of state changes.
+func RegisterRoutesWithCharacters(router *gin.Engine, sm CharacterStateManager, b Broadcaster, p Persistence, logger *zerolog.Logger) {
 	handler := NewHandler(sm, p, logger)
 
 	api := router.Group("/api")
@@ -53,7 +54,7 @@ func RegisterRoutesWithCharacters(router *gin.Engine, sm CharacterStateManager, 
 		}
 
 		// Character management
-		RegisterCharacterRoutes(api, sm, handler)
+		RegisterCharacterRoutes(api, sm, b, handler)
 
 		// Configuration
 		api.GET("/config", handler.getConfig)

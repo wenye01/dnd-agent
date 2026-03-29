@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useGameMessages } from '../hooks/useGameMessages'
 import { useUIStore } from '../stores/uiStore'
 import { ChatPanel } from '../components/chat'
-import { CharacterPanel } from '../components/panels'
+import { CharacterPanel, QuickActions } from '../components/panels'
 import { MainLayout } from '../components/layout'
 import { ConnectionStatus } from '../components/ui'
 import { Button } from '../components/ui'
@@ -30,7 +30,13 @@ function GamePage() {
             </div>
           </div>
         }
-        leftPanel={<div className="p-4"><CharacterPanel /></div>}
+        leftPanel={
+          <div className="flex flex-col h-full">
+            <div className="p-4"><CharacterPanel /></div>
+            <div className="flex-1" />
+            <QuickActions />
+          </div>
+        }
         mainContent={
           <div className="flex items-center justify-center h-full">
             <div className="text-center">

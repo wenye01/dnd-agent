@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dnd-game/server/internal/client/llm"
 	"github.com/dnd-game/server/internal/shared/models"
 )
 
@@ -62,19 +63,34 @@ func (h *Hub) handleUserInput(client *Client, msg models.ClientMessage) {
 	go h.processLLMResponse(client, payload.Text, msg.RequestID)
 }
 
-// processLLMResponse handles the streaming LLM response.
+// processLLMResponse handles the streaming LLM response with agentic loop.
+// When the LLM returns a tool call, the tool is executed, the result is added
+// to the conversation, and the LLM is called again to continue narrating.
 func (h *Hub) processLLMResponse(client *Client, text, requestID string) {
 	ctx := getContext()
 	tools := h.toolRegistry.AsToolDefinitions()
 
+	// Save user message
+	h.saveMessage(client.SessionID, "user_input", text)
+
+	// Initial LLM call
 	stream, err := h.sessionMgr.SendMessage(ctx, client.SessionID, text, tools)
 	if err != nil {
 		h.SendError(client, fmt.Sprintf("LLM error: %v", err))
 		return
 	}
 
+	h.processStreamWithToolLoop(ctx, client, stream, tools, requestID)
+}
+
+// processStreamWithToolLoop processes a stream, executing tool calls and
+// continuing the conversation with the LLM until it produces a final text
+// response without any tool calls (agentic loop).
+const maxToolLoopIterations = 5
+
+func (h *Hub) processStreamWithToolLoop(ctx context.Context, client *Client, stream <-chan llm.StreamChunk, tools []llm.ToolDefinition, requestID string) {
 	var fullText strings.Builder
-	var currentToolCall *toolCallAccumulator
+	var toolCalls []llm.ToolCall
 
 	for chunk := range stream {
 		if chunk.Error != nil {
@@ -83,21 +99,7 @@ func (h *Hub) processLLMResponse(client *Client, text, requestID string) {
 		}
 
 		if chunk.Done {
-			// Send final message
-			client.SendMessage(&models.ServerMessage{
-				Type: models.MsgTypeNarration,
-				Payload: map[string]interface{}{
-					"text":        fullText.String(),
-					"isStreaming": false,
-				},
-				RequestID: requestID,
-				Timestamp: getCurrentTimestamp(),
-			})
-
-			// Save to persistence
-			h.saveMessage(client.SessionID, "user_input", text)
-			h.saveMessage(client.SessionID, "narration", fullText.String())
-			return
+			break
 		}
 
 		if chunk.Delta != "" {
@@ -114,57 +116,66 @@ func (h *Hub) processLLMResponse(client *Client, text, requestID string) {
 		}
 
 		if chunk.ToolCall != nil {
-			if currentToolCall == nil {
-				currentToolCall = &toolCallAccumulator{}
-			}
-
-			if chunk.ToolCall.ID != "" {
-				currentToolCall.ID = chunk.ToolCall.ID
-			}
-			if chunk.ToolCall.Name != "" {
-				currentToolCall.Name = chunk.ToolCall.Name
-			}
-			if chunk.ToolCall.Arguments != nil {
-				if currentToolCall.Arguments == nil {
-					currentToolCall.Arguments = make(map[string]interface{})
-				}
-				for k, v := range chunk.ToolCall.Arguments {
-					currentToolCall.Arguments[k] = v
-				}
-			}
-
-			// When we have a complete tool call, execute it
-			if currentToolCall.ID != "" && currentToolCall.Name != "" && currentToolCall.Arguments != nil {
-				h.executeToolCall(client, currentToolCall, requestID)
-				currentToolCall = nil
-			}
+			// Accumulate tool call (providers now emit one ToolCall with fully
+			// accumulated arguments at finish/DONE, so append is sufficient)
+			toolCalls = append(toolCalls, *chunk.ToolCall)
 		}
 	}
+
+	// If there are tool calls, execute them and continue the agentic loop
+	if len(toolCalls) > 0 {
+		for i := 0; i < len(toolCalls) && i < maxToolLoopIterations; i++ {
+			tc := &toolCalls[i]
+			h.executeAndSendToolResult(client, tc, requestID)
+		}
+
+		// Continue the agentic loop: call LLM again with tool results
+		continueStream, err := h.sessionMgr.ContinueMessage(ctx, client.SessionID, tools)
+		if err != nil {
+			h.SendError(client, fmt.Sprintf("LLM continue error: %v", err))
+			return
+		}
+		h.processStreamWithToolLoop(ctx, client, continueStream, tools, requestID)
+		return
+	}
+
+	// No tool calls -- send final narration message and record in session
+	narrationText := fullText.String()
+	client.SendMessage(&models.ServerMessage{
+		Type: models.MsgTypeNarration,
+		Payload: map[string]interface{}{
+			"text":        narrationText,
+			"isStreaming": false,
+		},
+		RequestID: requestID,
+		Timestamp: getCurrentTimestamp(),
+	})
+
+	h.sessionMgr.AddAssistantMessage(client.SessionID, narrationText)
+	h.saveMessage(client.SessionID, "narration", narrationText)
 }
 
-// toolCallAccumulator accumulates tool call data from streaming chunks.
-type toolCallAccumulator struct {
-	ID        string
-	Name      string
-	Arguments map[string]interface{}
-}
-
-// executeToolCall executes a tool call and sends the result.
-func (h *Hub) executeToolCall(client *Client, tc *toolCallAccumulator, requestID string) {
+// executeAndSendToolResult executes a tool call, records the assistant's tool
+// call message and the tool result in the session, and sends the result to the
+// client.
+func (h *Hub) executeAndSendToolResult(client *Client, tc *llm.ToolCall, requestID string) {
 	h.logger.Info().
 		Str("session_id", client.SessionID).
 		Str("tool", tc.Name).
 		Msg("executing tool")
 
+	// Record the assistant's tool call in the session history so the LLM API
+	// receives a valid message sequence: assistant(tool_calls) -> tool(result)
+	h.sessionMgr.AddAssistantToolCalls(client.SessionID, "", []llm.ToolCall{*tc})
+
 	result, err := h.toolRegistry.Execute(tc.Name, tc.Arguments)
 	if err != nil {
 		h.logger.Error().Err(err).Str("tool", tc.Name).Msg("tool execution failed")
-		// Send error result back to LLM
 		h.sessionMgr.AddToolResult(client.SessionID, tc.ID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 
-	// Convert result to JSON for response
+	// Convert result to JSON and add to session
 	resultJSON, _ := json.Marshal(result)
 	h.sessionMgr.AddToolResult(client.SessionID, tc.ID, string(resultJSON))
 

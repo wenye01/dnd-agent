@@ -122,10 +122,30 @@ func (p *OpenAIProvider) StreamMessage(ctx context.Context, req *Request) (<-cha
 	go func() {
 		defer close(stream)
 
+		// Accumulators for streaming tool call arguments
+		var tcID string
+		var tcName string
+		var tcArgsBuf strings.Builder
+		var inToolCall bool
+
 		for {
 			chunk, err := resp.Recv()
 			if err != nil {
 				if err == io.EOF {
+					// Flush any pending tool call before ending
+					if inToolCall && tcName != "" {
+						var args map[string]interface{}
+						if tcArgsBuf.Len() > 0 {
+							json.Unmarshal([]byte(tcArgsBuf.String()), &args)
+						}
+						stream <- StreamChunk{
+							ToolCall: &ToolCall{
+								ID:        tcID,
+								Name:      tcName,
+								Arguments: args,
+							},
+						}
+					}
 					stream <- StreamChunk{Done: true}
 					return
 				}
@@ -144,20 +164,37 @@ func (p *OpenAIProvider) StreamMessage(ctx context.Context, req *Request) (<-cha
 				stream <- StreamChunk{Delta: delta.Content}
 			}
 
-			// Tool calls
+			// Tool calls - accumulate arguments across streaming chunks
 			if len(delta.ToolCalls) > 0 {
 				tc := delta.ToolCalls[0]
-				stream <- StreamChunk{
-					ToolCall: &ToolCall{
-						ID:        tc.ID,
-						Name:      tc.Function.Name,
-						Arguments: parseJSON(tc.Function.Arguments),
-					},
+				if tc.ID != "" {
+					tcID = tc.ID
 				}
+				if tc.Function.Name != "" {
+					tcName = tc.Function.Name
+				}
+				if tc.Function.Arguments != "" {
+					tcArgsBuf.WriteString(tc.Function.Arguments)
+				}
+				inToolCall = true
 			}
 
-			// Check if finished
-			if chunk.Choices[0].FinishReason != "" {
+			// Check if finished - flush accumulated tool call
+			finishReason := chunk.Choices[0].FinishReason
+			if finishReason != "" {
+				if inToolCall && tcName != "" {
+					var args map[string]interface{}
+					if tcArgsBuf.Len() > 0 {
+						json.Unmarshal([]byte(tcArgsBuf.String()), &args)
+					}
+					stream <- StreamChunk{
+						ToolCall: &ToolCall{
+							ID:        tcID,
+							Name:      tcName,
+							Arguments: args,
+						},
+					}
+				}
 				stream <- StreamChunk{Done: true}
 				return
 			}
@@ -212,28 +249,6 @@ func (p *OpenAIProvider) convertTools(tools []ToolDefinition) []openai.Tool {
 	return result
 }
 
-// parseJSON parses a JSON string into a map, handling partial JSON.
-// Returns nil for empty strings or invalid JSON (expected during streaming).
-// Non-empty invalid JSON is logged at debug level for troubleshooting.
-func parseJSON(s string) map[string]interface{} {
-	if s == "" {
-		return nil
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(s), &result); err != nil {
-		// For partial JSON (streaming), return nil
-		// The caller should accumulate chunks
-		// Debug logging helps troubleshoot JSON parsing issues without noise
-		if len(s) > 0 {
-			// Consider using debug logging here if needed for troubleshooting
-			// Keep silent for now to avoid log spam during streaming
-		}
-		return nil
-	}
-	return result
-}
-
 // CreateToolSchema creates a JSON schema for a tool's parameters.
 func CreateToolSchema(params string) map[string]interface{} {
 	var schema map[string]interface{}
@@ -247,30 +262,3 @@ func CreateToolSchema(params string) map[string]interface{} {
 	return schema
 }
 
-// ParseToolArguments parses tool arguments from JSON strings.
-// This handles streaming accumulation of partial JSON.
-func ParseToolArguments(existing map[string]interface{}, chunk string) (map[string]interface{}, error) {
-	if existing == nil {
-		existing = make(map[string]interface{})
-	}
-
-	// Try to parse the accumulated JSON so far
-	var result map[string]interface{}
-	accumulated := strings.Builder{}
-
-	// Write existing state
-	if existingBytes, err := json.Marshal(existing); err == nil && len(existingBytes) > 2 {
-		accumulated.WriteString(string(existingBytes[:len(existingBytes)-1])) // Remove trailing }
-		if len(chunk) > 0 && chunk[0] != ',' && len(existing) > 0 {
-			accumulated.WriteString(",")
-		}
-	}
-	accumulated.WriteString(chunk)
-
-	if err := json.Unmarshal([]byte(accumulated.String()), &result); err != nil {
-		// Return existing if this chunk doesn't complete a valid JSON
-		return existing, nil
-	}
-
-	return result, nil
-}

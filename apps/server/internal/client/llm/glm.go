@@ -60,8 +60,23 @@ type glmRequest struct {
 
 // glmMessage represents a message in GLM API.
 type glmMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role       string           `json:"role"`
+	Content    string           `json:"content,omitempty"`
+	ToolCalls  []glmToolCall    `json:"tool_calls,omitempty"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
+}
+
+// glmToolCall represents a tool call in a GLM message.
+type glmToolCall struct {
+	ID       string             `json:"id,omitempty"`
+	Type     string             `json:"type,omitempty"`
+	Function glmToolCallFunction `json:"function"`
+}
+
+// glmToolCallFunction represents the function part of a tool call.
+type glmToolCallFunction struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
 }
 
 // glmTool represents a tool definition.
@@ -148,10 +163,26 @@ func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan S
 	}
 
 	for i, m := range req.Messages {
-		glmReq.Messages[i] = glmMessage{
-			Role:    m.Role,
-			Content: m.Content,
+		msg := glmMessage{
+			Role:       m.Role,
+			Content:    m.Content,
+			ToolCallID: m.ToolCallID,
 		}
+		if len(m.ToolCalls) > 0 {
+			msg.ToolCalls = make([]glmToolCall, len(m.ToolCalls))
+			for j, tc := range m.ToolCalls {
+				argsJSON, _ := json.Marshal(tc.Arguments)
+				msg.ToolCalls[j] = glmToolCall{
+					ID:   tc.ID,
+					Type: "function",
+					Function: glmToolCallFunction{
+						Name:      tc.Name,
+						Arguments: string(argsJSON),
+					},
+				}
+			}
+		}
+		glmReq.Messages[i] = msg
 	}
 
 	// Add tools if present
@@ -201,6 +232,12 @@ func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan S
 		defer close(stream)
 		defer resp.Body.Close()
 
+		// Accumulators for streaming tool call arguments
+		var tcID string
+		var tcName string
+		var tcArgsBuf strings.Builder
+		var inToolCall bool
+
 		scanner := bufio.NewScanner(resp.Body)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -219,6 +256,20 @@ func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan S
 
 			// Check for end of stream
 			if data == "[DONE]" {
+				// Flush any pending tool call before ending
+				if inToolCall && tcName != "" {
+					var args map[string]interface{}
+					if tcArgsBuf.Len() > 0 {
+						json.Unmarshal([]byte(tcArgsBuf.String()), &args)
+					}
+					stream <- StreamChunk{
+						ToolCall: &ToolCall{
+							ID:        tcID,
+							Name:      tcName,
+							Arguments: args,
+						},
+					}
+				}
 				stream <- StreamChunk{Done: true}
 				return
 			}
@@ -247,24 +298,37 @@ func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan S
 				stream <- StreamChunk{Delta: delta.ReasoningContent}
 			}
 
-			// Handle tool calls
+			// Handle tool calls - accumulate arguments across streaming chunks
 			if len(delta.ToolCalls) > 0 {
 				tc := delta.ToolCalls[0]
-				var args map[string]interface{}
+
+				if tc.ID != "" {
+					tcID = tc.ID
+				}
+				if tc.Function.Name != "" {
+					tcName = tc.Function.Name
+				}
 				if tc.Function.Arguments != "" {
-					json.Unmarshal([]byte(tc.Function.Arguments), &args)
+					tcArgsBuf.WriteString(tc.Function.Arguments)
 				}
-				stream <- StreamChunk{
-					ToolCall: &ToolCall{
-						ID:        tc.ID,
-						Name:      tc.Function.Name,
-						Arguments: args,
-					},
-				}
+				inToolCall = true
 			}
 
-			// Check for finish
+			// On finish reason, flush accumulated tool call
 			if choice.FinishReason != "" {
+				if inToolCall && tcName != "" {
+					var args map[string]interface{}
+					if tcArgsBuf.Len() > 0 {
+						json.Unmarshal([]byte(tcArgsBuf.String()), &args)
+					}
+					stream <- StreamChunk{
+						ToolCall: &ToolCall{
+							ID:        tcID,
+							Name:      tcName,
+							Arguments: args,
+						},
+					}
+				}
 				stream <- StreamChunk{Done: true}
 				return
 			}

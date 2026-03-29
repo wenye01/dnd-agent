@@ -183,7 +183,7 @@ func setupRouter(cfg *configs.Config, wsHub *websocket.Hub, sm *state.Manager, p
 
 	// Register REST API routes (including character management)
 	logger := &log.Logger
-	rest.RegisterRoutesWithCharacters(router, &stateAdapter{sm, pm, logger}, &persistenceAdapter{pm}, logger)
+	rest.RegisterRoutesWithCharacters(router, &stateAdapter{sm, pm, logger}, wsHub, &persistenceAdapter{pm}, logger)
 
 	// Register WebSocket route
 	router.GET("/ws", func(c *gin.Context) {

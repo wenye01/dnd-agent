@@ -131,7 +131,7 @@ func setupTestRouter() (*gin.Engine, *mockCharacterStateManager, *mockPersistenc
 	logger := zerolog.Nop()
 	l := &logger
 
-	RegisterRoutesWithCharacters(router, sm, p, l)
+	RegisterRoutesWithCharacters(router, sm, nil, p, l)
 
 	return router, sm, p, l
 }
@@ -711,5 +711,204 @@ func createTestCharacter(id, name, race, class string) *models.Character {
 		Conditions:       []types.Condition{},
 		Inventory:        []models.Item{},
 		RacialTraits:     []models.RaceTrait{},
+	}
+}
+
+// mockBroadcaster captures messages sent via the Broadcaster interface.
+type mockBroadcaster struct {
+	messages []broadcastMessage
+}
+
+type broadcastMessage struct {
+	sessionID string
+	message   *models.ServerMessage
+}
+
+func (m *mockBroadcaster) SendToSession(sessionID string, message *models.ServerMessage) {
+	m.messages = append(m.messages, broadcastMessage{
+		sessionID: sessionID,
+		message:   message,
+	})
+}
+
+// setupTestRouterWithBroadcaster creates a test router with a mock broadcaster.
+func setupTestRouterWithBroadcaster() (*gin.Engine, *mockCharacterStateManager, *mockBroadcaster, *zerolog.Logger) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	sm := newMockCharacterStateManager()
+	b := &mockBroadcaster{}
+
+	logger := zerolog.Nop()
+	l := &logger
+
+	RegisterRoutesWithCharacters(router, sm, b, newMockPersistence(), l)
+
+	return router, sm, b, l
+}
+
+// TestCreateCharacter_BroadcastsStateUpdate verifies that creating a character
+// sends a state_update WebSocket message with stateType "party" to the session.
+func TestCreateCharacter_BroadcastsStateUpdate(t *testing.T) {
+	router, sm, b, _ := setupTestRouterWithBroadcaster()
+	sessionID := "test-session-broadcast"
+	sm.createTestSession(sessionID)
+
+	body := CreateCharacterRequest{
+		Name:       "Aragon",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "soldier",
+		AbilityScores: map[string]int{
+			"str": 16, "dex": 12, "con": 14,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/characters?sessionId="+sessionID, bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Expected status 201, got %d; body: %s", w.Code, w.Body.String())
+	}
+
+	// Verify a broadcast message was sent
+	if len(b.messages) != 1 {
+		t.Fatalf("Expected 1 broadcast message, got %d", len(b.messages))
+	}
+
+	msg := b.messages[0]
+	if msg.sessionID != sessionID {
+		t.Errorf("Expected sessionID '%s', got '%s'", sessionID, msg.sessionID)
+	}
+	if msg.message.Type != models.MsgTypeStateUpdate {
+		t.Errorf("Expected message type '%s', got '%s'", models.MsgTypeStateUpdate, msg.message.Type)
+	}
+
+	// Verify payload structure matches frontend isStateUpdatePayload type guard
+	payload, ok := msg.message.Payload.(map[string]interface{})
+	if !ok {
+		t.Fatal("Expected payload to be a map")
+	}
+	if payload["stateType"] != "party" {
+		t.Errorf("Expected stateType 'party', got '%v'", payload["stateType"])
+	}
+	if payload["data"] == nil {
+		t.Error("Expected data to be present in payload")
+	}
+
+	// Verify data contains the party array
+	party, ok := payload["data"].([]*models.Character)
+	if !ok {
+		t.Error("Expected data to be a character array")
+	}
+	if len(party) != 1 {
+		t.Errorf("Expected party length 1, got %d", len(party))
+	}
+	if party[0].Name != "Aragon" {
+		t.Errorf("Expected character name 'Aragon', got '%s'", party[0].Name)
+	}
+}
+
+// TestDeleteCharacter_BroadcastsStateUpdate verifies that deleting a character
+// sends a state_update WebSocket message with the updated party.
+func TestDeleteCharacter_BroadcastsStateUpdate(t *testing.T) {
+	router, sm, b, _ := setupTestRouterWithBroadcaster()
+	sessionID := "test-session-del-broadcast"
+	gs := sm.createTestSession(sessionID)
+
+	gs.Party = append(gs.Party,
+		createTestCharacter("char-1", "Aragon", "human", "fighter"),
+		createTestCharacter("char-2", "Legolas", "elf", "wizard"),
+	)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/char-1?sessionId="+sessionID, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d; body: %s", w.Code, w.Body.String())
+	}
+
+	// Verify a broadcast message was sent
+	if len(b.messages) != 1 {
+		t.Fatalf("Expected 1 broadcast message, got %d", len(b.messages))
+	}
+
+	msg := b.messages[0]
+	if msg.message.Type != models.MsgTypeStateUpdate {
+		t.Errorf("Expected message type '%s', got '%s'", models.MsgTypeStateUpdate, msg.message.Type)
+	}
+
+	payload, ok := msg.message.Payload.(map[string]interface{})
+	if !ok {
+		t.Fatal("Expected payload to be a map")
+	}
+	if payload["stateType"] != "party" {
+		t.Errorf("Expected stateType 'party', got '%v'", payload["stateType"])
+	}
+
+	party, ok := payload["data"].([]*models.Character)
+	if !ok {
+		t.Error("Expected data to be a character array")
+	}
+	if len(party) != 1 {
+		t.Errorf("Expected party length 1 after deletion, got %d", len(party))
+	}
+	if party[0].ID != "char-2" {
+		t.Errorf("Expected remaining character 'char-2', got '%s'", party[0].ID)
+	}
+}
+
+// TestCreateCharacter_FullNameAbilityScores tests that full ability names work via HTTP.
+func TestCreateCharacter_FullNameAbilityScores(t *testing.T) {
+	router, sm, _, _ := setupTestRouter()
+	sessionID := "test-session-fullnames"
+	sm.createTestSession(sessionID)
+
+	body := map[string]interface{}{
+		"name":       "Aragon",
+		"race":       "human",
+		"class":      "fighter",
+		"background": "soldier",
+		"abilityScores": map[string]int{
+			"strength": 16, "dexterity": 12, "constitution": 14,
+			"intelligence": 10, "wisdom": 10, "charisma": 10,
+		},
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/characters?sessionId="+sessionID, bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Expected status 201, got %d; body: %s", w.Code, w.Body.String())
+	}
+
+	gs := sm.GetGameState(sessionID)
+	if len(gs.Party) != 1 {
+		t.Fatalf("Expected party length 1, got %d", len(gs.Party))
+	}
+
+	char := gs.Party[0]
+	// Human +1 to all: STR 17, DEX 13, CON 15
+	// HP: 10 (fighter hit dice) + 2 (CON 15 = +2 mod) = 12
+	if char.MaxHP != 12 {
+		t.Errorf("Expected MaxHP 12 (with human CON bonus), got %d", char.MaxHP)
+	}
+	// AC: 10 + 1 (DEX 13 = +1 mod) = 11
+	if char.AC != 11 {
+		t.Errorf("Expected AC 11 (with human DEX bonus), got %d", char.AC)
+	}
+	if char.Stats.Strength != 17 {
+		t.Errorf("Expected Strength 17 (16+1 human bonus), got %d", char.Stats.Strength)
 	}
 }

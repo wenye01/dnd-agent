@@ -328,18 +328,31 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 	return char, nil
 }
 
+// abilityKeyAliases maps short ability keys to their full-name equivalents.
+// This allows the API to accept both "str" and "strength" as valid keys.
+var abilityKeyAliases = map[string]string{
+	"str": "strength",
+	"dex": "dexterity",
+	"con": "constitution",
+	"int": "intelligence",
+	"wis": "wisdom",
+	"cha": "charisma",
+}
+
 // getAbilityScore retrieves an ability score from the map with a default value.
 //
 // Behavior:
-// - Returns the score if the key exists (e.g., "str", "dex", "con", "int", "wis", "cha")
-// - Returns defaultAbility (10) if the key is missing
-//
-// TODO(future): Add key name validation to reject invalid keys or warn on typos.
-// Current behavior silently ignores invalid keys (e.g., "strength" instead of "str").
-// Consider: return error for unknown keys, or add strict mode flag.
+// - Accepts both short keys ("str", "dex", etc.) and full keys ("strength", "dexterity", etc.)
+// - Returns the score if either key form exists
+// - Returns defaultAbility (10) if neither form is found
 func getAbilityScore(scores map[string]int, key string) int {
 	if val, ok := scores[key]; ok {
 		return val
+	}
+	if alias, ok := abilityKeyAliases[key]; ok {
+		if val, ok := scores[alias]; ok {
+			return val
+		}
 	}
 	return defaultAbility
 }

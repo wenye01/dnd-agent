@@ -804,3 +804,57 @@ func TestGetBackgroundConfig(t *testing.T) {
 		t.Error("Expected false for invalid background config")
 	}
 }
+
+// TestCreateBasic_FullNameAbilityScores tests that full ability names work as map keys.
+// This ensures the API accepts both "str" and "strength" as valid keys.
+func TestCreateBasic_FullNameAbilityScores(t *testing.T) {
+	params := CreateParams{
+		Name:       "Test",
+		Race:       "human",
+		Class:      "fighter",
+		Background: "soldier",
+		AbilityScores: map[string]int{
+			"strength":     16,
+			"dexterity":    12,
+			"constitution": 14,
+			"intelligence": 10,
+			"wisdom":       8,
+			"charisma":     13,
+		},
+	}
+
+	char, err := CreateBasic(params)
+	if err != nil {
+		t.Fatalf("CreateBasic failed: %v", err)
+	}
+
+	// Human +1 to all: STR 17, DEX 13, CON 15, INT 11, WIS 9, CHA 14
+	if char.Stats.Strength != 17 {
+		t.Errorf("Expected Strength 17 (16+1 human bonus), got %d", char.Stats.Strength)
+	}
+	if char.Stats.Dexterity != 13 {
+		t.Errorf("Expected Dexterity 13 (12+1 human bonus), got %d", char.Stats.Dexterity)
+	}
+	if char.Stats.Constitution != 15 {
+		t.Errorf("Expected Constitution 15 (14+1 human bonus), got %d", char.Stats.Constitution)
+	}
+	if char.Stats.Intelligence != 11 {
+		t.Errorf("Expected Intelligence 11 (10+1 human bonus), got %d", char.Stats.Intelligence)
+	}
+	if char.Stats.Wisdom != 9 {
+		t.Errorf("Expected Wisdom 9 (8+1 human bonus), got %d", char.Stats.Wisdom)
+	}
+	if char.Stats.Charisma != 14 {
+		t.Errorf("Expected Charisma 14 (13+1 human bonus), got %d", char.Stats.Charisma)
+	}
+
+	// HP: 10 (fighter hit dice) + 2 (CON 15 = +2 mod) = 12
+	if char.MaxHP != 12 {
+		t.Errorf("Expected MaxHP 12, got %d", char.MaxHP)
+	}
+
+	// AC: 10 + 1 (DEX 13 = +1 mod) = 11
+	if char.AC != 11 {
+		t.Errorf("Expected AC 11, got %d", char.AC)
+	}
+}
