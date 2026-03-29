@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dnd-game/server/configs"
+	"github.com/joho/godotenv"
 	"github.com/dnd-game/server/internal/api/rest"
 	"github.com/dnd-game/server/internal/api/websocket"
 	"github.com/dnd-game/server/internal/client/llm"
@@ -25,6 +26,9 @@ import (
 )
 
 func main() {
+	// Load .env file (ignore error if not found)
+	_ = godotenv.Load()
+
 	// Load configuration
 	cfg, err := configs.Load()
 	if err != nil {
@@ -135,6 +139,13 @@ func setupLogger(cfg *configs.Config) {
 // createLLMProvider creates the LLM provider based on configuration.
 func createLLMProvider(cfg *configs.Config) llm.Provider {
 	switch cfg.LLM.Provider {
+	case "minimax":
+		// MiniMax-M2.7 is OpenAI-compatible, use standard OpenAI provider
+		return llm.NewOpenAIProvider(&llm.OpenAIConfig{
+			APIKey:  cfg.LLM.OpenAI.APIKey,
+			BaseURL: cfg.LLM.OpenAI.BaseURL,
+			Model:   cfg.LLM.OpenAI.Model,
+		})
 	case "openai":
 		// Use GLMProvider for OpenAI-compatible APIs (including GLM)
 		// GLM-4.7-Flash returns content in reasoning_content field

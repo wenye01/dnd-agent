@@ -42,14 +42,12 @@ game:
 
 # LLM configuration
 llm:
-  provider: openai
+  # Supported providers: minimax, openai, glm
+  provider: minimax
   openai:
-    # For GLM (智谱AI), use these settings:
-    # BaseURL: https://open.bigmodel.cn/api/paas/v4/
-    # Model: glm-4-flash
-    api_key: ${GLM_API_KEY:-}
-    base_url: ${GLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4/}
-    model: ${GLM_MODEL:-glm-4-flash}
+    api_key: ${MINIMAX_API_KEY:-}
+    base_url: ${MINIMAX_BASE_URL:-https://api.minimaxi.com/v1}
+    model: ${MINIMAX_MODEL:-MiniMax-M2.7}
 
 # Persistence configuration
 persistence:
