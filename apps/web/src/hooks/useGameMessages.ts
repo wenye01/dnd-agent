@@ -74,7 +74,9 @@ export function useGameMessages() {
       // For streaming, append text character by character or chunk by chunk
       appendStreamText(text)
     } else {
-      // Finalize any existing streaming and add complete message
+      // Finalize streaming: the accumulated stream text is already in the store.
+      // The final message contains the complete text, so use it as the definitive
+      // version (it may differ slightly from streamed chunks due to think-tag stripping).
       finalizeStreamText()
       if (text) {
         addDMMessage(text)

@@ -15,6 +15,11 @@ function HomePage() {
     navigate('/game')
   }
 
+  const handleCreateCharacter = async () => {
+    await initSession()
+    setShowCharacterCreation(true)
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-parchment">
       <div className="text-center space-y-4">
@@ -31,7 +36,7 @@ function HomePage() {
           <Button
             variant="secondary"
             size="lg"
-            onClick={() => setShowCharacterCreation(true)}
+            onClick={handleCreateCharacter}
           >
             Create Character
           </Button>

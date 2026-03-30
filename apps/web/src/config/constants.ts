@@ -4,7 +4,7 @@
  */
 
 // WebSocket URL defaults
-export const WS_DEFAULT_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080/ws'
+export const WS_DEFAULT_URL = import.meta.env.VITE_WS_URL || `ws://${window.location.host}/ws`
 
 // Reconnection configuration
 export const WS_DEFAULT_RECONNECT_INTERVAL = Number(import.meta.env.VITE_WS_RECONNECT_INTERVAL) || 3000
