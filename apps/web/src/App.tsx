@@ -6,7 +6,7 @@ import HomePage from './pages/HomePage'
 function App() {
   return (
     <WebSocketProvider>
-      <div className="min-h-screen bg-parchment text-ink font-body">
+      <div className="min-h-screen bg-abyss text-parchment font-body">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/game" element={<GamePage />} />

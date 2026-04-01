@@ -33,14 +33,12 @@ export function Tooltip({
     setIsVisible(false)
   }
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [])
 
-  // Position the tooltip
   useEffect(() => {
     if (isVisible && triggerRef.current && tooltipRef.current) {
       const triggerRect = triggerRef.current.getBoundingClientRect()
@@ -102,7 +100,7 @@ export function Tooltip({
       {isVisible && (
         <div
           ref={tooltipRef}
-          className={`fixed z-50 px-3 py-1.5 max-w-xs text-sm bg-ink text-parchment rounded-lg shadow-lg pointer-events-none ${className}`}
+          className={`fixed z-50 px-3 py-1.5 max-w-xs text-sm bg-dungeon text-parchment rounded border border-gold/20 shadow-panel pointer-events-none animate-fade-in ${className}`}
           role="tooltip"
         >
           {content}

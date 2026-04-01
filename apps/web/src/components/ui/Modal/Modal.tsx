@@ -67,34 +67,60 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[8px] p-4 animate-fade-in"
       onClick={handleBackdropClick}
     >
       <div
-        className={`${sizeStyles[size]} w-full bg-parchment rounded-lg shadow-xl border border-ink/20 ${className}`}
+        className={`${sizeStyles[size]} w-full rounded-lg animate-scale-in ${className}`}
+        style={{
+          background: 'linear-gradient(180deg, rgba(26, 24, 38, 0.98) 0%, rgba(22, 20, 36, 0.99) 100%)',
+          border: '1.5px solid rgba(212, 168, 67, 0.35)',
+          boxShadow: '0 8px 48px rgba(0,0,0,0.6), 0 0 30px rgba(212,168,67,0.12), 0 0 8px rgba(155,109,255,0.06), inset 0 0 20px rgba(0,0,0,0.3)',
+        }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
       >
+        {/* Decorative top line */}
+        <div className="h-[2px]" style={{
+          background: 'linear-gradient(to right, transparent 5%, rgba(212,168,67,0.4) 20%, rgba(155,109,255,0.25) 50%, rgba(212,168,67,0.4) 80%, transparent 95%)',
+          boxShadow: '0 0 8px rgba(212,168,67,0.15)',
+        }} />
+
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-ink/10">
+          <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid rgba(212,168,67,0.15)' }}>
             {title && (
-              <h2 id="modal-title" className="font-display text-lg font-semibold text-ink">
+              <h2
+                id="modal-title"
+                className="font-display text-lg font-semibold tracking-wider uppercase text-gold text-glow-gold"
+              >
                 {title}
               </h2>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1 text-ink/60 hover:text-ink hover:bg-stone-200 rounded transition-colors"
+                className="p-1.5 rounded transition-all duration-200 cursor-pointer text-stone-text/40 hover:text-parchment hover:bg-stone/50"
                 aria-label="Close modal"
               >
-                <span className="text-xl">✕</span>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               </button>
             )}
           </div>
         )}
-        <div className="p-4">
+        <div className="p-5">
           {children}
         </div>
       </div>

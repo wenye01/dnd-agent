@@ -1,38 +1,694 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
-/* D&D Theme Colors */
+/* ============================================
+   D&D Dark Fantasy Theme - Design Tokens
+   ============================================ */
+
 @theme {
-  /* Primary colors */
-  --color-primary-50: #fef2f2;
-  --color-primary-100: #fee2e2;
-  --color-primary-200: #fecaca;
-  --color-primary-300: #fca5a5;
-  --color-primary-400: #f87171;
-  --color-primary-500: #ef4444;
-  --color-primary-600: #dc2626;
-  --color-primary-700: #b91c1c;
-  --color-primary-800: #991b1b;
-  --color-primary-900: #7f1d1d;
+  /* --- Surface Colors --- */
+  --color-abyss: #08070E;
+  --color-dungeon: #0F0E1A;
+  --color-cave: #1A1826;
+  --color-stone: #252337;
+  --color-slate-dark: #302D46;
+  --color-metal: #3D3A54;
+  --color-iron: #4A4762;
 
-  /* D&D specific colors */
-  --color-parchment: #f5e6d3;
-  --color-ink: #2c1810;
+  /* --- Gold Accent --- */
+  --color-gold: #D4A843;
+  --color-gold-light: #E8C56D;
+  --color-gold-dark: #A67C2E;
+  --color-gold-dim: rgba(212, 168, 67, 0.15);
 
-  /* Fonts */
+  /* --- Arcane (Purple/Magic) --- */
+  --color-arcane: #9B6DFF;
+  --color-arcane-dim: #6B4FB0;
+
+  /* --- Semantic Colors --- */
+  --color-blood: #DC3545;
+  --color-heal: #4ADE80;
+  --color-frost: #60A5FA;
+  --color-poison: #84CC16;
+  --color-fire: #F97316;
+  --color-warning: #FBBF24;
+
+  /* --- Text Colors --- */
+  --color-parchment: #E8DCC8;
+  --color-antique: #C4B59A;
+  --color-stone-text: #8A7F6E;
+  --color-shadow-text: #5A5347;
+
+  /* --- Fonts --- */
   --font-display: 'Cinzel', serif;
   --font-body: 'Crimson Text', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* --- Custom Easing --- */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-dramatic: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Base styles */
+/* ============================================
+   Base Styles
+   ============================================ */
+
 html {
-  font-family: var(--font-body, system-ui, sans-serif);
+  font-family: var(--font-body, system-ui, serif);
+  color: var(--color-parchment);
+  background: var(--color-abyss);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-dungeon);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-metal);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-dark);
+}
+
+/* ============================================
+   Selection
+   ============================================ */
+
+::selection {
+  background: rgba(212, 168, 67, 0.3);
+  color: var(--color-parchment);
+}
+
+/* ============================================
+   Focus Styles (Accessibility)
+   ============================================ */
+
+*:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   Keyframe Animations
+   ============================================ */
+
+/* Pulsing gold glow */
+@keyframes pulse-gold {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(212, 168, 67, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(212, 168, 67, 0.4);
+  }
+}
+
+/* Floating embers for backgrounds */
+@keyframes float-ember {
+  0% {
+    transform: translateY(0) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+    transform: translateY(-10vh) scale(0.5);
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-100vh) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Subtle breathing */
+@keyframes breathe {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Quest scroll glow pulse - more visible than breathe */
+@keyframes scroll-glow {
+  0%, 100% {
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.3), 0 0 15px rgba(0,0,0,0.3), 0 0 20px rgba(212,168,67,0.08), 0 0 6px rgba(155,109,255,0.03);
+    border-color: rgba(212,168,67,0.4);
+  }
+  50% {
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.3), 0 0 20px rgba(0,0,0,0.3), 0 0 35px rgba(212,168,67,0.18), 0 0 12px rgba(155,109,255,0.08);
+    border-color: rgba(212,168,67,0.6);
+  }
+}
+
+/* Emblem ring pulse */
+@keyframes emblem-pulse {
+  0%, 100% {
+    box-shadow: 0 0 45px rgba(155, 109, 255, 0.3), inset 0 0 18px rgba(155, 109, 255, 0.08), 0 0 65px rgba(155, 109, 255, 0.1);
+    border-color: rgba(155, 109, 255, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 55px rgba(155, 109, 255, 0.4), inset 0 0 22px rgba(155, 109, 255, 0.12), 0 0 80px rgba(155, 109, 255, 0.15);
+    border-color: rgba(155, 109, 255, 0.7);
+  }
+}
+
+/* Cursor blink for streaming text */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Dice roll shake */
+@keyframes dice-shake {
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(-12deg); }
+  20% { transform: rotate(10deg); }
+  30% { transform: rotate(-8deg); }
+  40% { transform: rotate(6deg); }
+  50% { transform: rotate(-4deg); }
+  60% { transform: rotate(2deg); }
+}
+
+/* Slide up entry */
+@keyframes slide-up {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Fade in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Scale in for modals */
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Shimmer effect for loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Torch flame flicker */
+@keyframes torch-flicker {
+  0%, 100% { opacity: 0.7; filter: brightness(1); }
+  25% { opacity: 0.9; filter: brightness(1.1); }
+  50% { opacity: 0.6; filter: brightness(0.95); }
+  75% { opacity: 1; filter: brightness(1.15); }
+}
+
+/* Fog drift */
+@keyframes fog-drift {
+  0% { transform: translateX(-5%) translateY(0); opacity: 0.3; }
+  50% { transform: translateX(5%) translateY(-2%); opacity: 0.15; }
+  100% { transform: translateX(-5%) translateY(0); opacity: 0.3; }
+}
+
+/* Magical shimmer */
+@keyframes magic-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Slow rotation for decorative elements */
+@keyframes slow-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Gentle floating */
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Rune pulse for magical effects */
+@keyframes rune-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    filter: drop-shadow(0 0 2px rgba(155, 109, 255, 0.2));
+  }
+  50% {
+    opacity: 0.7;
+    filter: drop-shadow(0 0 8px rgba(155, 109, 255, 0.4));
+  }
+}
+
+@keyframes input-pulse {
+  0%, 100% {
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), 0 0 12px rgba(155,109,255,0.15), 0 0 4px rgba(155,109,255,0.1), 0 0 20px rgba(155,109,255,0.06);
+  }
+  50% {
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), 0 0 18px rgba(155,109,255,0.25), 0 0 6px rgba(155,109,255,0.15), 0 0 30px rgba(155,109,255,0.1);
+  }
+}
+
+@keyframes arcane-border-glow {
+  0%, 100% {
+    border-color: rgba(155, 109, 255, 0.45);
+  }
+  50% {
+    border-color: rgba(155, 109, 255, 0.75);
+  }
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+/* Gold text glow */
+.text-glow-gold {
+  text-shadow: 0 0 8px rgba(212, 168, 67, 0.6), 0 0 20px rgba(212, 168, 67, 0.3), 0 0 40px rgba(212, 168, 67, 0.12);
+}
+
+/* Arcane text glow */
+.text-glow-arcane {
+  text-shadow: 0 0 10px rgba(155, 109, 255, 0.3), 0 0 20px rgba(155, 109, 255, 0.1);
+}
+
+/* Gold box glow */
+.shadow-glow-gold {
+  box-shadow: 0 0 28px rgba(212, 168, 67, 0.35), 0 0 56px rgba(212, 168, 67, 0.15), inset 0 1px 0 rgba(212, 168, 67, 0.2);
+}
+
+/* Arcane box glow */
+.shadow-glow-arcane {
+  box-shadow: 0 0 20px rgba(155, 109, 255, 0.2), 0 0 40px rgba(155, 109, 255, 0.08);
+}
+
+/* Panel shadow */
+.shadow-panel {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(212, 168, 67, 0.05);
+}
+
+/* Card shadow */
+.shadow-card {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Ornamental divider */
+.ornament-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(212, 168, 67, 0.3);
+}
+.ornament-divider::before,
+.ornament-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(212, 168, 67, 0.3), transparent);
+}
+
+/* Ornamental divider - variant with wider diamonds */
+.ornament-divider-wide {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: rgba(212, 168, 67, 0.25);
+}
+.ornament-divider-wide::before,
+.ornament-divider-wide::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(212, 168, 67, 0.25), transparent);
+}
+
+/* Corner accent decoration */
+.corner-accent {
+  position: relative;
+}
+.corner-accent::before,
+.corner-accent::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+}
+.corner-accent::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--color-gold);
+  border-left: 2px solid var(--color-gold);
+}
+.corner-accent::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--color-gold);
+  border-right: 2px solid var(--color-gold);
+}
+
+/* Full four-corner decoration */
+.corner-accent-full {
+  position: relative;
+}
+.corner-accent-full::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: -1px;
+  width: 14px; height: 14px;
+  border-top: 2px solid rgba(212, 168, 67, 0.5);
+  border-left: 2px solid rgba(212, 168, 67, 0.5);
+  pointer-events: none;
+}
+.corner-accent-full::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 14px; height: 14px;
+  border-bottom: 2px solid rgba(212, 168, 67, 0.5);
+  border-right: 2px solid rgba(212, 168, 67, 0.5);
+  pointer-events: none;
+}
+
+/* Shimmer loading placeholder */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-cave) 25%,
+    var(--color-stone) 50%,
+    var(--color-cave) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Input placeholder */
+input::placeholder {
+  color: rgba(155, 109, 255, 0.4);
+  font-style: italic;
+}
+input:focus::placeholder {
+  color: rgba(212, 168, 67, 0.35);
+}
+input:disabled::placeholder {
+  color: rgba(61, 58, 84, 0.4);
+}
+
+/* Animation entry */
+.animate-slide-up {
+  animation: slide-up 300ms var(--ease-smooth) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 250ms ease forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-torch-flicker {
+  animation: torch-flicker 3s ease-in-out infinite;
+}
+
+.animate-fog-drift {
+  animation: fog-drift 20s ease-in-out infinite;
+}
+
+.animate-gentle-float {
+  animation: gentle-float 4s ease-in-out infinite;
+}
+
+.animate-slow-spin {
+  animation: slow-spin 30s linear infinite;
+}
+
+.animate-rune-pulse {
+  animation: rune-pulse 3s ease-in-out infinite;
+}
+
+.animate-magic-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(155, 109, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: magic-shimmer 3s ease-in-out infinite;
+}
+
+/* ============================================
+   Background Patterns
+   ============================================ */
+
+/* Subtle noise texture */
+.bg-noise {
+  position: relative;
+}
+.bg-noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.02;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Radial vignette (dark edges, lighter center) */
+.bg-vignette {
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+/* Parchment texture - warm antique paper feel */
+.bg-parchment {
+  background:
+    linear-gradient(135deg, rgba(212, 168, 67, 0.03) 0%, transparent 50%),
+    linear-gradient(225deg, rgba(212, 168, 67, 0.02) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 20%, rgba(212, 168, 67, 0.04), transparent 60%),
+    radial-gradient(ellipse at 70% 80%, rgba(212, 168, 67, 0.03), transparent 60%);
+}
+
+/* Dungeon wall texture - subtle stone feel */
+.bg-dungeon-wall {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 40px,
+      rgba(0, 0, 0, 0.08) 40px,
+      rgba(0, 0, 0, 0.08) 41px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 80px,
+      rgba(0, 0, 0, 0.05) 80px,
+      rgba(0, 0, 0, 0.05) 81px
+    );
+}
+
+/* Fog overlay - atmospheric mist */
+.bg-fog {
+  position: relative;
+}
+.bg-fog::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(212, 168, 67, 0.04), transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(155, 109, 255, 0.03), transparent 50%);
+  animation: fog-drift 25s ease-in-out infinite;
+}
+
+/* Map grid texture for center portal */
+.bg-map-grid {
+  background-image:
+    linear-gradient(rgba(212, 168, 67, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 168, 67, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Portal glow pulse */
+@keyframes portal-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+}
+
+/* ============================================
+   Game-Specific Decorative Elements
+   ============================================ */
+
+/* Gold gradient border (for hero elements) */
+.border-gold-gradient {
+  border-image: linear-gradient(135deg, rgba(212, 168, 67, 0.6), rgba(212, 168, 67, 0.15), rgba(212, 168, 67, 0.6)) 1;
+}
+
+/* Runestone border effect */
+.border-rune {
+  position: relative;
+}
+.border-rune::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.4), transparent 30%, transparent 70%, rgba(212, 168, 67, 0.4));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Glass panel effect for header bars */
+.glass-panel {
+  background: linear-gradient(180deg, rgba(26, 24, 38, 0.97) 0%, rgba(15, 14, 26, 0.95) 100%);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(212, 168, 67, 0.25);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(212, 168, 67, 0.12);
+  position: relative;
+}
+/* Subtle shimmer on header bottom edge */
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(212, 168, 67, 0.35), rgba(155, 109, 255, 0.25), rgba(212, 168, 67, 0.35), transparent);
+  pointer-events: none;
+}
+
+/* Separator with rune diamond */
+.rune-separator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+.rune-separator::before,
+.rune-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(212, 168, 67, 0.2), transparent);
+}
+
+/* ============================================
+   Game Button Styles
+   ============================================ */
+
+/* Action button with inner glow on hover */
+.btn-game {
+  position: relative;
+  overflow: hidden;
+  transition: all 200ms ease;
+}
+.btn-game::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.btn-game:hover::after {
+  opacity: 1;
+}
+
+/* ============================================
+   Stat Display Styles
+   ============================================ */
+
+/* Hexagonal stat badge */
+.stat-badge {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 2px;
+  background: linear-gradient(180deg, rgba(61, 58, 84, 0.5) 0%, rgba(37, 35, 55, 0.8) 100%);
+  border: 1px solid rgba(212, 168, 67, 0.12);
+  border-radius: 4px;
+  transition: all 200ms ease;
+}
+.stat-badge:hover {
+  border-color: rgba(212, 168, 67, 0.3);
+  background: linear-gradient(180deg, rgba(61, 58, 84, 0.7) 0%, rgba(48, 45, 70, 0.9) 100%);
+}
+
+/* ============================================
+   Message Bubble Styles
+   ============================================ */
+
+/* DM message with scroll-like styling */
+.msg-dm {
+  background:
+    linear-gradient(135deg, rgba(212, 168, 67, 0.08) 0%, transparent 50%),
+    var(--color-cave);
+  border: 1px solid rgba(212, 168, 67, 0.22);
+  border-left: 2px solid rgba(212, 168, 67, 0.4);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* User message with warm accent */
+.msg-user {
+  background: linear-gradient(135deg, rgba(48, 45, 70, 0.9), rgba(61, 58, 84, 0.7));
+  border: 1px solid rgba(212, 168, 67, 0.12);
+  border-left: 2px solid rgba(212, 168, 67, 0.5);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

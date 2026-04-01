@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { characterApi, type CreateCharacterRequest, type ServerCharacter } from '../../services/api'
 import { useGameStore } from '../../stores/gameStore'
+import { Sword, Shield, Wand2, User } from 'lucide-react'
 
 interface CharacterCreationDialogProps {
   isOpen: boolean
@@ -10,15 +11,48 @@ interface CharacterCreationDialogProps {
 }
 
 const RACES = [
-  { value: 'human', label: 'Human', description: '+1 to all ability scores' },
-  { value: 'elf', label: 'Elf', description: '+2 DEX, Darkvision, Keen Senses' },
-  { value: 'dwarf', label: 'Dwarf', description: '+2 CON, Darkvision, Dwarven Resilience' },
+  {
+    value: 'human',
+    label: 'Human',
+    description: '+1 to all ability scores',
+    icon: User,
+  },
+  {
+    value: 'elf',
+    label: 'Elf',
+    description: '+2 DEX, Darkvision, Keen Senses',
+    icon: User,
+  },
+  {
+    value: 'dwarf',
+    label: 'Dwarf',
+    description: '+2 CON, Darkvision, Dwarven Resilience',
+    icon: User,
+  },
 ]
 
 const CLASSES = [
-  { value: 'fighter', label: 'Fighter', description: 'd10 HP, martial weapon master' },
-  { value: 'wizard', label: 'Wizard', description: 'd6 HP, arcane spellcaster' },
-  { value: 'rogue', label: 'Rogue', description: 'd8 HP, stealth and skill expert' },
+  {
+    value: 'fighter',
+    label: 'Fighter',
+    description: 'd10 HP, martial weapon master',
+    icon: Sword,
+    accent: 'text-blood',
+  },
+  {
+    value: 'wizard',
+    label: 'Wizard',
+    description: 'd6 HP, arcane spellcaster',
+    icon: Wand2,
+    accent: 'text-arcane',
+  },
+  {
+    value: 'rogue',
+    label: 'Rogue',
+    description: 'd8 HP, stealth and skill expert',
+    icon: Shield,
+    accent: 'text-gold',
+  },
 ]
 
 const BACKGROUNDS = [
@@ -94,7 +128,6 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
       const response = await characterApi.create(request)
 
       if (response.status === 'success' && response.data) {
-        // Convert server character to frontend Character type and add to party
         const serverChar = response.data as ServerCharacter
         const newChar = serverToClientCharacter(serverChar)
 
@@ -104,7 +137,7 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
           updateParty([newChar])
         }
 
-        // Reset form and close
+        // Reset form
         setName('')
         setRace('human')
         setCharClass('fighter')
@@ -123,83 +156,107 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create Character" size="lg">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Error */}
         {error && (
-          <div className="p-3 bg-red-100 border border-red-300 rounded text-red-800 text-sm">
+          <div className="flex items-center gap-2 p-3 bg-blood/8 border border-blood/15 rounded-md text-blood/90 text-sm">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
             {error}
           </div>
         )}
 
         {/* Character Name */}
         <div>
-          <label className="block text-sm font-semibold text-ink/70 mb-1">Character Name</label>
+          <label className="block text-[11px] font-display font-semibold text-antique/70 mb-1.5 tracking-wider uppercase">
+            Character Name
+          </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter character name"
-            className="w-full px-3 py-2 border border-ink/20 rounded bg-white text-ink focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-2.5 rounded-md border border-gold/10 bg-metal/25 text-parchment placeholder:text-stone-text/35 font-body text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/20"
             maxLength={50}
           />
         </div>
 
         {/* Race Selection */}
         <div>
-          <label className="block text-sm font-semibold text-ink/70 mb-1">Race</label>
+          <label className="block text-[11px] font-display font-semibold text-antique/70 mb-2 tracking-wider uppercase">
+            Race
+          </label>
           <div className="grid grid-cols-3 gap-2">
-            {RACES.map((r) => (
-              <button
-                key={r.value}
-                type="button"
-                onClick={() => setRace(r.value)}
-                className={`p-3 rounded border-2 text-left transition-colors ${
-                  race === r.value
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-ink/10 hover:border-ink/30 bg-white'
-                }`}
-              >
-                <div className="font-semibold text-ink">{r.label}</div>
-                <div className="text-xs text-ink/60">{r.description}</div>
-              </button>
-            ))}
+            {RACES.map((r) => {
+              const Icon = r.icon
+              return (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => setRace(r.value)}
+                  className={`p-3 rounded-md border text-left transition-all duration-200 cursor-pointer ${
+                    race === r.value
+                      ? 'border-gold/40 bg-gold/8 shadow-[0_0_12px_rgba(212,168,67,0.06)]'
+                      : 'border-gold/6 bg-metal/15 hover:border-gold/15 hover:bg-metal/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className={`w-4 h-4 ${race === r.value ? 'text-gold/70' : 'text-stone-text/30'}`} />
+                    <div className="font-display font-semibold text-sm text-parchment">{r.label}</div>
+                  </div>
+                  <div className="text-[11px] text-stone-text/50 mt-1 ml-6">{r.description}</div>
+                </button>
+              )
+            })}
           </div>
         </div>
 
         {/* Class Selection */}
         <div>
-          <label className="block text-sm font-semibold text-ink/70 mb-1">Class</label>
+          <label className="block text-[11px] font-display font-semibold text-antique/70 mb-2 tracking-wider uppercase">
+            Class
+          </label>
           <div className="grid grid-cols-3 gap-2">
-            {CLASSES.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => setCharClass(c.value)}
-                className={`p-3 rounded border-2 text-left transition-colors ${
-                  charClass === c.value
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-ink/10 hover:border-ink/30 bg-white'
-                }`}
-              >
-                <div className="font-semibold text-ink">{c.label}</div>
-                <div className="text-xs text-ink/60">{c.description}</div>
-              </button>
-            ))}
+            {CLASSES.map((c) => {
+              const Icon = c.icon
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setCharClass(c.value)}
+                  className={`p-3 rounded-md border text-left transition-all duration-200 cursor-pointer ${
+                    charClass === c.value
+                      ? 'border-gold/40 bg-gold/8 shadow-[0_0_12px_rgba(212,168,67,0.06)]'
+                      : 'border-gold/6 bg-metal/15 hover:border-gold/15 hover:bg-metal/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className={`w-4 h-4 ${charClass === c.value ? c.accent : 'text-stone-text/30'}`} />
+                    <div className="font-display font-semibold text-sm text-parchment">{c.label}</div>
+                  </div>
+                  <div className="text-[11px] text-stone-text/50 mt-1 ml-6">{c.description}</div>
+                </button>
+              )
+            })}
           </div>
         </div>
 
         {/* Background Selection */}
         <div>
-          <label className="block text-sm font-semibold text-ink/70 mb-1">Background</label>
+          <label className="block text-[11px] font-display font-semibold text-antique/70 mb-2 tracking-wider uppercase">
+            Background
+          </label>
           <div className="grid grid-cols-4 gap-2">
             {BACKGROUNDS.map((b) => (
               <button
                 key={b.value}
                 type="button"
                 onClick={() => setBackground(b.value)}
-                className={`px-3 py-2 rounded border-2 text-sm font-medium transition-colors ${
+                className={`px-3 py-2 rounded-md border text-sm font-display font-medium transition-all duration-200 cursor-pointer ${
                   background === b.value
-                    ? 'border-primary-500 bg-primary-50 text-primary-800'
-                    : 'border-ink/10 hover:border-ink/30 bg-white text-ink/70'
+                    ? 'border-gold/40 bg-gold/8 text-gold'
+                    : 'border-gold/6 bg-metal/15 text-antique/50 hover:border-gold/15 hover:text-antique'
                 }`}
               >
                 {b.label}
@@ -210,25 +267,27 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
 
         {/* Ability Scores */}
         <div>
-          <label className="block text-sm font-semibold text-ink/70 mb-1">
+          <label className="block text-[11px] font-display font-semibold text-antique/70 mb-2 tracking-wider uppercase">
             Ability Scores
-            <span className="ml-2 text-xs font-normal text-ink/40">
+            <span className="ml-2 text-[10px] font-normal text-stone-text/40 normal-case tracking-normal font-body">
               Standard Array: {STANDARD_ARRAY.join(', ')}
             </span>
           </label>
           <div className="grid grid-cols-6 gap-2">
             {ABILITY_NAMES.map((ability) => (
               <div key={ability.key} className="flex flex-col items-center">
-                <span className="text-xs font-semibold text-ink/60 mb-1">{ability.label}</span>
+                <span className="text-[9px] font-display font-semibold text-stone-text/60 mb-1 tracking-wider uppercase">
+                  {ability.label}
+                </span>
                 <input
                   type="number"
                   min={1}
                   max={20}
                   value={scores[ability.key]}
                   onChange={(e) => handleScoreChange(ability.key, e.target.value)}
-                  className="w-full text-center px-1 py-2 border border-ink/20 rounded bg-white text-ink font-bold focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full text-center px-1 py-2 border border-gold/10 rounded-md bg-metal/25 text-parchment font-mono font-bold text-lg focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/20 transition-all duration-200"
                 />
-                <span className="text-xs text-primary-700 mt-1">
+                <span className="text-[11px] text-gold/60 font-mono mt-1 font-medium">
                   {getModifier(scores[ability.key])}
                 </span>
               </div>
@@ -237,8 +296,8 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="secondary" type="button" onClick={onClose}>
+        <div className="flex justify-end gap-2 pt-3 border-t border-gold/8">
+          <Button variant="ghost" type="button" onClick={onClose}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" loading={isSubmitting}>
@@ -250,10 +309,6 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
   )
 }
 
-/**
- * Converts a server-side Character object to the frontend Character type.
- * The backend uses snake_case/camelCase differences and different field names.
- */
 function serverToClientCharacter(char: ServerCharacter): import('../../types').Character {
   return {
     id: char.id,

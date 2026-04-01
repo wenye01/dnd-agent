@@ -41,11 +41,11 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
     }, [value, autoResize, textAreaRef])
 
     const textAreaStyles = `
-      w-full px-4 py-2 rounded-lg border bg-white text-ink placeholder:text-ink/40
-      font-body text-base transition-all ${autoResize ? 'overflow-hidden' : 'resize-none'}
-      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-      disabled:bg-stone-100 disabled:text-ink/30 disabled:cursor-not-allowed
-      ${error ? 'border-red-500 focus:ring-red-500' : 'border-ink/20'}
+      w-full px-4 py-2 rounded-md border bg-metal text-parchment placeholder:text-stone-text
+      font-body text-base transition-all duration-200 ${autoResize ? 'overflow-hidden' : 'resize-none'}
+      focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold/40
+      disabled:bg-iron/50 disabled:text-stone-text disabled:cursor-not-allowed
+      ${error ? 'border-blood focus:ring-blood/50' : 'border-gold-dim'}
       ${className}
     `
 
@@ -54,7 +54,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-display font-semibold text-ink"
+            className="text-xs font-display font-semibold text-antique tracking-wide uppercase"
           >
             {label}
           </label>
@@ -67,21 +67,19 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           rows={rows}
           value={value}
           aria-invalid={error ? 'true' : undefined}
-          aria-describedby={
-            error ? errorId : helperId
-          }
+          aria-describedby={error ? errorId : helperId}
           className={textAreaStyles}
           {...props}
         />
 
         {error && (
-          <span id={errorId} className="text-sm text-red-600" role="alert">
+          <span id={errorId} className="text-sm text-blood" role="alert">
             {error}
           </span>
         )}
 
         {helperText && !error && (
-          <span id={helperId} className="text-sm text-ink/60">
+          <span id={helperId} className="text-sm text-stone-text">
             {helperText}
           </span>
         )}

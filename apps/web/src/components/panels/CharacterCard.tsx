@@ -1,6 +1,7 @@
 import type { Character } from '../../types'
 import { HealthBar } from '../ui/HealthBar'
 import { Tooltip } from '../ui/Tooltip'
+import { Shield, Zap, Heart } from 'lucide-react'
 
 export interface CharacterCardProps {
   character: Character
@@ -23,10 +24,10 @@ function AbilityScore({ name, value }: { name: keyof import('../../types').Abili
 
   return (
     <Tooltip content={abilityFullNames[name]}>
-      <div className="flex flex-col items-center p-2 bg-stone-100 rounded border border-ink/10 hover:bg-stone-200 transition-colors cursor-help">
-        <span className="text-xs font-semibold text-ink/60">{name.slice(0, 3)}</span>
-        <span className="text-lg font-bold text-ink">{value}</span>
-        <span className="text-xs text-primary-700 font-medium">{modifierStr}</span>
+      <div className="stat-badge cursor-help">
+        <span className="text-[9px] font-display font-semibold text-stone-text uppercase tracking-wider">{name.slice(0, 3)}</span>
+        <span className="text-sm font-mono font-bold text-parchment">{value}</span>
+        <span className="text-[10px] text-gold font-mono font-medium">{modifierStr}</span>
       </div>
     </Tooltip>
   )
@@ -45,8 +46,10 @@ export function CharacterCard({ character, onSelect, isActive }: CharacterCardPr
   return (
     <div
       className={`
-        bg-stone-50 rounded-lg p-3 border-2 transition-all cursor-pointer
-        ${isActive ? 'border-primary-500 shadow-md' : 'border-ink/10 hover:border-ink/30'}
+        bg-cave/50 rounded-lg p-3 border transition-all cursor-pointer group
+        ${isActive
+          ? 'border-gold/40 shadow-[0_0_16px_rgba(212,168,67,0.1)]'
+          : 'border-gold/8 hover:border-gold/20'}
       `}
       onClick={onSelect}
       role="button"
@@ -54,50 +57,50 @@ export function CharacterCard({ character, onSelect, isActive }: CharacterCardPr
       aria-pressed={isActive}
     >
       {/* Header: Name and Class */}
-      <div className="mb-3">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-display font-semibold text-ink text-lg">{character.name}</h3>
-            <p className="text-sm text-ink/60">
-              Level {character.level} {character.class} ({character.race})
-            </p>
-          </div>
+      <div className="mb-2.5 flex items-start justify-between">
+        <div>
+          <h3 className="font-display font-semibold text-gold text-sm tracking-wide group-hover:text-gold-light transition-colors">
+            {character.name}
+          </h3>
+          <p className="text-[11px] text-antique/60 mt-0.5">
+            Level {character.level} {character.class} &middot; {character.race}
+          </p>
+        </div>
+        <div className="text-[10px] font-display text-gold/25 bg-gold/5 px-1.5 py-0.5 rounded tracking-wider uppercase">
+          {character.class}
         </div>
       </div>
 
       {/* HP Bar */}
-      <div className="mb-3">
+      <div className="mb-2.5">
         <HealthBar
           current={character.currentHitPoints}
           max={character.maxHitPoints}
           temporary={character.temporaryHitPoints}
           size="md"
+          label="HP"
         />
       </div>
 
-      {/* AC, Speed, Initiative */}
-      <div className="flex gap-4 text-sm text-ink/70 mb-3">
-        <Tooltip content="Armor Class">
-          <div className="flex items-center gap-1">
-            <span className="font-semibold">AC</span>
-            <span className="font-bold text-ink">{character.armorClass}</span>
-          </div>
-        </Tooltip>
-        <Tooltip content="Speed">
-          <div className="flex items-center gap-1">
-            <span className="font-semibold">SPD</span>
-            <span>{character.speed}ft</span>
-          </div>
-        </Tooltip>
-        <Tooltip content="Initiative">
-          <div className="flex items-center gap-1">
-            <span className="font-semibold">INIT</span>
-            <span className={character.initiative > 0 ? 'text-green-600 font-bold' : character.initiative < 0 ? 'text-red-600 font-bold' : ''}>
-              {character.initiative > 0 ? '+' : ''}
-              {character.initiative}
-            </span>
-          </div>
-        </Tooltip>
+      {/* AC, Speed, Initiative as chips */}
+      <div className="flex gap-1.5 text-xs text-antique mb-2.5">
+        <div className="flex items-center gap-1 px-2 py-1 bg-cave/50 rounded border border-gold/8">
+          <Shield className="w-3 h-3 text-stone-text/50" />
+          <span className="text-[10px] text-stone-text font-display">AC</span>
+          <span className="font-mono font-bold text-parchment">{character.armorClass}</span>
+        </div>
+        <div className="flex items-center gap-1 px-2 py-1 bg-cave/50 rounded border border-gold/8">
+          <Zap className="w-3 h-3 text-stone-text/50" />
+          <span className="text-[10px] text-stone-text font-display">SPD</span>
+          <span className="font-mono text-parchment">{character.speed}ft</span>
+        </div>
+        <div className="flex items-center gap-1 px-2 py-1 bg-cave/50 rounded border border-gold/8">
+          <Heart className="w-3 h-3 text-stone-text/50" />
+          <span className="text-[10px] text-stone-text font-display">INIT</span>
+          <span className={`font-mono font-bold ${character.initiative > 0 ? 'text-heal' : character.initiative < 0 ? 'text-blood' : 'text-parchment'}`}>
+            {character.initiative > 0 ? '+' : ''}{character.initiative}
+          </span>
+        </div>
       </div>
 
       {/* Ability Scores */}
@@ -113,11 +116,11 @@ export function CharacterCard({ character, onSelect, isActive }: CharacterCardPr
 
       {/* Conditions */}
       {character.conditions.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1">
+        <div className="mt-2.5 flex flex-wrap gap-1">
           {character.conditions.map((condition) => (
             <span
               key={condition}
-              className="text-xs px-2 py-0.5 bg-red-100 text-red-800 rounded border border-red-200 font-medium"
+              className="text-[10px] px-2 py-0.5 bg-blood/10 text-blood/80 border border-blood/15 rounded-full font-medium"
             >
               {condition}
             </span>
