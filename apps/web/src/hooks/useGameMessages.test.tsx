@@ -101,18 +101,16 @@ describe('useGameMessages', () => {
       handler({ type: 'narration', payload: { text: 'Partial', isStreaming: true }, timestamp: Date.now() })
       expect(useChatStore.getState().streamingText).toBe('Partial')
 
-      // finalizeStreamText() converts streaming text into a message,
-      // then addDMMessage() adds the complete text as another message
+      // finalizeStreamText() converts the accumulated streaming text into a single message.
+      // Since there was streaming content, the final text is NOT added again (no duplicate).
       handler({ type: 'narration', payload: { text: 'Complete text', isStreaming: false }, timestamp: Date.now() })
 
       const state = useChatStore.getState()
       expect(state.streamingText).toBe('')
       expect(state.isStreaming).toBe(false)
-      expect(state.messages).toHaveLength(2)
+      expect(state.messages).toHaveLength(1)
       expect(state.messages[0].type).toBe('dm')
       expect(state.messages[0].content).toBe('Partial')
-      expect(state.messages[1].type).toBe('dm')
-      expect(state.messages[1].content).toBe('Complete text')
     })
 
     it('should skip empty text in complete narration', () => {
@@ -122,6 +120,21 @@ describe('useGameMessages', () => {
       handler({ type: 'narration', payload: { text: '', isStreaming: false }, timestamp: Date.now() })
 
       expect(useChatStore.getState().messages).toHaveLength(0)
+    })
+
+    it('should display non-streaming response as a single message', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      // A response that arrives as a single final message with no prior streaming chunks
+      handler({ type: 'narration', payload: { text: 'Short response.', isStreaming: false }, timestamp: Date.now() })
+
+      const state = useChatStore.getState()
+      expect(state.streamingText).toBe('')
+      expect(state.isStreaming).toBe(false)
+      expect(state.messages).toHaveLength(1)
+      expect(state.messages[0].type).toBe('dm')
+      expect(state.messages[0].content).toBe('Short response.')
     })
   })
 

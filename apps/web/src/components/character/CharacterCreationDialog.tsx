@@ -116,12 +116,12 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
         class: charClass,
         background,
         abilityScores: {
-          str: scores.str,
-          dex: scores.dex,
-          con: scores.con,
-          int: scores.int,
-          wis: scores.wis,
-          cha: scores.cha,
+          strength: scores.str,
+          dexterity: scores.dex,
+          constitution: scores.con,
+          intelligence: scores.int,
+          wisdom: scores.wis,
+          charisma: scores.cha,
         },
       }
 

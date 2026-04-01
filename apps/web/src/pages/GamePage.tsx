@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useGameMessages } from '../hooks/useGameMessages'
 import { useUIStore } from '../stores/uiStore'
 import { useGameStore } from '../stores/gameStore'
@@ -13,14 +14,18 @@ function GamePage() {
   // Set up message processing
   useGameMessages()
 
-  // Initialize session on mount
-  const initSession = useGameStore((s) => s.initSession)
+  const navigate = useNavigate()
+  const sessionId = useGameStore((s) => s.gameState?.sessionId)
   const isLoading = useGameStore((s) => s.isLoading)
   const error = useGameStore((s) => s.error)
+  const setError = useGameStore((s) => s.setError)
 
+  // Session should already exist from HomePage. If not, redirect back.
   useEffect(() => {
-    initSession()
-  }, [initSession])
+    if (!sessionId && !isLoading) {
+      navigate('/')
+    }
+  }, [sessionId, isLoading, navigate])
 
   // UI state for panel toggles
   const { isPanelOpen, togglePanel } = useUIStore()
@@ -67,8 +72,8 @@ function GamePage() {
           </div>
           <p className="text-blood text-sm font-display font-semibold">Portal Connection Failed</p>
           <p className="text-stone-text text-xs">{error}</p>
-          <Button variant="secondary" size="sm" onClick={() => initSession()}>
-            Retry Connection
+          <Button variant="secondary" size="sm" onClick={() => { setError(null); navigate('/') }}>
+            Return to Home
           </Button>
         </div>
       </div>

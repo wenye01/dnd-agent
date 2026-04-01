@@ -43,12 +43,12 @@ export interface CreateCharacterRequest {
   class: string
   background: string
   abilityScores: {
-    str: number
-    dex: number
-    con: number
-    int: number
-    wis: number
-    cha: number
+    strength: number
+    dexterity: number
+    constitution: number
+    intelligence: number
+    wisdom: number
+    charisma: number
   }
 }
 

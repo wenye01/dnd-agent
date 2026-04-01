@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react'
 import { WebSocketClient } from '../services/websocket'
+import { useGameStore } from '../stores/gameStore'
 import type { ServerMessage, ClientMessage } from '../types'
 
 interface WebSocketContextValue {
@@ -16,9 +17,25 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const [client, setClient] = useState<WebSocketClient | null>(null)
   const [connected, setConnected] = useState(false)
   const handlersRef = useRef<Set<(message: ServerMessage) => void>>(new Set())
+  // Track which sessionId is currently connected to prevent duplicate connections
+  const connectedSessionRef = useRef<string | null>(null)
+
+  // Derive sessionId from gameStore. WebSocket only connects when a session exists.
+  const sessionId = useGameStore((s) => s.gameState?.sessionId)
 
   useEffect(() => {
-    const wsClient = new WebSocketClient()
+    // No session yet -- do not connect WebSocket.
+    if (!sessionId) return
+
+    // Skip if already connected to this exact session (prevents React StrictMode
+    // double-mount from creating two simultaneous connections)
+    if (connectedSessionRef.current === sessionId) return
+
+    connectedSessionRef.current = sessionId
+
+    const wsClient = new WebSocketClient({
+      getSessionId: () => sessionId,
+    })
     let isMounted = true
 
     // Set up connection handler
@@ -51,9 +68,12 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false
+      connectedSessionRef.current = null
       wsClient.disconnect()
+      setClient(null)
+      setConnected(false)
     }
-  }, []) // Run only once on mount
+  }, [sessionId]) // Reconnect when sessionId changes
 
   const send = useCallback((message: ClientMessage) => {
     client?.send(message)

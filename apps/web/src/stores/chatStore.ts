@@ -18,7 +18,7 @@ interface ChatStore {
   addDMMessage: (content: string) => void
   addSystemMessage: (content: string) => void
   appendStreamText: (text: string) => void
-  finalizeStreamText: () => void
+  finalizeStreamText: () => boolean
   clearMessages: () => void
 }
 
@@ -88,8 +88,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         streamingText: '',
         isStreaming: false,
       })
+      return true
     } else {
       set({ isStreaming: false })
+      return false
     }
   },
 

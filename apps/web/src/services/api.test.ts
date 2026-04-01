@@ -64,7 +64,7 @@ function createValidRequest(): CreateCharacterRequest {
     race: 'human',
     class: 'fighter',
     background: 'soldier',
-    abilityScores: { str: 16, dex: 12, con: 14, int: 10, wis: 10, cha: 10 },
+    abilityScores: { strength: 16, dexterity: 12, constitution: 14, intelligence: 10, wisdom: 10, charisma: 10 },
   }
 }
 
@@ -232,7 +232,7 @@ describe('api.ts - REST API Client', () => {
         race: 'elf',
         class: 'wizard',
         background: 'sage',
-        abilityScores: { str: 8, dex: 14, con: 12, int: 16, wis: 12, cha: 10 },
+        abilityScores: { strength: 8, dexterity: 14, constitution: 12, intelligence: 16, wisdom: 12, charisma: 10 },
       }
       mockFetchResponse({ status: 'success', data: createMockCharacter(elfWizard) }, 201)
 
@@ -241,7 +241,7 @@ describe('api.ts - REST API Client', () => {
       const body = JSON.parse(mockFetch.mock.calls[0][1].body)
       expect(body.race).toBe('elf')
       expect(body.class).toBe('wizard')
-      expect(body.abilityScores.int).toBe(16)
+      expect(body.abilityScores.intelligence).toBe(16)
     })
 
     it('should send correct body for dwarf rogue', async () => {
@@ -250,7 +250,7 @@ describe('api.ts - REST API Client', () => {
         race: 'dwarf',
         class: 'rogue',
         background: 'criminal',
-        abilityScores: { str: 10, dex: 16, con: 14, int: 12, wis: 10, cha: 8 },
+        abilityScores: { strength: 10, dexterity: 16, constitution: 14, intelligence: 12, wisdom: 10, charisma: 8 },
       }
       mockFetchResponse({ status: 'success', data: createMockCharacter(dwarfRogue) }, 201)
 

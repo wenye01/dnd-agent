@@ -59,8 +59,6 @@ export const useGameStore = create<GameStore>()(
         }
 
         set({ isLoading: true, error: null })
-
-        set({ isLoading: true, error: null })
         try {
           const response = await sessionApi.create()
           if (response.status === 'success' && response.data) {

@@ -15,6 +15,8 @@ import {
 
 export interface WebSocketOptions {
   url?: string
+  /** Callback invoked on every connect/reconnect to obtain the current sessionId. */
+  getSessionId?: () => string | undefined
   reconnectInterval?: number
   maxReconnectAttempts?: number
   heartbeatInterval?: number
@@ -53,7 +55,7 @@ export class WebSocketClient {
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.isManualClose = false
-      this.ws = new WebSocket(this.options.url)
+      this.ws = new WebSocket(this.buildUrl())
 
       this.ws.onopen = () => {
         console.log('WebSocket connected')
@@ -196,6 +198,20 @@ export class WebSocketClient {
         console.error('Error in connection handler:', error)
       }
     })
+  }
+
+  /**
+   * Build the full WebSocket URL, appending ?session_id=xxx when available.
+   * Uses the base URL from options and queries the optional getSessionId callback.
+   */
+  private buildUrl(): string {
+    const baseUrl = this.options.url
+    const sessionId = this.options.getSessionId?.()
+    if (sessionId) {
+      const separator = baseUrl.includes('?') ? '&' : '?'
+      return `${baseUrl}${separator}session_id=${encodeURIComponent(sessionId)}`
+    }
+    return baseUrl
   }
 }
 
