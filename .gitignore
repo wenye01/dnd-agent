@@ -70,3 +70,21 @@ build-test.cjs
 
 # Server data (local sessions)
 apps/server/data/
+
+# Web local data (zustand persist)
+apps/web/data/
+
+# Build test output
+apps/web/dist-test/
+
+# Compiled binaries
+bin/
+
+# Design system assets
+design-system/
+
+# Bug records
+docs/bug-*.md
+
+# Test screenshots
+docs/screenshots/
