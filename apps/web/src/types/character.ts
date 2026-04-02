@@ -26,6 +26,15 @@ export interface InventoryItem {
   description?: string
 }
 
+// 法术位
+export interface SpellSlotLevel {
+  max: number
+  used: number
+}
+
+// 法术位映射 (1-9级)
+export type SpellSlots = Record<number, SpellSlotLevel>
+
 // 角色定义
 export interface Character {
   id: string
@@ -59,6 +68,9 @@ export interface Character {
   // 装备
   equipment: EquipmentSlot[]
   inventory: InventoryItem[]
+
+  // 法术位
+  spellSlots?: SpellSlots
 }
 
 // 怪物/NPC (简化版角色)
