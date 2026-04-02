@@ -61,6 +61,7 @@ func main() {
 	// Create tool registry
 	toolRegistry := tools.NewRegistry()
 	tools.RegisterDiceTools(toolRegistry, diceService)
+	tools.RegisterCharacterTools(toolRegistry, &characterStateAdapter{sm: stateManager})
 	log.Info().Int("tools", len(toolRegistry.List())).Msg("tools registered")
 
 	// Create WebSocket hub
@@ -236,6 +237,19 @@ func (a *persistenceAdapter) SaveState(sessionID string, st interface{}) error {
 
 func (a *persistenceAdapter) LoadState(sessionID string) (interface{}, error) {
 	return a.Manager.LoadState(sessionID)
+}
+
+// characterStateAdapter adapts *state.Manager to tools.CharacterStateProvider interface.
+type characterStateAdapter struct {
+	sm *state.Manager
+}
+
+func (a *characterStateAdapter) GetGameState(sessionID string) *state.GameState {
+	return a.sm.GetSession(sessionID)
+}
+
+func (a *characterStateAdapter) UpdateGameState(sessionID string, updateFn func(*state.GameState)) error {
+	return a.sm.UpdateSession(sessionID, updateFn)
 }
 
 // loggerMiddleware is a Gin middleware for request logging.

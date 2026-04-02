@@ -205,7 +205,7 @@ func TestCreateBasic_DwarfRogue(t *testing.T) {
 func TestCreateBasic_InvalidRace(t *testing.T) {
 	params := CreateParams{
 		Name:       "测试",
-		Race:       "dragonborn",
+		Race:       "invalid_race",
 		Class:      "fighter",
 		Background: "soldier",
 		AbilityScores: map[string]int{
@@ -225,7 +225,7 @@ func TestCreateBasic_InvalidClass(t *testing.T) {
 	params := CreateParams{
 		Name:       "测试",
 		Race:       "human",
-		Class:      "paladin",
+		Class:      "invalid_class",
 		Background: "soldier",
 		AbilityScores: map[string]int{
 			"str": 16, "dex": 12, "con": 14,
@@ -245,7 +245,7 @@ func TestCreateBasic_InvalidBackground(t *testing.T) {
 		Name:       "测试",
 		Race:       "human",
 		Class:      "fighter",
-		Background: "noble",
+		Background: "invalid_background",
 		AbilityScores: map[string]int{
 			"str": 16, "dex": 12, "con": 14,
 			"int": 10, "wis": 10, "cha": 10,
@@ -705,8 +705,8 @@ func TestCreateBasic_CaseInsensitiveRaceClass(t *testing.T) {
 // TestGetSupportedRaces tests that GetSupportedRaces returns all races.
 func TestGetSupportedRaces(t *testing.T) {
 	races := GetSupportedRaces()
-	if len(races) != 3 {
-		t.Errorf("Expected 3 supported races, got %d", len(races))
+	if len(races) != 9 {
+		t.Errorf("Expected 9 supported races, got %d", len(races))
 	}
 
 	// Check that expected races are present
@@ -714,40 +714,49 @@ func TestGetSupportedRaces(t *testing.T) {
 	for _, r := range races {
 		raceMap[r] = true
 	}
-	if !raceMap["human"] || !raceMap["elf"] || !raceMap["dwarf"] {
-		t.Error("Missing expected races in GetSupportedRaces")
+	expectedRaces := []string{"human", "elf", "dwarf", "halfling", "dragonborn", "gnome", "half-elf", "half-orc", "tiefling"}
+	for _, expected := range expectedRaces {
+		if !raceMap[expected] {
+			t.Errorf("Missing expected race: %s", expected)
+		}
 	}
 }
 
 // TestGetSupportedClasses tests that GetSupportedClasses returns all classes.
 func TestGetSupportedClasses(t *testing.T) {
 	classes := GetSupportedClasses()
-	if len(classes) != 3 {
-		t.Errorf("Expected 3 supported classes, got %d", len(classes))
+	if len(classes) != 11 {
+		t.Errorf("Expected 11 supported classes, got %d", len(classes))
 	}
 
 	classMap := make(map[string]bool)
 	for _, c := range classes {
 		classMap[c] = true
 	}
-	if !classMap["fighter"] || !classMap["wizard"] || !classMap["rogue"] {
-		t.Error("Missing expected classes in GetSupportedClasses")
+	expectedClasses := []string{"fighter", "wizard", "rogue", "cleric", "bard", "druid", "monk", "paladin", "ranger", "sorcerer", "warlock"}
+	for _, expected := range expectedClasses {
+		if !classMap[expected] {
+			t.Errorf("Missing expected class: %s", expected)
+		}
 	}
 }
 
 // TestGetSupportedBackgrounds tests that GetSupportedBackgrounds returns all backgrounds.
 func TestGetSupportedBackgrounds(t *testing.T) {
 	backgrounds := GetSupportedBackgrounds()
-	if len(backgrounds) != 4 {
-		t.Errorf("Expected 4 supported backgrounds, got %d", len(backgrounds))
+	if len(backgrounds) != 10 {
+		t.Errorf("Expected 10 supported backgrounds, got %d", len(backgrounds))
 	}
 
 	bgMap := make(map[string]bool)
 	for _, b := range backgrounds {
 		bgMap[b] = true
 	}
-	if !bgMap["sage"] || !bgMap["soldier"] || !bgMap["criminal"] || !bgMap["commoner"] {
-		t.Error("Missing expected backgrounds in GetSupportedBackgrounds")
+	expectedBGs := []string{"sage", "soldier", "criminal", "commoner", "urchin", "folk_hero", "noble", "outlander", "entertainer", "acolyte"}
+	for _, expected := range expectedBGs {
+		if !bgMap[expected] {
+			t.Errorf("Missing expected background: %s", expected)
+		}
 	}
 }
 
@@ -856,5 +865,215 @@ func TestCreateBasic_FullNameAbilityScores(t *testing.T) {
 	// AC: 10 + 1 (DEX 13 = +1 mod) = 11
 	if char.AC != 11 {
 		t.Errorf("Expected AC 11, got %d", char.AC)
+	}
+}
+
+// TestNewRaces_AllNewRaces tests that all newly added races can create characters successfully.
+func TestNewRaces_AllNewRaces(t *testing.T) {
+	newRaces := map[string]struct {
+		speed          int
+		bonusAbility   types.Ability
+		bonusValue     int
+		expectedTrait  string
+	}{
+		"halfling":   {25, types.Dexterity, 2, "Lucky"},
+		"dragonborn": {30, types.Strength, 2, "Draconic Ancestry"},
+		"gnome":      {25, types.Intelligence, 2, "Gnome Cunning"},
+		"half-elf":   {30, types.Charisma, 2, "Skill Versatility"},
+		"half-orc":   {30, types.Strength, 2, "Relentless Endurance"},
+		"tiefling":   {30, types.Charisma, 2, "Hellish Resistance"},
+	}
+
+	baseScores := map[string]int{"str": 10, "dex": 14, "con": 12, "int": 10, "wis": 10, "cha": 10}
+
+	for race, expected := range newRaces {
+		t.Run(race, func(t *testing.T) {
+			params := CreateParams{
+				Name:          "Test",
+				Race:          race,
+				Class:         "fighter",
+				Background:    "soldier",
+				AbilityScores: baseScores,
+			}
+
+			char, err := CreateBasic(params)
+			if err != nil {
+				t.Fatalf("Failed to create %s character: %v", race, err)
+			}
+
+			if char.Speed != expected.speed {
+				t.Errorf("Expected speed %d for %s, got %d", expected.speed, race, char.Speed)
+			}
+
+			if char.Race != race {
+				t.Errorf("Expected race %s, got %s", race, char.Race)
+			}
+
+			// Verify racial ability bonus was applied
+			if char.Stats.GetModifier(expected.bonusAbility) < 1 {
+				t.Errorf("Expected %s bonus to be applied for %s", expected.bonusAbility, race)
+			}
+
+			// Verify at least one racial trait exists
+			foundTrait := false
+			for _, trait := range char.RacialTraits {
+				if trait.Name == expected.expectedTrait {
+					foundTrait = true
+					break
+				}
+			}
+			if !foundTrait {
+				t.Errorf("Expected trait '%s' for %s, not found", expected.expectedTrait, race)
+			}
+		})
+	}
+}
+
+// TestNewClasses_AllNewClasses tests that all newly added classes can create characters successfully.
+func TestNewClasses_AllNewClasses(t *testing.T) {
+	newClasses := map[string]struct {
+		hitDice       int
+		saveThrows    []types.Ability
+		startingGold  int
+	}{
+		"cleric":   {8, []types.Ability{types.Wisdom, types.Charisma}, 125},
+		"bard":     {8, []types.Ability{types.Dexterity, types.Charisma}, 125},
+		"druid":    {8, []types.Ability{types.Intelligence, types.Wisdom}, 70},
+		"monk":     {8, []types.Ability{types.Strength, types.Dexterity}, 12},
+		"paladin":  {10, []types.Ability{types.Wisdom, types.Charisma}, 125},
+		"ranger":   {10, []types.Ability{types.Strength, types.Dexterity}, 125},
+		"sorcerer": {6, []types.Ability{types.Constitution, types.Charisma}, 105},
+		"warlock":  {8, []types.Ability{types.Wisdom, types.Charisma}, 100},
+	}
+
+	baseScores := map[string]int{"str": 10, "dex": 10, "con": 10, "int": 10, "wis": 10, "cha": 10}
+
+	for class, expected := range newClasses {
+		t.Run(class, func(t *testing.T) {
+			params := CreateParams{
+				Name:          "Test",
+				Race:          "human",
+				Class:         class,
+				Background:    "soldier",
+				AbilityScores: baseScores,
+			}
+
+			char, err := CreateBasic(params)
+			if err != nil {
+				t.Fatalf("Failed to create %s character: %v", class, err)
+			}
+
+			if char.Class != class {
+				t.Errorf("Expected class %s, got %s", class, char.Class)
+			}
+
+			// Verify HP: hit dice + CON modifier (human CON 10+1=11, mod +0)
+			// So HP should equal hitDice (CON mod is 0)
+			if char.MaxHP != expected.hitDice {
+				t.Errorf("Expected MaxHP %d for %s, got %d", expected.hitDice, class, char.MaxHP)
+			}
+
+			if char.Gold != expected.startingGold {
+				t.Errorf("Expected starting gold %d for %s, got %d", expected.startingGold, class, char.Gold)
+			}
+
+			// Verify saving throws
+			for _, expectedSave := range expected.saveThrows {
+				if !char.SavingThrows[expectedSave] {
+					t.Errorf("Expected %s saving throw proficiency for %s", expectedSave, class)
+				}
+			}
+		})
+	}
+}
+
+// TestNewBackgrounds_AllNewBackgrounds tests that all newly added backgrounds work correctly.
+func TestNewBackgrounds_AllNewBackgrounds(t *testing.T) {
+	newBackgrounds := map[string]struct {
+		skills []types.Skill
+	}{
+		"urchin":      {[]types.Skill{types.SleightOfHand, types.Stealth}},
+		"folk_hero":   {[]types.Skill{types.AnimalHandling, types.Survival}},
+		"noble":       {[]types.Skill{types.History, types.Persuasion}},
+		"outlander":   {[]types.Skill{types.Athletics, types.Survival}},
+		"entertainer": {[]types.Skill{types.Acrobatics, types.Performance}},
+		"acolyte":     {[]types.Skill{types.Insight, types.Religion}},
+	}
+
+	baseScores := map[string]int{"str": 10, "dex": 10, "con": 10, "int": 10, "wis": 10, "cha": 10}
+
+	for bg, expected := range newBackgrounds {
+		t.Run(bg, func(t *testing.T) {
+			params := CreateParams{
+				Name:          "Test",
+				Race:          "human",
+				Class:         "fighter",
+				Background:    bg,
+				AbilityScores: baseScores,
+			}
+
+			char, err := CreateBasic(params)
+			if err != nil {
+				t.Fatalf("Failed to create %s background character: %v", bg, err)
+			}
+
+			if char.Background != bg {
+				t.Errorf("Expected background %s, got %s", bg, char.Background)
+			}
+
+			// Verify background skills
+			for _, expectedSkill := range expected.skills {
+				if !char.Skills[expectedSkill] {
+					t.Errorf("Expected %s skill from %s background", expectedSkill, bg)
+				}
+			}
+		})
+	}
+}
+
+// TestDragonbornSpecifics tests dragonborn-specific racial bonuses.
+func TestDragonbornSpecifics(t *testing.T) {
+	params := CreateParams{
+		Name:       "Dragonborn",
+		Race:       "dragonborn",
+		Class:      "paladin",
+		Background: "noble",
+		AbilityScores: map[string]int{
+			"str": 16, "dex": 10, "con": 14,
+			"int": 8, "wis": 12, "cha": 14,
+		},
+	}
+
+	char, err := CreateBasic(params)
+	if err != nil {
+		t.Fatalf("Failed to create dragonborn paladin: %v", err)
+	}
+
+	// Dragonborn: +2 STR, +1 CHA
+	// STR: 16 + 2 = 18
+	if char.Stats.Strength != 18 {
+		t.Errorf("Expected STR 18 (16+2 dragonborn), got %d", char.Stats.Strength)
+	}
+	// CHA: 14 + 1 = 15
+	if char.Stats.Charisma != 15 {
+		t.Errorf("Expected CHA 15 (14+1 dragonborn), got %d", char.Stats.Charisma)
+	}
+
+	// HP: 10 (paladin hit die) + 2 (CON 14 = +2 mod) = 12
+	if char.MaxHP != 12 {
+		t.Errorf("Expected MaxHP 12, got %d", char.MaxHP)
+	}
+
+	// Speed: 30
+	if char.Speed != 30 {
+		t.Errorf("Expected Speed 30, got %d", char.Speed)
+	}
+
+	// Verify noble background skills
+	if !char.Skills[types.History] {
+		t.Error("Expected History skill from noble background")
+	}
+	if !char.Skills[types.Persuasion] {
+		t.Error("Expected Persuasion skill from noble background")
 	}
 }

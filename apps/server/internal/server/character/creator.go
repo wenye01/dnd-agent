@@ -1,7 +1,8 @@
 // Package character provides character creation and management functionality.
 //
-// Current Implementation Scope (B004 - v0.2 Phase 1):
-// - Basic character creation with 3 races (human, elf, dwarf) and 3 classes (fighter, wizard, rogue)
+// Current Implementation Scope (B212 - v0.3):
+// - Character creation with 9 races (human, elf, dwarf, halfling, dragonborn, gnome, half-elf, half-orc, tiefling)
+//   and 11 classes (fighter, wizard, rogue, cleric, bard, druid, monk, paladin, ranger, sorcerer, warlock)
 // - Racial ability score bonuses and traits
 // - Class-based HP, saving throws, and skill selection
 // - Background skill proficiencies
@@ -9,7 +10,6 @@
 //
 // Future Enhancement Candidates:
 // - Subraces (e.g., High Elf, Hill Dwarf)
-// - Additional classes and races
 // - Feat selection at level 1 (variant human)
 // - Equipment packs based on background/class
 // - Spell selection for spellcasting classes
@@ -44,16 +44,30 @@ const (
 
 // Supported race names.
 const (
-	RaceHuman = "human"
-	RaceElf   = "elf"
-	RaceDwarf = "dwarf"
+	RaceHuman     = "human"
+	RaceElf       = "elf"
+	RaceDwarf     = "dwarf"
+	RaceHalfling  = "halfling"
+	RaceDragonborn = "dragonborn"
+	RaceGnome     = "gnome"
+	RaceHalfElf   = "half-elf"
+	RaceHalfOrc   = "half-orc"
+	RaceTiefling  = "tiefling"
 )
 
 // Supported class names.
 const (
-	ClassFighter = "fighter"
-	ClassWizard  = "wizard"
-	ClassRogue   = "rogue"
+	ClassFighter  = "fighter"
+	ClassWizard   = "wizard"
+	ClassRogue    = "rogue"
+	ClassCleric   = "cleric"
+	ClassBard     = "bard"
+	ClassDruid    = "druid"
+	ClassMonk     = "monk"
+	ClassPaladin  = "paladin"
+	ClassRanger   = "ranger"
+	ClassSorcerer = "sorcerer"
+	ClassWarlock  = "warlock"
 )
 
 // RaceConfig holds configuration for a playable race.
@@ -119,9 +133,86 @@ var raceConfigs = map[string]RaceConfig{
 			{Name: "Darkvision", Description: "60 feet"},
 			{Name: "Dwarven Resilience", Description: "Advantage on saves against poison, resistance to poison damage"},
 			{Name: "Stonecunning", Description: "Double proficiency on History checks related to stonework"},
+			{Name: "Dwarven Combat Training", Description: "Proficiency with battleaxe, handaxe, light hammer, and warhammer"},
 		},
 		AbilityBonus: map[types.Ability]int{
 			types.Constitution: 2,
+		},
+	},
+	"halfling": {
+		Name:  "halfling",
+		Speed: 25,
+		Traits: []models.RaceTrait{
+			{Name: "Lucky", Description: "Reroll 1s on attack rolls, ability checks, and saving throws"},
+			{Name: "Brave", Description: "Advantage on saving throws against being frightened"},
+			{Name: "Halfling Nimbleness", Description: "Can move through the space of any creature larger than you"},
+		},
+		AbilityBonus: map[types.Ability]int{
+			types.Dexterity: 2,
+		},
+	},
+	"dragonborn": {
+		Name:  "dragonborn",
+		Speed: 30,
+		Traits: []models.RaceTrait{
+			{Name: "Draconic Ancestry", Description: "Choose a dragon ancestor, which determines breath weapon damage type and resistance"},
+			{Name: "Breath Weapon", Description: "Exhale destructive energy based on draconic ancestry (DC 8 + CON mod + proficiency)"},
+			{Name: "Damage Resistance", Description: "Resistance to the damage type associated with your draconic ancestry"},
+		},
+		AbilityBonus: map[types.Ability]int{
+			types.Strength: 2,
+			types.Charisma: 1,
+		},
+	},
+	"gnome": {
+		Name:  "gnome",
+		Speed: 25,
+		Traits: []models.RaceTrait{
+			{Name: "Darkvision", Description: "60 feet"},
+			{Name: "Gnome Cunning", Description: "Advantage on Intelligence, Wisdom, and Charisma saving throws against magic"},
+		},
+		AbilityBonus: map[types.Ability]int{
+			types.Intelligence: 2,
+		},
+	},
+	"half-elf": {
+		Name:  "half-elf",
+		Speed: 30,
+		Traits: []models.RaceTrait{
+			{Name: "Darkvision", Description: "60 feet"},
+			{Name: "Fey Ancestry", Description: "Advantage on saves against charm, immunity to sleep"},
+			{Name: "Skill Versatility", Description: "Proficiency in two skills of your choice"},
+		},
+		AbilityBonus: map[types.Ability]int{
+			types.Charisma: 2,
+		},
+	},
+	"half-orc": {
+		Name:  "half-orc",
+		Speed: 30,
+		Traits: []models.RaceTrait{
+			{Name: "Darkvision", Description: "60 feet"},
+			{Name: "Relentless Endurance", Description: "When reduced to 0 HP, drop to 1 HP instead (once per long rest)"},
+			{Name: "Savage Attacks", Description: "Roll one additional weapon damage die on critical hits"},
+			{Name: "Menacing", Description: "Proficiency in Intimidation"},
+		},
+		AbilityBonus: map[types.Ability]int{
+			types.Strength: 2,
+			types.Constitution: 1,
+		},
+	},
+	"tiefling": {
+		Name:  "tiefling",
+		Speed: 30,
+		Traits: []models.RaceTrait{
+			{Name: "Darkvision", Description: "60 feet"},
+			{Name: "Hellish Resistance", Description: "Resistance to fire damage"},
+			{Name: "Hellish Rebuke", Description: "Cast hellish rebuke as a 2nd-level spell once per long rest (DC 8 + CHA mod + proficiency)"},
+			{Name: "Infernal Legacy", Description: "Know thaumaturgy cantrip; at level 3, hellish rebuke; at level 5, darkness"},
+		},
+		AbilityBonus: map[types.Ability]int{
+			types.Charisma: 2,
+			types.Intelligence: 1,
 		},
 	},
 }
@@ -155,6 +246,78 @@ var classConfigs = map[string]ClassConfig{
 		StartingGoldDice:  "4d4 x 10 gp",
 		StartingGoldAvg:   100, // Average of 4d4 is 10, x 10 = 100
 	},
+	"cleric": {
+		Name:              "cleric",
+		HitDice:           8,
+		SavingThrows:      []types.Ability{types.Wisdom, types.Charisma},
+		Skills:            []types.Skill{types.History, types.Insight, types.Medicine, types.Persuasion, types.Religion},
+		SkillChoices:      2,
+		StartingGoldDice:  "5d4 x 10 gp",
+		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+	},
+	"bard": {
+		Name:              "bard",
+		HitDice:           8,
+		SavingThrows:      []types.Ability{types.Dexterity, types.Charisma},
+		Skills:            []types.Skill{types.Acrobatics, types.AnimalHandling, types.Arcana, types.Athletics, types.Deception, types.History, types.Insight, types.Intimidation, types.Investigation, types.Medicine, types.Nature, types.Perception, types.Performance, types.Persuasion, types.Religion, types.SleightOfHand, types.Stealth, types.Survival},
+		SkillChoices:      3,
+		StartingGoldDice:  "5d4 x 10 gp",
+		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+	},
+	"druid": {
+		Name:              "druid",
+		HitDice:           8,
+		SavingThrows:      []types.Ability{types.Intelligence, types.Wisdom},
+		Skills:            []types.Skill{types.Arcana, types.AnimalHandling, types.Insight, types.Medicine, types.Nature, types.Perception, types.Religion, types.Survival},
+		SkillChoices:      2,
+		StartingGoldDice:  "2d6 x 10 gp",
+		StartingGoldAvg:   70, // Average of 2d6 is 7, x 10 = 70
+	},
+	"monk": {
+		Name:              "monk",
+		HitDice:           8,
+		SavingThrows:      []types.Ability{types.Strength, types.Dexterity},
+		Skills:            []types.Skill{types.Acrobatics, types.Athletics, types.History, types.Insight, types.Religion, types.Stealth},
+		SkillChoices:      2,
+		StartingGoldDice:  "5d4 gp",
+		StartingGoldAvg:   12, // Average of 5d4 is 12.5
+	},
+	"paladin": {
+		Name:              "paladin",
+		HitDice:           10,
+		SavingThrows:      []types.Ability{types.Wisdom, types.Charisma},
+		Skills:            []types.Skill{types.Athletics, types.Insight, types.Intimidation, types.Medicine, types.Persuasion, types.Religion},
+		SkillChoices:      2,
+		StartingGoldDice:  "5d4 x 10 gp",
+		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+	},
+	"ranger": {
+		Name:              "ranger",
+		HitDice:           10,
+		SavingThrows:      []types.Ability{types.Strength, types.Dexterity},
+		Skills:            []types.Skill{types.AnimalHandling, types.Athletics, types.Insight, types.Investigation, types.Nature, types.Perception, types.Stealth, types.Survival},
+		SkillChoices:      3,
+		StartingGoldDice:  "5d4 x 10 gp",
+		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+	},
+	"sorcerer": {
+		Name:              "sorcerer",
+		HitDice:           6,
+		SavingThrows:      []types.Ability{types.Constitution, types.Charisma},
+		Skills:            []types.Skill{types.Arcana, types.Deception, types.Insight, types.Intimidation, types.Persuasion, types.Religion},
+		SkillChoices:      2,
+		StartingGoldDice:  "3d6 x 10 gp",
+		StartingGoldAvg:   105, // Average of 3d6 is 10.5, x 10 = 105
+	},
+	"warlock": {
+		Name:              "warlock",
+		HitDice:           8,
+		SavingThrows:      []types.Ability{types.Wisdom, types.Charisma},
+		Skills:            []types.Skill{types.Arcana, types.Deception, types.History, types.Investigation, types.Nature, types.Religion},
+		SkillChoices:      2,
+		StartingGoldDice:  "4d4 x 10 gp",
+		StartingGoldAvg:   100, // Average of 4d4 is 10, x 10 = 100
+	},
 }
 
 // Supported backgrounds configuration.
@@ -178,6 +341,36 @@ var backgroundConfigs = map[string]BackgroundConfig{
 		Name:        "commoner",
 		Skills:      []types.Skill{types.Insight, types.Perception},
 		Description: "You live a simple life among the common folk.",
+	},
+	"urchin": {
+		Name:        "urchin",
+		Skills:      []types.Skill{types.SleightOfHand, types.Stealth},
+		Description: "You grew up on the streets alone, impoverished, and making your own way.",
+	},
+	"folk_hero": {
+		Name:        "folk_hero",
+		Skills:      []types.Skill{types.AnimalHandling, types.Survival},
+		Description: "You come from a humble social rank, but you are destined for so much more.",
+	},
+	"noble": {
+		Name:        "noble",
+		Skills:      []types.Skill{types.History, types.Persuasion},
+		Description: "You understand wealth, power, and privilege. You carry a noble title.",
+	},
+	"outlander": {
+		Name:        "outlander",
+		Skills:      []types.Skill{types.Athletics, types.Survival},
+		Description: "You grew up in the wilds, far from civilization and the comforts of town and technology.",
+	},
+	"entertainer": {
+		Name:        "entertainer",
+		Skills:      []types.Skill{types.Acrobatics, types.Performance},
+		Description: "You thrive in front of an audience and know how to entrance, entertain, and mesmerize.",
+	},
+	"acolyte": {
+		Name:        "acolyte",
+		Skills:      []types.Skill{types.Insight, types.Religion},
+		Description: "You have spent your life in the service of a temple to a specific god or pantheon of gods.",
 	},
 }
 
