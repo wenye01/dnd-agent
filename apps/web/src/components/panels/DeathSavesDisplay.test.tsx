@@ -53,16 +53,17 @@ describe('DeathSavesDisplay', () => {
       <DeathSavesDisplay deathSaves={{ successes: 0, failures: 0 }} currentHitPoints={0} />
     )
     // 6 round dots total: 3 success + 3 failure
-    const dots = container.querySelectorAll('.rounded-full.w-3.h-3')
-    expect(dots.length).toBe(6)
+    const successDots = container.querySelectorAll('[data-testid="death-save-success"]')
+    const failureDots = container.querySelectorAll('[data-testid="death-save-failure"]')
+    expect(successDots.length).toBe(3)
+    expect(failureDots.length).toBe(3)
   })
 
   it('should show filled dots matching successes count', () => {
     const { container } = render(
       <DeathSavesDisplay deathSaves={{ successes: 2, failures: 1 }} currentHitPoints={0} />
     )
-    const dots = container.querySelectorAll('.rounded-full.w-3.h-3')
-    // Success dots (first 3): first 2 should have filled background, 3rd transparent
+    const dots = container.querySelectorAll('[data-testid="death-save-success"]')
     // Check that the first success dot has a non-transparent background
     const firstSuccessDot = dots[0]
     expect(firstSuccessDot).toBeDefined()
@@ -75,9 +76,9 @@ describe('DeathSavesDisplay', () => {
     const { container } = render(
       <DeathSavesDisplay deathSaves={{ successes: 0, failures: 2 }} currentHitPoints={0} />
     )
-    const dots = container.querySelectorAll('.rounded-full.w-3.h-3')
-    // Failure dots (last 3): first 2 should be filled
-    const firstFailureDot = dots[3]
+    const dots = container.querySelectorAll('[data-testid="death-save-failure"]')
+    // Failure dots: first 2 should be filled
+    const firstFailureDot = dots[0]
     expect(firstFailureDot).toBeDefined()
     const style = getComputedStyle(firstFailureDot)
     expect(style.background).toContain('radial-gradient')
@@ -87,8 +88,10 @@ describe('DeathSavesDisplay', () => {
     const { container } = render(
       <DeathSavesDisplay deathSaves={{ successes: 0, failures: 0 }} currentHitPoints={0} />
     )
-    const dots = container.querySelectorAll('.rounded-full.w-3.h-3')
-    dots.forEach((dot) => {
+    const successDots = container.querySelectorAll('[data-testid="death-save-success"]')
+    const failureDots = container.querySelectorAll('[data-testid="death-save-failure"]')
+    const allDots = [...Array.from(successDots), ...Array.from(failureDots)]
+    allDots.forEach((dot) => {
       const style = getComputedStyle(dot)
       expect(style.background).toBe('transparent')
     })
@@ -98,9 +101,11 @@ describe('DeathSavesDisplay', () => {
     const { container } = render(
       <DeathSavesDisplay deathSaves={{ successes: 3, failures: 3 }} currentHitPoints={0} />
     )
-    const dots = container.querySelectorAll('.rounded-full.w-3.h-3')
+    const successDots = container.querySelectorAll('[data-testid="death-save-success"]')
+    const failureDots = container.querySelectorAll('[data-testid="death-save-failure"]')
+    const allDots = [...Array.from(successDots), ...Array.from(failureDots)]
     // All dots should be filled
-    dots.forEach((dot) => {
+    allDots.forEach((dot) => {
       const style = getComputedStyle(dot)
       expect(style.background).toContain('radial-gradient')
     })

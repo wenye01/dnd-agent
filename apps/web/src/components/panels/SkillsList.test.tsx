@@ -216,7 +216,8 @@ describe('SkillsList', () => {
       />
     )
     // Check that proficiency dots are rendered (bg-gold for proficient)
-    const profDots = container.querySelectorAll('.bg-gold')
-    expect(profDots.length).toBe(2) // Acrobatics and Perception
+    const allDots = container.querySelectorAll('[data-testid="skill-proficiency-dot"]')
+    const goldDots = Array.from(allDots).filter((dot) => dot.classList.contains('bg-gold'))
+    expect(goldDots.length).toBe(2) // Acrobatics and Perception
   })
 })

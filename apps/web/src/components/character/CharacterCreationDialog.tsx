@@ -159,14 +159,6 @@ const BACKGROUNDS = [
   { value: 'soldier', label: 'Soldier' },
   { value: 'criminal', label: 'Criminal' },
   { value: 'commoner', label: 'Commoner' },
-  { value: 'noble', label: 'Noble' },
-  { value: 'folk_hero', label: 'Folk Hero' },
-  { value: 'acolyte', label: 'Acolyte' },
-  { value: 'entertainer', label: 'Entertainer' },
-  { value: 'outlander', label: 'Outlander' },
-  { value: 'sailor', label: 'Sailor' },
-  { value: 'urchin', label: 'Urchin' },
-  { value: 'guild_artisan', label: 'Guild Artisan' },
 ]
 
 const ABILITY_NAMES = [

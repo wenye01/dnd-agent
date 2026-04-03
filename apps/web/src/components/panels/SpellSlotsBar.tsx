@@ -55,6 +55,7 @@ export function SpellSlotsBar({ spellSlots, characterClass }: SpellSlotsBarProps
                   return (
                     <div
                       key={i}
+                      data-testid="spell-slot-dot"
                       className="w-2.5 h-2.5 rounded-full border transition-all duration-200"
                       style={{
                         borderColor: isFilled
@@ -82,4 +83,3 @@ export function SpellSlotsBar({ spellSlots, characterClass }: SpellSlotsBarProps
   )
 }
 
-export default SpellSlotsBar

@@ -330,9 +330,9 @@ describe('CharacterPanel', () => {
 
     // Equipment header should be present
     expect(screen.getByText('Equipment')).toBeDefined()
-    // Two equipped items should show "Equipped"
-    const equippedLabels = screen.getAllByText('Equipped')
-    expect(equippedLabels.length).toBe(2)
+    // Two equipped items should show their itemIds as fallback (inventory is empty)
+    expect(screen.getByText('robe-001')).toBeDefined()
+    expect(screen.getByText('staff-001')).toBeDefined()
   })
 
   it('should render multiple party members', () => {

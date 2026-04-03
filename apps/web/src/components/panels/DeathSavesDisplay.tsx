@@ -27,10 +27,11 @@ export function DeathSavesDisplay({ deathSaves, currentHitPoints }: DeathSavesDi
         <span className="text-[9px] font-display text-heal/60 uppercase tracking-wider w-12 flex-shrink-0">
           Success
         </span>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5" data-testid="death-saves-successes">
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={`success-${i}`}
+              data-testid="death-save-success"
               className="w-3 h-3 rounded-full border transition-all duration-200"
               style={{
                 borderColor:
@@ -56,10 +57,11 @@ export function DeathSavesDisplay({ deathSaves, currentHitPoints }: DeathSavesDi
         <span className="text-[9px] font-display text-blood/60 uppercase tracking-wider w-12 flex-shrink-0">
           Failure
         </span>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5" data-testid="death-saves-failures">
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={`failure-${i}`}
+              data-testid="death-save-failure"
               className="w-3 h-3 rounded-full border transition-all duration-200"
               style={{
                 borderColor:
@@ -83,4 +85,3 @@ export function DeathSavesDisplay({ deathSaves, currentHitPoints }: DeathSavesDi
   )
 }
 
-export default DeathSavesDisplay

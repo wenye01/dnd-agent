@@ -103,9 +103,9 @@ describe('CharacterCreationDialog', () => {
     })
   })
 
-  it('should render all 12 backgrounds (expanded from original 4)', () => {
+  it('should render all supported backgrounds', () => {
     render(<CharacterCreationDialog isOpen={true} onClose={vi.fn()} />)
-    const expectedBackgrounds = ['Sage', 'Soldier', 'Criminal', 'Commoner', 'Noble', 'Folk Hero', 'Acolyte', 'Entertainer', 'Outlander', 'Sailor', 'Urchin', 'Guild Artisan']
+    const expectedBackgrounds = ['Sage', 'Soldier', 'Criminal', 'Commoner']
     expectedBackgrounds.forEach((bg) => {
       expect(screen.getByText(bg)).toBeDefined()
     })

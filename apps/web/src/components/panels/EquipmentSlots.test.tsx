@@ -23,14 +23,14 @@ describe('EquipmentSlots', () => {
     expect(dashes.length).toBe(10)
   })
 
-  it('should show "Equipped" for occupied slots', () => {
+  it('should show itemId as fallback when no inventory is provided', () => {
     const equipment: EquipmentSlot[] = [
       { slot: 'head', itemId: 'helmet-001' },
       { slot: 'body', itemId: 'chainmail-001' },
     ]
     render(<EquipmentSlots equipment={equipment} />)
-    const equippedLabels = screen.getAllByText('Equipped')
-    expect(equippedLabels.length).toBe(2)
+    expect(screen.getByText('helmet-001')).toBeDefined()
+    expect(screen.getByText('chainmail-001')).toBeDefined()
   })
 
   it('should show "--" for slots with null itemId', () => {
@@ -70,9 +70,9 @@ describe('EquipmentSlots', () => {
       { slot: 'ring', itemId: 'ring-001' },
     ]
     render(<EquipmentSlots equipment={equipment} />)
-    const equippedLabels = screen.getAllByText('Equipped')
+    expect(screen.getByText('sword-001')).toBeDefined()
+    expect(screen.getByText('ring-001')).toBeDefined()
     const dashes = screen.getAllByText('--')
-    expect(equippedLabels.length).toBe(2)
     expect(dashes.length).toBe(8)
   })
 
@@ -81,7 +81,7 @@ describe('EquipmentSlots', () => {
       { slot: 'head', itemId: 'h1' },
       { slot: 'body', itemId: 'b1' },
       { slot: 'hands', itemId: 'g1' },
-      { slot: 'feet', itemId: 'b1' },
+      { slot: 'feet', itemId: 'f1' },
       { slot: 'main_hand', itemId: 's1' },
       { slot: 'off_hand', itemId: 'sh1' },
       { slot: 'ring', itemId: 'r1' },
@@ -90,9 +90,35 @@ describe('EquipmentSlots', () => {
       { slot: 'quiver', itemId: 'q1' },
     ]
     render(<EquipmentSlots equipment={equipment} />)
-    const equippedLabels = screen.getAllByText('Equipped')
-    expect(equippedLabels.length).toBe(10)
+    expect(screen.getByText('h1')).toBeDefined()
+    expect(screen.getByText('b1')).toBeDefined()
     expect(screen.queryByText('--')).toBeNull()
+  })
+
+  it('should show item name from inventory when available', () => {
+    const equipment: EquipmentSlot[] = [
+      { slot: 'head', itemId: 'helmet-001' },
+      { slot: 'body', itemId: 'chainmail-001' },
+    ]
+    const inventory = [
+      { id: 'helmet-001', name: 'Iron Helm' },
+      { id: 'chainmail-001', name: 'Chain Mail' },
+    ]
+    render(<EquipmentSlots equipment={equipment} inventory={inventory} />)
+    expect(screen.getByText('Iron Helm')).toBeDefined()
+    expect(screen.getByText('Chain Mail')).toBeDefined()
+  })
+
+  it('should fallback to itemId when inventory does not contain the item', () => {
+    const equipment: EquipmentSlot[] = [
+      { slot: 'head', itemId: 'helmet-001' },
+    ]
+    const inventory = [
+      { id: 'other-item', name: 'Other Item' },
+    ]
+    render(<EquipmentSlots equipment={equipment} inventory={inventory} />)
+    expect(screen.getByText('helmet-001')).toBeDefined()
+    expect(screen.queryByText('Other Item')).toBeNull()
   })
 
   it('should handle unknown slot name gracefully', () => {

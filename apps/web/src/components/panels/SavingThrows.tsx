@@ -39,6 +39,7 @@ export function SavingThrows({ savingThrows, abilityScores, proficiencyBonus }: 
             >
               {/* Proficiency dot */}
               <span
+                data-testid="save-proficiency-dot"
                 className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                   isProficient
                     ? 'bg-gold'
@@ -67,4 +68,3 @@ export function SavingThrows({ savingThrows, abilityScores, proficiencyBonus }: 
   )
 }
 
-export default SavingThrows

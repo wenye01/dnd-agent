@@ -144,7 +144,7 @@ describe('SpellSlotsBar', () => {
       <SpellSlotsBar spellSlots={spellSlots} characterClass="wizard" />
     )
     // 4 dots for level 1 (max=4)
-    const dots = container.querySelectorAll('.rounded-full.w-2\\.5')
+    const dots = container.querySelectorAll('[data-testid="spell-slot-dot"]')
     expect(dots.length).toBe(4)
   })
 

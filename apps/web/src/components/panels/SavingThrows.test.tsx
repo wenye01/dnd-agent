@@ -196,8 +196,9 @@ describe('SavingThrows', () => {
         proficiencyBonus={2}
       />
     )
-    // Check that proficiency dots are rendered (bg-gold for proficient, border for non-proficient)
-    const profDots = container.querySelectorAll('.bg-gold')
-    expect(profDots.length).toBe(2) // STR and WIS
+    // Check that proficiency dots are rendered (bg-gold for proficient)
+    const allDots = container.querySelectorAll('[data-testid="save-proficiency-dot"]')
+    const goldDots = Array.from(allDots).filter((dot) => dot.classList.contains('bg-gold'))
+    expect(goldDots.length).toBe(2) // STR and WIS
   })
 })

@@ -21,17 +21,20 @@ const SLOT_ORDER = [
 
 interface EquipmentSlotsProps {
   equipment: EquipmentSlot[]
+  inventory?: Array<{ id: string; name: string }>
 }
 
-function getEquippedName(equipment: EquipmentSlot[], slotName: string): string | null {
+function getEquippedName(equipment: EquipmentSlot[], slotName: string, inventory?: Array<{ id: string; name: string }>): string | null {
   const slot = equipment.find((e) => e.slot === slotName)
   if (!slot || !slot.itemId) return null
-  // itemId is an identifier, not a display name.
-  // Show "Equipped" until a proper name lookup mechanism is available.
-  return 'Equipped'
+  if (inventory) {
+    const item = inventory.find((i) => i.id === slot.itemId)
+    if (item) return item.name
+  }
+  return slot.itemId
 }
 
-export function EquipmentSlots({ equipment }: EquipmentSlotsProps) {
+export function EquipmentSlots({ equipment, inventory }: EquipmentSlotsProps) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
@@ -43,7 +46,7 @@ export function EquipmentSlots({ equipment }: EquipmentSlotsProps) {
       </div>
       <div className="grid grid-cols-2 gap-1">
         {SLOT_ORDER.map((slotName) => {
-          const itemName = getEquippedName(equipment, slotName)
+          const itemName = getEquippedName(equipment, slotName, inventory)
           const isFilled = itemName !== null
           return (
             <div
@@ -74,4 +77,4 @@ export function EquipmentSlots({ equipment }: EquipmentSlotsProps) {
   )
 }
 
-export default EquipmentSlots
+

@@ -61,6 +61,7 @@ export function SkillsList({ skills, abilityScores, proficiencyBonus }: SkillsLi
             >
               {/* Proficiency indicator */}
               <span
+                data-testid="skill-proficiency-dot"
                 className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                   isProficient
                     ? 'bg-gold'
@@ -90,4 +91,3 @@ export function SkillsList({ skills, abilityScores, proficiencyBonus }: SkillsLi
   )
 }
 
-export default SkillsList
