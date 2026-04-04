@@ -67,6 +67,11 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 					"items":       map[string]interface{}{"type": "string"},
 					"description": "Optional: class skills to gain proficiency in",
 				},
+				"extra_ability_bonuses": map[string]interface{}{
+					"type":        "array",
+					"items":       map[string]interface{}{"type": "string"},
+					"description": "Optional: extra ability score bonuses from racial features (e.g., half-elf: [\"str\", \"cha\"]). Each grants +1.",
+				},
 			},
 			"required": []string{"session_id", "name", "race", "class", "background", "ability_scores"},
 		},
@@ -102,7 +107,19 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if skillChoicesRaw, ok := args["skill_choices"].([]interface{}); ok {
 				for _, sc := range skillChoicesRaw {
 					if s, ok := sc.(string); ok {
-						params.SkillChoices = append(params.SkillChoices, skillFromString(s))
+						if sk, valid := skillFromString(s); valid {
+							params.SkillChoices = append(params.SkillChoices, sk)
+						}
+					}
+				}
+			}
+			// Handle optional extra ability bonuses (e.g., half-elf)
+			if extraBonusesRaw, ok := args["extra_ability_bonuses"].([]interface{}); ok {
+				for _, eb := range extraBonusesRaw {
+					if s, ok := eb.(string); ok {
+						if ab, valid := abilityFromString(s); valid {
+							params.ExtraAbilityBonuses = append(params.ExtraAbilityBonuses, ab)
+						}
 					}
 				}
 			}
@@ -110,21 +127,22 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if err != nil {
 				return nil, fmt.Errorf("character creation failed: %w", err)
 			}
-			// Check for duplicate name in party
-			gs := stateProvider.GetGameState(sessionID)
-			if gs != nil {
+			// Add to party in game state (duplicate name check is atomic inside the write lock)
+			var duplicateNameErr error
+			err = stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
 				for _, existing := range gs.Party {
 					if existing.Name == name {
-						return nil, fmt.Errorf("a character named %q already exists in this session (ID: %s)", name, existing.ID)
+						duplicateNameErr = fmt.Errorf("a character named %q already exists in this session (ID: %s)", name, existing.ID)
+						return
 					}
 				}
-			}
-			// Add to party in game state
-			err = stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
 				gs.Party = append(gs.Party, char)
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to add character to session: %w", err)
+			}
+			if duplicateNameErr != nil {
+				return nil, duplicateNameErr
 			}
 			return map[string]interface{}{
 				"success":    true,
@@ -374,19 +392,19 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 				return nil, fmt.Errorf("session_id and character_id are required")
 			}
 			var updatedChar *models.Character
-			var levelUpErr error
+			var opErr error // capture callback-level errors (UpdateGameState fn returns no error)
 			err := stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
 				for _, char := range gs.Party {
 					if char.ID == characterID {
 						// Get class config for hit die
 						classConfig, ok := character.GetClassConfig(char.Class)
 						if !ok {
-							levelUpErr = fmt.Errorf("class config not found for class %q", char.Class)
+							opErr = fmt.Errorf("class config not found for class %q", char.Class)
 							return
 						}
 						newLevel := char.Level + 1
 						if newLevel > 20 {
-							levelUpErr = fmt.Errorf("character is already at maximum level (20)")
+							opErr = fmt.Errorf("character is already at maximum level (20)")
 							return
 						}
 						// HP gain: floor(HitDice / 2) + 1 + CON modifier (SRD 5.1 average roll, rounded up)
@@ -409,8 +427,8 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if err != nil {
 				return nil, fmt.Errorf("failed to level up: %w", err)
 			}
-			if levelUpErr != nil {
-				return nil, levelUpErr
+			if opErr != nil {
+				return nil, opErr
 			}
 			if updatedChar == nil {
 				return nil, fmt.Errorf("character not found: %s", characterID)
@@ -426,14 +444,37 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 }
 
 // skillFromString converts a string to a skill type with validation.
-// Returns the skill if valid, or an empty skill value with a warning log if invalid.
-func skillFromString(s string) types.Skill {
+// Returns the skill and true if valid, or empty skill and false if invalid.
+func skillFromString(s string) (types.Skill, bool) {
 	skill := types.Skill(strings.ToLower(s))
 	if _, ok := types.SkillAbility[skill]; !ok {
-		log.Warn().Str("skill", s).Msg("skillFromString: unknown skill, returning empty value")
-		return types.Skill("")
+		log.Warn().Str("skill", s).Msg("skillFromString: unknown skill, skipping")
+		return types.Skill(""), false
 	}
-	return skill
+	return skill, true
+}
+
+// abilityFromString converts a string to an Ability type with validation.
+// Returns the ability and true if valid, or empty ability and false if invalid.
+func abilityFromString(s string) (types.Ability, bool) {
+	lower := strings.ToLower(s)
+	switch lower {
+	case "str", "strength":
+		return types.Strength, true
+	case "dex", "dexterity":
+		return types.Dexterity, true
+	case "con", "constitution":
+		return types.Constitution, true
+	case "int", "intelligence":
+		return types.Intelligence, true
+	case "wis", "wisdom":
+		return types.Wisdom, true
+	case "cha", "charisma":
+		return types.Charisma, true
+	default:
+		log.Warn().Str("ability", s).Msg("abilityFromString: unknown ability, skipping")
+		return types.Ability(""), false
+	}
 }
 
 // conditionFromString converts a string to a condition type with validation.

@@ -1077,3 +1077,66 @@ func TestDragonbornSpecifics(t *testing.T) {
 		t.Error("Expected Persuasion skill from noble background")
 	}
 }
+
+// TestHalfElfExtraAbilityBonuses tests that half-elf characters can receive
+// extra ability score bonuses via ExtraAbilityBonuses (SRD: +2 CHA +1/+1 to two others).
+func TestHalfElfExtraAbilityBonuses(t *testing.T) {
+	params := CreateParams{
+		Name:       "HalfElfTest",
+		Race:       "half-elf",
+		Class:      "cleric",
+		Background: "acolyte",
+		AbilityScores: map[string]int{
+			"str": 10, "dex": 10, "con": 10,
+			"int": 10, "wis": 10, "cha": 10,
+		},
+		ExtraAbilityBonuses: []types.Ability{types.Dexterity, types.Intelligence},
+	}
+
+	char, err := CreateBasic(params)
+	if err != nil {
+		t.Fatalf("Failed to create half-elf with extra bonuses: %v", err)
+	}
+
+	// Base CHA 10 + racial CHA 2 = 12 (no extra bonus to CHA)
+	if char.Stats.Charisma != 12 {
+		t.Errorf("Expected CHA 12 (10 base + 2 racial), got %d", char.Stats.Charisma)
+	}
+	// DEX 10 + extra bonus 1 = 11
+	if char.Stats.Dexterity != 11 {
+		t.Errorf("Expected DEX 11 (10 base + 1 extra), got %d", char.Stats.Dexterity)
+	}
+	// INT 10 + extra bonus 1 = 11
+	if char.Stats.Intelligence != 11 {
+		t.Errorf("Expected INT 11 (10 base + 1 extra), got %d", char.Stats.Intelligence)
+	}
+	// STR should remain at base 10 (no racial or extra bonus)
+	if char.Stats.Strength != 10 {
+		t.Errorf("Expected STR 10 (no bonus), got %d", char.Stats.Strength)
+	}
+}
+
+// TestHalfElfWithoutExtraBonuses tests that half-elf works without extra bonuses.
+func TestHalfElfWithoutExtraBonuses(t *testing.T) {
+	params := CreateParams{
+		Name:       "HalfElfBasic",
+		Race:       "half-elf",
+		Class:      "bard",
+		Background: "entertainer",
+		AbilityScores: map[string]int{
+			"str": 8, "dex": 14, "con": 12,
+			"int": 10, "wis": 10, "cha": 14,
+		},
+		// No ExtraAbilityBonuses — backward compatible
+	}
+
+	char, err := CreateBasic(params)
+	if err != nil {
+		t.Fatalf("Failed to create half-elf without extra bonuses: %v", err)
+	}
+
+	// CHA: 14 base + 2 racial = 16
+	if char.Stats.Charisma != 16 {
+		t.Errorf("Expected CHA 16 (14 + 2), got %d", char.Stats.Charisma)
+	}
+}

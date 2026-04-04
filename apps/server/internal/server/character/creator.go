@@ -425,12 +425,13 @@ var backgroundConfigs = map[string]BackgroundConfig{
 
 // CreateParams defines the parameters for creating a basic character.
 type CreateParams struct {
-	Name          string         `json:"name"`
-	Race          string         `json:"race"`
-	Class         string         `json:"class"`
-	Background    string         `json:"background"`
-	AbilityScores map[string]int `json:"abilityScores"`
-	SkillChoices  []types.Skill  `json:"skillChoices,omitempty"` // Optional: chosen class skills
+	Name                string           `json:"name"`
+	Race                string           `json:"race"`
+	Class               string           `json:"class"`
+	Background          string           `json:"background"`
+	AbilityScores       map[string]int   `json:"abilityScores"`
+	SkillChoices        []types.Skill    `json:"skillChoices,omitempty"`        // Optional: chosen class skills
+	ExtraAbilityBonuses []types.Ability  `json:"extraAbilityBonuses,omitempty"` // Optional: extra racial bonuses (e.g., half-elf +1/+1)
 }
 
 // CreateBasic creates a new character with the given parameters.
@@ -489,6 +490,24 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 	stats.Intelligence += raceConfig.AbilityBonus[types.Intelligence]
 	stats.Wisdom += raceConfig.AbilityBonus[types.Wisdom]
 	stats.Charisma += raceConfig.AbilityBonus[types.Charisma]
+
+	// Apply extra ability bonuses (e.g., half-elf +1 to two abilities of player's choice)
+	for _, ab := range params.ExtraAbilityBonuses {
+		switch ab {
+		case types.Strength:
+			stats.Strength++
+		case types.Dexterity:
+			stats.Dexterity++
+		case types.Constitution:
+			stats.Constitution++
+		case types.Intelligence:
+			stats.Intelligence++
+		case types.Wisdom:
+			stats.Wisdom++
+		case types.Charisma:
+			stats.Charisma++
+		}
+	}
 
 	// Calculate HP: class hit dice + CON modifier
 	maxHP := classConfig.HitDice + stats.GetModifier(types.Constitution)

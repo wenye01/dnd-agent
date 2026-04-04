@@ -385,6 +385,30 @@ func TestCreateCharacterTool_MultipleCharactersInParty(t *testing.T) {
 	}
 }
 
+func TestCreateCharacterTool_DuplicateName(t *testing.T) {
+	registry, provider := setupTestRegistry()
+	provider.createSession("test-session")
+
+	tool, _ := registry.Get("create_character")
+
+	// Create first character
+	args1 := baseCreateArgs()
+	args1["name"] = "DupHero"
+	_, err := tool.Handler(args1)
+	if err != nil {
+		t.Fatalf("First create failed: %v", err)
+	}
+
+	// Try to create second character with same name — should fail
+	args2 := baseCreateArgs()
+	args2["name"] = "DupHero"
+	args2["race"] = "elf"
+	_, err = tool.Handler(args2)
+	if err == nil {
+		t.Error("Expected error for duplicate character name")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // get_character Tests
 // ---------------------------------------------------------------------------
@@ -1207,19 +1231,43 @@ func TestToInt_Conversions(t *testing.T) {
 
 func TestSkillFromString(t *testing.T) {
 	tests := []struct {
-		input    string
-		expected types.Skill
+		input          string
+		expectedSkill  types.Skill
+		expectedValid  bool
 	}{
-		{"Perception", types.Perception},
-		{"perception", types.Perception},
-		{"PERCEPTION", types.Perception},
-		{"stealth", types.Stealth},
-		{"Arcana", types.Arcana},
+		{"Perception", types.Perception, true},
+		{"perception", types.Perception, true},
+		{"PERCEPTION", types.Perception, true},
+		{"stealth", types.Stealth, true},
+		{"Arcana", types.Arcana, true},
+		{"not_a_skill", types.Skill(""), false}, // invalid skill returns false
 	}
 	for _, tt := range tests {
-		result := skillFromString(tt.input)
-		if result != tt.expected {
-			t.Errorf("skillFromString(%q) = %q, expected %q", tt.input, result, tt.expected)
+		result, valid := skillFromString(tt.input)
+		if valid != tt.expectedValid || result != tt.expectedSkill {
+			t.Errorf("skillFromString(%q) = (%q, %v), expected (%q, %v)", tt.input, result, valid, tt.expectedSkill, tt.expectedValid)
+		}
+	}
+}
+
+func TestAbilityFromString(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedAb    types.Ability
+		expectedValid bool
+	}{
+		{"str", types.Strength, true},
+		{"Strength", types.Strength, true},
+		{"STRENGTH", types.Strength, true},
+		{"dex", types.Dexterity, true},
+		{"intelligence", types.Intelligence, true},
+		{"cha", types.Charisma, true},
+		{"not_an_ability", types.Ability(""), false}, // invalid ability returns false
+	}
+	for _, tt := range tests {
+		result, valid := abilityFromString(tt.input)
+		if valid != tt.expectedValid || result != tt.expectedAb {
+			t.Errorf("abilityFromString(%q) = (%v, %v), expected (%v, %v)", tt.input, result, valid, tt.expectedAb, tt.expectedValid)
 		}
 	}
 }
