@@ -123,6 +123,12 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 					}
 				}
 			}
+			// Validate session exists before creating character (avoid wasted computation)
+			gs := stateProvider.GetGameState(sessionID)
+			if gs == nil {
+				return nil, fmt.Errorf("session not found: %s", sessionID)
+			}
+
 			char, err := character.CreateBasic(params)
 			if err != nil {
 				return nil, fmt.Errorf("character creation failed: %w", err)
@@ -265,7 +271,7 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 								}
 							}
 						}
-						// Remove conditions
+						// Remove conditions (conditionFromString already lowercases, so stored values are lowercase)
 						if conditionsRemove, ok := args["conditions_remove"].([]interface{}); ok {
 							removeSet := make(map[string]bool)
 							for _, c := range conditionsRemove {
@@ -275,7 +281,7 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 							}
 							filtered := char.Conditions[:0]
 							for _, c := range char.Conditions {
-								if !removeSet[strings.ToLower(string(c))] {
+								if !removeSet[string(c)] {
 									filtered = append(filtered, c)
 								}
 							}
@@ -409,10 +415,11 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 						}
 						// HP gain: floor(HitDice / 2) + 1 + CON modifier (SRD 5.1 average roll, rounded up)
 						// Equivalent to: d6→4, d8→5, d10→6, d12→7
+						// Per SRD 5.1: a character always gains at least 1 HP on level up, even with negative CON mod
 						conMod := char.Stats.GetModifier(types.Constitution)
 						hpGain := classConfig.HitDice/2 + 1 + conMod
 						if hpGain < 1 {
-							hpGain = 1
+							hpGain = 1 // SRD minimum HP gain
 						}
 						char.Level = newLevel
 						char.MaxHP += hpGain
