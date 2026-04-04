@@ -892,9 +892,7 @@ func TestLevelUpTool_Success(t *testing.T) {
 	}
 
 	// HP should increase by (hitDice/2 + 1) + CON mod
-	// Fighter: (10/2 + 1) + 1 = 6 + 1 = 7  (CON 13 -> +1 mod after human bonus)
-	// Wait: human CON 12 + 1 = 13, mod = (13-10)/2 = +1
-	// HP gain = (10/2 + 1) + 1 = 6
+	// Fighter hit dice=10, CON 13 (+1 mod after human racial bonus): hpGain = 10/2 + 1 + 1 = 6
 	hpGain := (10/2 + 1) + 1 // = 6
 	expectedNewHP := initialHP + hpGain
 	if updatedChar.MaxHP != expectedNewHP {

@@ -3,13 +3,14 @@ package tools
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/dnd-game/server/internal/server/character"
 	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/dnd-game/server/internal/shared/types"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
-	"strings"
 )
 
 // CharacterStateProvider defines the interface for accessing and modifying
@@ -123,37 +124,41 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 					}
 				}
 			}
-			// Validate session exists before creating character (avoid wasted computation)
-			gs := stateProvider.GetGameState(sessionID)
-			if gs == nil {
-				return nil, fmt.Errorf("session not found: %s", sessionID)
-			}
-
 			char, err := character.CreateBasic(params)
 			if err != nil {
 				return nil, fmt.Errorf("character creation failed: %w", err)
 			}
-			// Add to party in game state (duplicate name check is atomic inside the write lock)
-			var duplicateNameErr error
+			// Atomically validate session, check duplicate name, and add character under write lock.
+			var (
+				addedChar   *models.Character
+				partySize   int
+				dupNameErr  error
+			)
 			err = stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
 				for _, existing := range gs.Party {
 					if existing.Name == name {
-						duplicateNameErr = fmt.Errorf("a character named %q already exists in this session (ID: %s)", name, existing.ID)
+						dupNameErr = fmt.Errorf("a character named %q already exists in this session (ID: %s)", name, existing.ID)
 						return
 					}
 				}
 				gs.Party = append(gs.Party, char)
+				addedChar = char
+				partySize = len(gs.Party)
 			})
 			if err != nil {
+				// UpdateGameState returns ErrSessionNotFound when session doesn't exist
+				if strings.Contains(err.Error(), "not found") {
+					return nil, fmt.Errorf("session not found: %s", sessionID)
+				}
 				return nil, fmt.Errorf("failed to add character to session: %w", err)
 			}
-			if duplicateNameErr != nil {
-				return nil, duplicateNameErr
+			if dupNameErr != nil {
+				return nil, dupNameErr
 			}
 			return map[string]interface{}{
 				"success":    true,
-				"character":  char,
-				"party_size": len(stateProvider.GetGameState(sessionID).Party),
+				"character":  addedChar,
+				"party_size": partySize,
 			}, nil
 		},
 	})
@@ -271,7 +276,7 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 								}
 							}
 						}
-						// Remove conditions (conditionFromString already lowercases, so stored values are lowercase)
+						// Remove conditions (conditionFromString lowercases input; stored values are also lowercase)
 						if conditionsRemove, ok := args["conditions_remove"].([]interface{}); ok {
 							removeSet := make(map[string]bool)
 							for _, c := range conditionsRemove {
@@ -281,7 +286,7 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 							}
 							filtered := char.Conditions[:0]
 							for _, c := range char.Conditions {
-								if !removeSet[string(c)] {
+								if !removeSet[conditionKey(c)] {
 									filtered = append(filtered, c)
 								}
 							}
@@ -413,9 +418,10 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 							opErr = fmt.Errorf("character is already at maximum level (20)")
 							return
 						}
-						// HP gain: floor(HitDice / 2) + 1 + CON modifier (SRD 5.1 average roll, rounded up)
-						// Equivalent to: d6→4, d8→5, d10→6, d12→7
-						// Per SRD 5.1: a character always gains at least 1 HP on level up, even with negative CON mod
+						// HP gain: HitDice/2 + 1 + CON modifier.
+						// Integer division truncates so this equals ceil(HitDice/2) per SRD 5.1:
+						//   d6→4, d8→5, d10→6, d12→7
+						// Per SRD 5.1: a character always gains at least 1 HP on level up, even with negative CON mod.
 						conMod := char.Stats.GetModifier(types.Constitution)
 						hpGain := classConfig.HitDice/2 + 1 + conMod
 						if hpGain < 1 {
@@ -493,4 +499,10 @@ func conditionFromString(s string) (types.Condition, bool) {
 		return types.Condition(""), false
 	}
 	return cond, true
+}
+
+// conditionKey returns the string key for a Condition, for use in map lookups.
+// All conditions are stored lowercased by conditionFromString, so this is a no-op cast.
+func conditionKey(c types.Condition) string {
+	return string(c)
 }
