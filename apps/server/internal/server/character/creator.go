@@ -1,12 +1,12 @@
 // Package character provides character creation and management functionality.
 //
 // Current Implementation Scope (B212 - v0.3):
-// - Character creation with 9 races (human, elf, dwarf, halfling, dragonborn, gnome, half-elf, half-orc, tiefling)
-//   and 11 classes (fighter, wizard, rogue, cleric, bard, druid, monk, paladin, ranger, sorcerer, warlock)
-// - Racial ability score bonuses and traits
-// - Class-based HP, saving throws, and skill selection
-// - Background skill proficiencies
-// - Starting gold based on class
+//   - Character creation with 9 races (human, elf, dwarf, halfling, dragonborn, gnome, half-elf, half-orc, tiefling)
+//     and 11 classes (fighter, wizard, rogue, cleric, bard, druid, monk, paladin, ranger, sorcerer, warlock)
+//   - Racial ability score bonuses and traits
+//   - Class-based HP, saving throws, skill selection, and equipment proficiencies
+//   - Background skill proficiencies
+//   - Starting gold based on class
 //
 // Future Enhancement Candidates:
 // - Subraces (e.g., High Elf, Hill Dwarf)
@@ -27,10 +27,10 @@ import (
 
 // Default values for character creation.
 const (
-	defaultBaseHP   = 8  // Default base HP when class hit dice lookup fails
-	defaultSpeed    = 30 // Default movement speed in feet
-	minHP           = 1  // Minimum HP for any character
-	defaultAbility  = 10 // Default ability score
+	defaultBaseHP  = 8  // Default base HP when class hit dice lookup fails
+	defaultSpeed   = 30 // Default movement speed in feet
+	minHP          = 1  // Minimum HP for any character
+	defaultAbility = 10 // Default ability score
 )
 
 // ID prefix for character entities.
@@ -44,15 +44,15 @@ const (
 
 // Supported race names.
 const (
-	RaceHuman     = "human"
-	RaceElf       = "elf"
-	RaceDwarf     = "dwarf"
-	RaceHalfling  = "halfling"
+	RaceHuman      = "human"
+	RaceElf        = "elf"
+	RaceDwarf      = "dwarf"
+	RaceHalfling   = "halfling"
 	RaceDragonborn = "dragonborn"
-	RaceGnome     = "gnome"
-	RaceHalfElf   = "half-elf"
-	RaceHalfOrc   = "half-orc"
-	RaceTiefling  = "tiefling"
+	RaceGnome      = "gnome"
+	RaceHalfElf    = "half-elf"
+	RaceHalfOrc    = "half-orc"
+	RaceTiefling   = "tiefling"
 )
 
 // Supported class names.
@@ -80,13 +80,15 @@ type RaceConfig struct {
 
 // ClassConfig holds configuration for a playable class.
 type ClassConfig struct {
-	Name              string
-	HitDice           int
-	SavingThrows      []types.Ability
-	Skills            []types.Skill // Class skill proficiencies (choose from)
-	SkillChoices      int           // Number of skills to choose
-	StartingGoldDice  string        // D&D 5e starting wealth formula
-	StartingGoldAvg   int           // Simplified average for quick creation
+	Name                string
+	HitDice             int
+	SavingThrows        []types.Ability
+	Skills              []types.Skill // Class skill proficiencies (choose from)
+	SkillChoices        int           // Number of skills to choose
+	ArmorProficiencies  []string      // Armor proficiencies granted by this class
+	WeaponProficiencies []string      // Weapon proficiencies granted by this class
+	StartingGoldDice    string        // D&D 5e starting wealth formula
+	StartingGoldAvg     int           // Simplified average for quick creation
 }
 
 // BackgroundConfig holds configuration for a character background.
@@ -222,7 +224,7 @@ var raceConfigs = map[string]RaceConfig{
 			{Name: "Menacing", Description: "Proficiency in Intimidation"},
 		},
 		AbilityBonus: map[types.Ability]int{
-			types.Strength: 2,
+			types.Strength:     2,
 			types.Constitution: 1,
 		},
 	},
@@ -236,112 +238,134 @@ var raceConfigs = map[string]RaceConfig{
 			{Name: "Infernal Legacy", Description: "Know thaumaturgy cantrip; at level 3, hellish rebuke; at level 5, darkness"},
 		},
 		AbilityBonus: map[types.Ability]int{
-			types.Charisma: 2,
+			types.Charisma:     2,
 			types.Intelligence: 1,
 		},
 	},
 }
 
-// Supported classes configuration.
+// Supported classes configuration with armor/weapon proficiencies (SRD 5.1).
 var classConfigs = map[string]ClassConfig{
 	"fighter": {
-		Name:              "fighter",
-		HitDice:           10,
-		SavingThrows:      []types.Ability{types.Strength, types.Constitution},
-		Skills:            []types.Skill{types.Acrobatics, types.AnimalHandling, types.Athletics, types.History, types.Insight, types.Intimidation, types.Perception, types.Survival},
-		SkillChoices:      2,
-		StartingGoldDice:  "5d4 x 10 gp",
-		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+		Name:                "fighter",
+		HitDice:             10,
+		SavingThrows:        []types.Ability{types.Strength, types.Constitution},
+		Skills:              []types.Skill{types.Acrobatics, types.AnimalHandling, types.Athletics, types.History, types.Insight, types.Intimidation, types.Perception, types.Survival},
+		SkillChoices:        2,
+		ArmorProficiencies:  []string{"all armor", "shields"},
+		WeaponProficiencies: []string{"simple weapons", "martial weapons"},
+		StartingGoldDice:    "5d4 x 10 gp",
+		StartingGoldAvg:     125,
 	},
 	"wizard": {
-		Name:              "wizard",
-		HitDice:           6,
-		SavingThrows:      []types.Ability{types.Intelligence, types.Wisdom},
-		Skills:            []types.Skill{types.Arcana, types.History, types.Insight, types.Investigation, types.Medicine, types.Religion},
-		SkillChoices:      2,
-		StartingGoldDice:  "3d6 x 10 gp",
-		StartingGoldAvg:   105, // Average of 3d6 is 10.5, x 10 = 105
+		Name:                "wizard",
+		HitDice:             6,
+		SavingThrows:        []types.Ability{types.Intelligence, types.Wisdom},
+		Skills:              []types.Skill{types.Arcana, types.History, types.Insight, types.Investigation, types.Medicine, types.Religion},
+		SkillChoices:        2,
+		ArmorProficiencies:  []string{"light armor"},
+		WeaponProficiencies: []string{"daggers", "darts", "slings", "quarterstaffs", "light crossbows"},
+		StartingGoldDice:    "3d6 x 10 gp",
+		StartingGoldAvg:     105,
 	},
 	"rogue": {
-		Name:              "rogue",
-		HitDice:           8,
-		SavingThrows:      []types.Ability{types.Dexterity, types.Intelligence},
-		Skills:            []types.Skill{types.Acrobatics, types.Athletics, types.Deception, types.Insight, types.Intimidation, types.Investigation, types.Perception, types.Performance, types.Persuasion, types.SleightOfHand, types.Stealth},
-		SkillChoices:      4,
-		StartingGoldDice:  "4d4 x 10 gp",
-		StartingGoldAvg:   100, // Average of 4d4 is 10, x 10 = 100
+		Name:                "rogue",
+		HitDice:             8,
+		SavingThrows:        []types.Ability{types.Dexterity, types.Intelligence},
+		Skills:              []types.Skill{types.Acrobatics, types.Athletics, types.Deception, types.Insight, types.Intimidation, types.Investigation, types.Perception, types.Performance, types.Persuasion, types.SleightOfHand, types.Stealth},
+		SkillChoices:        4,
+		ArmorProficiencies:  []string{"light armor"},
+		WeaponProficiencies: []string{"simple weapons", "hand crossbows", "longswords", "rapiers", "shortswords"},
+		StartingGoldDice:    "4d4 x 10 gp",
+		StartingGoldAvg:     100,
 	},
 	"cleric": {
-		Name:              "cleric",
-		HitDice:           8,
-		SavingThrows:      []types.Ability{types.Wisdom, types.Charisma},
-		Skills:            []types.Skill{types.History, types.Insight, types.Medicine, types.Persuasion, types.Religion},
-		SkillChoices:      2,
-		StartingGoldDice:  "5d4 x 10 gp",
-		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+		Name:                "cleric",
+		HitDice:             8,
+		SavingThrows:        []types.Ability{types.Wisdom, types.Charisma},
+		Skills:              []types.Skill{types.History, types.Insight, types.Medicine, types.Persuasion, types.Religion},
+		SkillChoices:        2,
+		ArmorProficiencies:  []string{"all armor", "shields"},
+		WeaponProficiencies: []string{"simple weapons", "maces (war)", "warhammers"},
+		StartingGoldDice:    "5d4 x 10 gp",
+		StartingGoldAvg:     125,
 	},
 	"bard": {
-		Name:              "bard",
-		HitDice:           8,
-		SavingThrows:      []types.Ability{types.Dexterity, types.Charisma},
-		Skills:            []types.Skill{types.Acrobatics, types.AnimalHandling, types.Arcana, types.Athletics, types.Deception, types.History, types.Insight, types.Intimidation, types.Investigation, types.Medicine, types.Nature, types.Perception, types.Performance, types.Persuasion, types.Religion, types.SleightOfHand, types.Stealth, types.Survival},
-		SkillChoices:      3,
-		StartingGoldDice:  "5d4 x 10 gp",
-		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+		Name:                "bard",
+		HitDice:             8,
+		SavingThrows:        []types.Ability{types.Dexterity, types.Charisma},
+		Skills:              []types.Skill{types.Acrobatics, types.AnimalHandling, types.Arcana, types.Athletics, types.Deception, types.History, types.Insight, types.Intimidation, types.Investigation, types.Medicine, types.Nature, types.Perception, types.Performance, types.Persuasion, types.Religion, types.SleightOfHand, types.Stealth, types.Survival},
+		SkillChoices:        3,
+		ArmorProficiencies:  []string{"light armor"},
+		WeaponProficiencies: []string{"simple weapons", "hand crossbows", "longswords", "rapiers", "shortswords"},
+		StartingGoldDice:    "5d4 x 10 gp",
+		StartingGoldAvg:     125,
 	},
 	"druid": {
-		Name:              "druid",
-		HitDice:           8,
-		SavingThrows:      []types.Ability{types.Intelligence, types.Wisdom},
-		Skills:            []types.Skill{types.Arcana, types.AnimalHandling, types.Insight, types.Medicine, types.Nature, types.Perception, types.Religion, types.Survival},
-		SkillChoices:      2,
-		StartingGoldDice:  "2d6 x 10 gp",
-		StartingGoldAvg:   70, // Average of 2d6 is 7, x 10 = 70
+		Name:                "druid",
+		HitDice:             8,
+		SavingThrows:        []types.Ability{types.Intelligence, types.Wisdom},
+		Skills:              []types.Skill{types.Arcana, types.AnimalHandling, types.Insight, types.Medicine, types.Nature, types.Perception, types.Religion, types.Survival},
+		SkillChoices:        2,
+		ArmorProficiencies:  []string{"light armor", "medium armor (non-metal)", "shields (non-metal)"},
+		WeaponProficiencies: []string{"clubs", "daggers", "darts", "javelins", "maces", "quarterstaffs", "scimitars", "sickles", "slings", "spears"},
+		StartingGoldDice:    "2d6 x 10 gp",
+		StartingGoldAvg:     70,
 	},
 	"monk": {
-		Name:              "monk",
-		HitDice:           8,
-		SavingThrows:      []types.Ability{types.Strength, types.Dexterity},
-		Skills:            []types.Skill{types.Acrobatics, types.Athletics, types.History, types.Insight, types.Religion, types.Stealth},
-		SkillChoices:      2,
-		StartingGoldDice:  "5d4 gp",
-		StartingGoldAvg:   12, // Average of 5d4 is 12.5
+		Name:                "monk",
+		HitDice:             8,
+		SavingThrows:        []types.Ability{types.Strength, types.Dexterity},
+		Skills:              []types.Skill{types.Acrobatics, types.Athletics, types.History, types.Insight, types.Religion, types.Stealth},
+		SkillChoices:        2,
+		ArmorProficiencies:  []string{"none"},
+		WeaponProficiencies: []string{"simple weapons", "shortswords"},
+		StartingGoldDice:    "5d4 gp",
+		StartingGoldAvg:     12,
 	},
 	"paladin": {
-		Name:              "paladin",
-		HitDice:           10,
-		SavingThrows:      []types.Ability{types.Wisdom, types.Charisma},
-		Skills:            []types.Skill{types.Athletics, types.Insight, types.Intimidation, types.Medicine, types.Persuasion, types.Religion},
-		SkillChoices:      2,
-		StartingGoldDice:  "5d4 x 10 gp",
-		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+		Name:                "paladin",
+		HitDice:             10,
+		SavingThrows:        []types.Ability{types.Wisdom, types.Charisma},
+		Skills:              []types.Skill{types.Athletics, types.Insight, types.Intimidation, types.Medicine, types.Persuasion, types.Religion},
+		SkillChoices:        2,
+		ArmorProficiencies:  []string{"all armor", "shields"},
+		WeaponProficiencies: []string{"simple weapons", "martial weapons"},
+		StartingGoldDice:    "5d4 x 10 gp",
+		StartingGoldAvg:     125,
 	},
 	"ranger": {
-		Name:              "ranger",
-		HitDice:           10,
-		SavingThrows:      []types.Ability{types.Strength, types.Dexterity},
-		Skills:            []types.Skill{types.AnimalHandling, types.Athletics, types.Insight, types.Investigation, types.Nature, types.Perception, types.Stealth, types.Survival},
-		SkillChoices:      3,
-		StartingGoldDice:  "5d4 x 10 gp",
-		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+		Name:                "ranger",
+		HitDice:             10,
+		SavingThrows:        []types.Ability{types.Strength, types.Dexterity},
+		Skills:              []types.Skill{types.AnimalHandling, types.Athletics, types.Insight, types.Investigation, types.Nature, types.Perception, types.Stealth, types.Survival},
+		SkillChoices:        3,
+		ArmorProficiencies:  []string{"light armor", "medium armor", "shields"},
+		WeaponProficiencies: []string{"simple weapons", "martial weapons"},
+		StartingGoldDice:    "5d4 x 10 gp",
+		StartingGoldAvg:     125,
 	},
 	"sorcerer": {
-		Name:              "sorcerer",
-		HitDice:           6,
-		SavingThrows:      []types.Ability{types.Constitution, types.Charisma},
-		Skills:            []types.Skill{types.Arcana, types.Deception, types.Insight, types.Intimidation, types.Persuasion, types.Religion},
-		SkillChoices:      2,
-		StartingGoldDice:  "3d6 x 10 gp",
-		StartingGoldAvg:   105, // Average of 3d6 is 10.5, x 10 = 105
+		Name:                "sorcerer",
+		HitDice:             6,
+		SavingThrows:        []types.Ability{types.Constitution, types.Charisma},
+		Skills:              []types.Skill{types.Arcana, types.Deception, types.Insight, types.Intimidation, types.Persuasion, types.Religion},
+		SkillChoices:        2,
+		ArmorProficiencies:  []string{"none"},
+		WeaponProficiencies: []string{"daggers", "darts", "slings", "quarterstaffs", "light crossbows"},
+		StartingGoldDice:    "3d6 x 10 gp",
+		StartingGoldAvg:     105,
 	},
 	"warlock": {
-		Name:              "warlock",
-		HitDice:           8,
-		SavingThrows:      []types.Ability{types.Wisdom, types.Charisma},
-		Skills:            []types.Skill{types.Arcana, types.Deception, types.History, types.Investigation, types.Nature, types.Religion},
-		SkillChoices:      2,
-		StartingGoldDice:  "4d4 x 10 gp",
-		StartingGoldAvg:   100, // Average of 4d4 is 10, x 10 = 100
+		Name:                "warlock",
+		HitDice:             8,
+		SavingThrows:        []types.Ability{types.Wisdom, types.Charisma},
+		Skills:              []types.Skill{types.Arcana, types.Deception, types.History, types.Investigation, types.Nature, types.Religion},
+		SkillChoices:        2,
+		ArmorProficiencies:  []string{"light armor"},
+		WeaponProficiencies: []string{"simple weapons"},
+		StartingGoldDice:    "4d4 x 10 gp",
+		StartingGoldAvg:     100,
 	},
 }
 
@@ -401,12 +425,12 @@ var backgroundConfigs = map[string]BackgroundConfig{
 
 // CreateParams defines the parameters for creating a basic character.
 type CreateParams struct {
-	Name          string          `json:"name"`
-	Race          string          `json:"race"`
-	Class         string          `json:"class"`
-	Background    string          `json:"background"`
-	AbilityScores map[string]int  `json:"abilityScores"`
-	SkillChoices  []types.Skill   `json:"skillChoices,omitempty"` // Optional: chosen class skills
+	Name          string         `json:"name"`
+	Race          string         `json:"race"`
+	Class         string         `json:"class"`
+	Background    string         `json:"background"`
+	AbilityScores map[string]int `json:"abilityScores"`
+	SkillChoices  []types.Skill  `json:"skillChoices,omitempty"` // Optional: chosen class skills
 }
 
 // CreateBasic creates a new character with the given parameters.
@@ -439,11 +463,6 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 	}
 
 	// Validate ability scores (before racial bonuses)
-	//
-	// TODO(future): Add post-bonus cap validation (D&D 5e max is 20 for most races).
-	// Current implementation allows scores up to 20 before bonuses, which may result
-	// in scores exceeding 20 after racial bonuses are applied (e.g., elf with 20 DEX).
-	// Consider: Add maxAfterBonus constant and clamp/validate after applying bonuses.
 	for ability, score := range params.AbilityScores {
 		if score < minAbilityScore || score > maxAbilityScore {
 			return nil, fmt.Errorf("ability score %s out of range [%d, %d]: %d", ability, minAbilityScore, maxAbilityScore, score)
@@ -478,13 +497,6 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 	}
 
 	// Calculate AC: 10 + DEX modifier (no armor)
-	//
-	// TODO(future): Support armor-based AC calculations:
-	// - Light armor: AC from armor + DEX modifier (no limit)
-	// - Medium armor: AC from armor + DEX modifier (max +2)
-	// - Heavy armor: AC from armor only (no DEX bonus)
-	// - Shields: +2 AC when equipped
-	// - Natural armor: Use creature's natural AC formula
 	ac := 10 + stats.GetModifier(types.Dexterity)
 
 	// Calculate proficiency bonus for level
@@ -525,8 +537,8 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 	char := &models.Character{
 		ID:               generateID(),
 		Name:             params.Name,
-		Race:             race,       // Use normalized value
-		Class:            class,      // Use normalized value
+		Race:             race,
+		Class:            class,
 		Level:            level,
 		HP:               maxHP,
 		MaxHP:            maxHP,
@@ -535,7 +547,7 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 		Skills:           skills,
 		Inventory:        []models.Item{},
 		Conditions:       []types.Condition{},
-		Background:       background, // Use normalized value
+		Background:       background,
 		ProficiencyBonus: profBonus,
 		SavingThrows:     savingThrows,
 		Speed:            raceConfig.Speed,
@@ -560,9 +572,9 @@ var abilityKeyAliases = map[string]string{
 // getAbilityScore retrieves an ability score from the map with a default value.
 //
 // Behavior:
-// - Accepts both short keys ("str", "dex", etc.) and full keys ("strength", "dexterity", etc.)
-// - Returns the score if either key form exists
-// - Returns defaultAbility (10) if neither form is found
+//   - Accepts both short keys ("str", "dex", etc.) and full keys ("strength", "dexterity", etc.)
+//   - Returns the score if either key form exists
+//   - Returns defaultAbility (10) if neither form is found
 func getAbilityScore(scores map[string]int, key string) int {
 	if val, ok := scores[key]; ok {
 		return val

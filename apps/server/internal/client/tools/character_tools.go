@@ -3,14 +3,13 @@ package tools
 
 import (
 	"fmt"
-	"log"
-	"strings"
-
 	"github.com/dnd-game/server/internal/server/character"
 	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/dnd-game/server/internal/shared/types"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
+	"strings"
 )
 
 // CharacterStateProvider defines the interface for accessing and modifying
@@ -76,21 +75,22 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if sessionID == "" {
 				return nil, fmt.Errorf("session_id is required")
 			}
-
 			name, _ := args["name"].(string)
 			race, _ := args["race"].(string)
 			class, _ := args["class"].(string)
 			background, _ := args["background"].(string)
-
 			abilityScoresRaw, ok := args["ability_scores"].(map[string]interface{})
 			if !ok {
 				return nil, fmt.Errorf("ability_scores must be an object")
 			}
 			abilityScores := make(map[string]int)
 			for k, v := range abilityScoresRaw {
-				abilityScores[k] = toInt(v, 10)
+				val := toInt(v, 0)
+				if val < 1 || val > 20 {
+					return nil, fmt.Errorf("ability score %q must be between 1 and 20, got %d", k, val)
+				}
+				abilityScores[k] = val
 			}
-
 			params := character.CreateParams{
 				Name:          name,
 				Race:          race,
@@ -98,7 +98,6 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 				Background:    background,
 				AbilityScores: abilityScores,
 			}
-
 			// Handle optional skill choices
 			if skillChoicesRaw, ok := args["skill_choices"].([]interface{}); ok {
 				for _, sc := range skillChoicesRaw {
@@ -107,12 +106,19 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 					}
 				}
 			}
-
 			char, err := character.CreateBasic(params)
 			if err != nil {
 				return nil, fmt.Errorf("character creation failed: %w", err)
 			}
-
+			// Check for duplicate name in party
+			gs := stateProvider.GetGameState(sessionID)
+			if gs != nil {
+				for _, existing := range gs.Party {
+					if existing.Name == name {
+						return nil, fmt.Errorf("a character named %q already exists in this session (ID: %s)", name, existing.ID)
+					}
+				}
+			}
 			// Add to party in game state
 			err = stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
 				gs.Party = append(gs.Party, char)
@@ -120,7 +126,6 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if err != nil {
 				return nil, fmt.Errorf("failed to add character to session: %w", err)
 			}
-
 			return map[string]interface{}{
 				"success":    true,
 				"character":  char,
@@ -128,7 +133,6 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			}, nil
 		},
 	})
-
 	registry.Register(Tool{
 		Name:        "get_character",
 		Description: "Retrieves a character's details by ID. Returns the full character sheet.",
@@ -149,16 +153,13 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
 			characterID, _ := args["character_id"].(string)
-
 			if sessionID == "" || characterID == "" {
 				return nil, fmt.Errorf("session_id and character_id are required")
 			}
-
 			gs := stateProvider.GetGameState(sessionID)
 			if gs == nil {
 				return nil, fmt.Errorf("session not found: %s", sessionID)
 			}
-
 			for _, char := range gs.Party {
 				if char.ID == characterID {
 					return map[string]interface{}{
@@ -167,11 +168,9 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 					}, nil
 				}
 			}
-
 			return nil, fmt.Errorf("character not found: %s", characterID)
 		},
 	})
-
 	registry.Register(Tool{
 		Name:        "update_character",
 		Description: "Updates a character's mutable properties (HP, AC, conditions, gold). Does NOT change race, class, or ability scores.",
@@ -218,11 +217,9 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
 			characterID, _ := args["character_id"].(string)
-
 			if sessionID == "" || characterID == "" {
 				return nil, fmt.Errorf("session_id and character_id are required")
 			}
-
 			var updatedChar *models.Character
 			err := stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
 				for _, char := range gs.Party {
@@ -240,16 +237,16 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 						if v, ok := args["gold"]; ok {
 							char.Gold = toInt(v, char.Gold)
 						}
-
 						// Add conditions
 						if conditionsAdd, ok := args["conditions_add"].([]interface{}); ok {
 							for _, c := range conditionsAdd {
 								if s, ok := c.(string); ok {
-									char.Conditions = append(char.Conditions, conditionFromString(s))
+									if cond, valid := conditionFromString(s); valid {
+										char.Conditions = append(char.Conditions, cond)
+									}
 								}
 							}
 						}
-
 						// Remove conditions
 						if conditionsRemove, ok := args["conditions_remove"].([]interface{}); ok {
 							removeSet := make(map[string]bool)
@@ -266,7 +263,6 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 							}
 							char.Conditions = filtered
 						}
-
 						updatedChar = char
 						return
 					}
@@ -275,18 +271,15 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if err != nil {
 				return nil, fmt.Errorf("failed to update character: %w", err)
 			}
-
 			if updatedChar == nil {
 				return nil, fmt.Errorf("character not found: %s", characterID)
 			}
-
 			return map[string]interface{}{
 				"success":   true,
 				"character": updatedChar,
 			}, nil
 		},
 	})
-
 	registry.Register(Tool{
 		Name:        "add_to_inventory",
 		Description: "Adds an item to a character's inventory.",
@@ -322,15 +315,12 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			itemName, _ := args["item_name"].(string)
 			itemType, _ := args["item_type"].(string)
 			description, _ := args["description"].(string)
-
 			if sessionID == "" || characterID == "" || itemName == "" {
 				return nil, fmt.Errorf("session_id, character_id, and item_name are required")
 			}
-
 			if itemType == "" {
 				itemType = "gear"
 			}
-
 			var updatedChar *models.Character
 			err := stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
 				for _, char := range gs.Party {
@@ -350,11 +340,9 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if err != nil {
 				return nil, fmt.Errorf("failed to add item: %w", err)
 			}
-
 			if updatedChar == nil {
 				return nil, fmt.Errorf("character not found: %s", characterID)
 			}
-
 			return map[string]interface{}{
 				"success":         true,
 				"item_added":      itemName,
@@ -362,7 +350,6 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			}, nil
 		},
 	})
-
 	registry.Register(Tool{
 		Name:        "level_up",
 		Description: "Levels up a character, increasing HP and proficiency bonus. Uses average hit die roll + CON modifier for HP gain.",
@@ -383,11 +370,9 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
 			characterID, _ := args["character_id"].(string)
-
 			if sessionID == "" || characterID == "" {
 				return nil, fmt.Errorf("session_id and character_id are required")
 			}
-
 			var updatedChar *models.Character
 			var levelUpErr error
 			err := stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
@@ -399,9 +384,11 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 							levelUpErr = fmt.Errorf("class config not found for class %q", char.Class)
 							return
 						}
-
 						newLevel := char.Level + 1
-
+						if newLevel > 20 {
+							levelUpErr = fmt.Errorf("character is already at maximum level (20)")
+							return
+						}
 						// HP gain: floor(HitDice / 2) + 1 + CON modifier (SRD 5.1 average roll, rounded up)
 						// Equivalent to: d6→4, d8→5, d10→6, d12→7
 						conMod := char.Stats.GetModifier(types.Constitution)
@@ -409,14 +396,11 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 						if hpGain < 1 {
 							hpGain = 1
 						}
-
 						char.Level = newLevel
 						char.MaxHP += hpGain
 						char.HP += hpGain
-
 						// Update proficiency bonus
 						char.ProficiencyBonus = character.ProficiencyBonusForLevel(newLevel)
-
 						updatedChar = char
 						return
 					}
@@ -428,11 +412,9 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if levelUpErr != nil {
 				return nil, levelUpErr
 			}
-
 			if updatedChar == nil {
 				return nil, fmt.Errorf("character not found: %s", characterID)
 			}
-
 			return map[string]interface{}{
 				"success":           true,
 				"character":         updatedChar,
@@ -448,19 +430,19 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 func skillFromString(s string) types.Skill {
 	skill := types.Skill(strings.ToLower(s))
 	if _, ok := types.SkillAbility[skill]; !ok {
-		log.Printf("[WARN] skillFromString: unknown skill %q, returning empty value", s)
+		log.Warn().Str("skill", s).Msg("skillFromString: unknown skill, returning empty value")
 		return types.Skill("")
 	}
 	return skill
 }
 
 // conditionFromString converts a string to a condition type with validation.
-// Returns the condition if valid, or an empty condition value with a warning log if invalid.
-func conditionFromString(s string) types.Condition {
+// Returns the condition and true if valid, or empty condition and false if invalid.
+func conditionFromString(s string) (types.Condition, bool) {
 	cond := types.Condition(strings.ToLower(s))
 	if !cond.Valid() {
-		log.Printf("[WARN] conditionFromString: unknown condition %q, returning empty value", s)
-		return types.Condition("")
+		log.Warn().Str("condition", s).Msg("conditionFromString: unknown condition, skipping")
+		return types.Condition(""), false
 	}
-	return cond
+	return cond, true
 }

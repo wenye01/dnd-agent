@@ -275,6 +275,7 @@ func TestCreateCharacterTool_AllNewRaces(t *testing.T) {
 	for _, race := range races {
 		t.Run(race, func(t *testing.T) {
 			args := baseCreateArgs()
+			args["name"] = "Test_" + race
 			args["race"] = race
 			result, err := tool.Handler(args)
 			if err != nil {
@@ -298,6 +299,7 @@ func TestCreateCharacterTool_AllNewClasses(t *testing.T) {
 	for _, class := range classes {
 		t.Run(class, func(t *testing.T) {
 			args := baseCreateArgs()
+			args["name"] = "Test_" + class
 			args["class"] = class
 			result, err := tool.Handler(args)
 			if err != nil {
@@ -1233,9 +1235,9 @@ func TestConditionFromString(t *testing.T) {
 		{"stunned", "stunned"},
 	}
 	for _, tt := range tests {
-		result := conditionFromString(tt.input)
-		if result != tt.expected {
-			t.Errorf("conditionFromString(%q) = %q, expected %q", tt.input, result, tt.expected)
+		result, valid := conditionFromString(tt.input)
+		if !valid || result != tt.expected {
+			t.Errorf("conditionFromString(%q) = (%q, %v), expected (%q, true)", tt.input, result, valid, tt.expected)
 		}
 	}
 }
