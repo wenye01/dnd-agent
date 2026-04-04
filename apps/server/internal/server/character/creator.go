@@ -139,6 +139,13 @@ var raceConfigs = map[string]RaceConfig{
 			types.Constitution: 2,
 		},
 	},
+	// TODO(B212-followup): halfling has two subraces with different ability bonuses:
+	//   - Lightfoot: +2 DEX, +1 CHA (also can hide behind larger creatures)
+	//   - Stout:    +2 DEX, +1 CON (also advantage against poison, resistance to poison damage)
+	// Current implementation uses a generic halfling (+2 DEX only). To fully support:
+	//   - Add Subrace string field to RaceConfig or CreateParams
+	//   - Define separate ability bonus maps per subrace
+	//   - Add subrace-specific traits (e.g., Stout Resilience)
 	"halfling": {
 		Name:  "halfling",
 		Speed: 25,
@@ -151,11 +158,16 @@ var raceConfigs = map[string]RaceConfig{
 			types.Dexterity: 2,
 		},
 	},
+	// TODO(B212-followup): dragonborn must choose a draconic ancestry (black/blue/green/red/white/brass/bronze/copper/gold/silver),
+	// which determines breath weapon damage type and damage resistance. To fully support this:
+	//   - Add DraconicAncestry string field to RaceConfig or CreateParams
+	//   - Map ancestry -> damage type (e.g., black=acid, blue=lightning, fire=red/gold/brass)
+	//   - Store the choice on the Character model for breath weapon / resistance logic
 	"dragonborn": {
 		Name:  "dragonborn",
 		Speed: 30,
 		Traits: []models.RaceTrait{
-			{Name: "Draconic Ancestry", Description: "Choose a dragon ancestor, which determines breath weapon damage type and resistance"},
+			{Name: "Draconic Ancestry", Description: "Choose a dragon ancestor, which determines breath weapon damage type and resistance (not yet selectable; defaults to generic)"},
 			{Name: "Breath Weapon", Description: "Exhale destructive energy based on draconic ancestry (DC 8 + CON mod + proficiency)"},
 			{Name: "Damage Resistance", Description: "Resistance to the damage type associated with your draconic ancestry"},
 		},
@@ -164,6 +176,12 @@ var raceConfigs = map[string]RaceConfig{
 			types.Charisma: 1,
 		},
 	},
+	// TODO(B212-followup): gnome has two subraces with different ability bonuses:
+	//   - Forest gnome: +2 INT, +1 DEX (also Speak with Small Beasts, minor illusion cantrip)
+	//   - Rock gnome:   +2 INT, +1 CON (also Artificer's Lore: tinker's tools history insight)
+	// Current implementation uses a generic gnome (+2 INT only). To fully support:
+	//   - Add Subrace string field to RaceConfig or CreateParams
+	//   - Define separate ability bonus maps and trait lists per subrace
 	"gnome": {
 		Name:  "gnome",
 		Speed: 25,
@@ -175,6 +193,11 @@ var raceConfigs = map[string]RaceConfig{
 			types.Intelligence: 2,
 		},
 	},
+	// TODO(B212-followup): half-elf SRD grants +2 CHA and +1 to two other abilities of player's choice.
+	// Current implementation only applies CHA +2. To fully support this:
+	//   - Add ExtraAbilityBonuses []types.Ability to CreateParams or RaceConfig
+	//   - Validate that the two chosen abilities are not CHA (already covered by the +2)
+	//   - Apply them in CreateBasic alongside the fixed AbilityBonus map
 	"half-elf": {
 		Name:  "half-elf",
 		Speed: 30,
@@ -182,11 +205,11 @@ var raceConfigs = map[string]RaceConfig{
 			{Name: "Darkvision", Description: "60 feet"},
 			{Name: "Fey Ancestry", Description: "Advantage on saves against charm, immunity to sleep"},
 			{Name: "Skill Versatility", Description: "Proficiency in two skills of your choice"},
-			{Name: "Ability Score Increase", Description: "+2 Charisma, and +1 to two other ability scores of your choice (choose via manual adjustment; not yet automated)"},
+			{Name: "Ability Score Increase", Description: "+2 Charisma, and +1 to two other ability scores of your choice (not yet automated; adjust manually)"},
 		},
 		AbilityBonus: map[types.Ability]int{
 			types.Charisma: 2,
-			// TODO: SRD half-elf also gets +1 to two abilities of player's choice
+			// TODO(B212-followup): SRD half-elf also gets +1 to two abilities of player's choice
 		},
 	},
 	"half-orc": {

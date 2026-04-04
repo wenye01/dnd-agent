@@ -1169,6 +1169,7 @@ func TestIntegration_FullCharacterLifecycle(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestToInt_Conversions(t *testing.T) {
+	// Positive cases: valid numeric inputs should convert correctly
 	validCases := []struct {
 		input    interface{}
 		expected int
@@ -1185,6 +1186,7 @@ func TestToInt_Conversions(t *testing.T) {
 		}
 	}
 
+	// Negative cases: invalid inputs should return the default fallback
 	invalidCases := []struct {
 		input        interface{}
 		defaultValue int

@@ -402,9 +402,10 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 
 						newLevel := char.Level + 1
 
-						// HP gain: average hit die roll + CON modifier
+						// HP gain: floor(HitDice / 2) + 1 + CON modifier (SRD 5.1 average roll, rounded up)
+						// Equivalent to: d6→4, d8→5, d10→6, d12→7
 						conMod := char.Stats.GetModifier(types.Constitution)
-						hpGain := (classConfig.HitDice / 2 + 1) + conMod
+						hpGain := classConfig.HitDice/2 + 1 + conMod
 						if hpGain < 1 {
 							hpGain = 1
 						}
@@ -443,6 +444,7 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 }
 
 // skillFromString converts a string to a skill type with validation.
+// Returns the skill if valid, or an empty skill value with a warning log if invalid.
 func skillFromString(s string) types.Skill {
 	skill := types.Skill(strings.ToLower(s))
 	if _, ok := types.SkillAbility[skill]; !ok {
@@ -453,6 +455,7 @@ func skillFromString(s string) types.Skill {
 }
 
 // conditionFromString converts a string to a condition type with validation.
+// Returns the condition if valid, or an empty condition value with a warning log if invalid.
 func conditionFromString(s string) types.Condition {
 	cond := types.Condition(strings.ToLower(s))
 	if !cond.Valid() {
