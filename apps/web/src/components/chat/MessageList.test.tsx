@@ -17,8 +17,8 @@ describe('MessageList', () => {
     it('should show welcome message when no messages', () => {
       render(<MessageList />)
 
-      expect(screen.getByText(/Welcome, adventurer/)).toBeInTheDocument()
-      expect(screen.getByText(/Your journey begins/)).toBeInTheDocument()
+      expect(screen.getByText(/Chronicle of the Realm/)).toBeInTheDocument()
+      expect(screen.getByText(/Speak to begin/)).toBeInTheDocument()
     })
   })
 

@@ -417,7 +417,7 @@ describe('api.ts - REST API Client', () => {
       await characterApi.list()
 
       const url = mockFetch.mock.calls[0][0] as string
-      expect(url).toMatch(/^http:\/\/localhost:8080\/api\/characters$/)
+      expect(url).toMatch(/^\/api\/characters$/)
     })
 
     it('should construct correct URL for character get', async () => {
