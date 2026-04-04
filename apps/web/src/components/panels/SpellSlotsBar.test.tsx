@@ -166,4 +166,21 @@ describe('SpellSlotsBar', () => {
     )
     expect(container.innerHTML).toBe('')
   })
+
+  it('should filter out levels above 9 even if data is provided', () => {
+    const spellSlots: SpellSlots = {
+      1: { max: 4, used: 0 },
+      11: { max: 1, used: 0 },
+      12: { max: 1, used: 0 },
+      13: { max: 1, used: 0 },
+    }
+    render(
+      <SpellSlotsBar spellSlots={spellSlots} characterClass="wizard" />
+    )
+    // Only level 1 should be rendered; 11/12/13 are filtered out (>9)
+    expect(screen.getByText('1st')).toBeDefined()
+    expect(screen.queryByText('11th')).toBeNull()
+    expect(screen.queryByText('12th')).toBeNull()
+    expect(screen.queryByText('13th')).toBeNull()
+  })
 })

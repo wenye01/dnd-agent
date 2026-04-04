@@ -6,9 +6,11 @@ const SPELLCASTER_CLASSES = [
 ]
 
 function getOrdinalSuffix(level: number): string {
-  if (level === 1) return 'st'
-  if (level === 2) return 'nd'
-  if (level === 3) return 'rd'
+  const rem = level % 100
+  if (rem >= 11 && rem <= 13) return 'th'
+  if (level % 10 === 1) return 'st'
+  if (level % 10 === 2) return 'nd'
+  if (level % 10 === 3) return 'rd'
   return 'th'
 }
 
