@@ -35,6 +35,9 @@ export interface ServerCharacter {
   speed: number
   gold: number
   racialTraits: Array<{ name: string; description: string }>
+  deathSaves?: import('../types').DeathSaves
+  equipment?: import('../types').EquipmentSlot[]
+  spellSlots?: import('../types').SpellSlots
 }
 
 export interface CreateCharacterRequest {

@@ -4,6 +4,7 @@ import { Button } from '../ui/Button'
 import { characterApi, type CreateCharacterRequest, type ServerCharacter } from '../../services/api'
 import { useGameStore } from '../../stores/gameStore'
 import { Sword, Shield, Wand2, User } from 'lucide-react'
+import type { Character, Ability, Condition, DeathSaves, EquipmentSlot, SpellSlots } from '../../types'
 
 interface CharacterCreationDialogProps {
   isOpen: boolean
@@ -27,6 +28,42 @@ const RACES = [
     value: 'dwarf',
     label: 'Dwarf',
     description: '+2 CON, Darkvision, Dwarven Resilience',
+    icon: User,
+  },
+  {
+    value: 'halfling',
+    label: 'Halfling',
+    description: '+2 DEX, Lucky, Brave',
+    icon: User,
+  },
+  {
+    value: 'dragonborn',
+    label: 'Dragonborn',
+    description: '+2 STR, +1 CHA, Breath Weapon',
+    icon: User,
+  },
+  {
+    value: 'gnome',
+    label: 'Gnome',
+    description: '+2 INT, Darkvision, Gnome Cunning',
+    icon: User,
+  },
+  {
+    value: 'half-elf',
+    label: 'Half-Elf',
+    description: '+2 CHA, two +1s, Darkvision, Fey Ancestry',
+    icon: User,
+  },
+  {
+    value: 'half-orc',
+    label: 'Half-Orc',
+    description: '+2 STR, +1 CON, Darkvision, Relentless Endurance',
+    icon: User,
+  },
+  {
+    value: 'tiefling',
+    label: 'Tiefling',
+    description: '+2 CHA, +1 INT, Darkvision, Hellish Resistance',
     icon: User,
   },
 ]
@@ -53,6 +90,69 @@ const CLASSES = [
     icon: Shield,
     accent: 'text-gold',
   },
+  {
+    value: 'cleric',
+    label: 'Cleric',
+    description: 'd8 HP, divine spellcaster and healer',
+    icon: Wand2,
+    accent: 'text-heal',
+  },
+  {
+    value: 'ranger',
+    label: 'Ranger',
+    description: 'd10 HP, wilderness warrior',
+    icon: Sword,
+    accent: 'text-heal',
+  },
+  {
+    value: 'bard',
+    label: 'Bard',
+    description: 'd8 HP, versatile performer and caster',
+    icon: Wand2,
+    accent: 'text-arcane',
+  },
+  {
+    value: 'paladin',
+    label: 'Paladin',
+    description: 'd10 HP, holy warrior with divine magic',
+    icon: Sword,
+    accent: 'text-gold',
+  },
+  {
+    value: 'sorcerer',
+    label: 'Sorcerer',
+    description: 'd6 HP, innate arcane magic',
+    icon: Wand2,
+    accent: 'text-arcane',
+  },
+  {
+    value: 'warlock',
+    label: 'Warlock',
+    description: 'd8 HP, pact magic caster',
+    icon: Wand2,
+    accent: 'text-arcane',
+  },
+  {
+    value: 'druid',
+    label: 'Druid',
+    description: 'd8 HP, nature spellcaster and shapeshifter',
+    icon: Wand2,
+    accent: 'text-heal',
+  },
+  {
+    value: 'monk',
+    label: 'Monk',
+    description: 'd8 HP, martial arts and ki',
+    icon: Shield,
+    accent: 'text-gold',
+  },
+  {
+    value: 'barbarian',
+    label: 'Barbarian',
+    description: 'd12 HP, rage-fueled warrior',
+    icon: Sword,
+    accent: 'text-blood',
+  },
 ]
 
 const BACKGROUNDS = [
@@ -60,6 +160,14 @@ const BACKGROUNDS = [
   { value: 'soldier', label: 'Soldier' },
   { value: 'criminal', label: 'Criminal' },
   { value: 'commoner', label: 'Commoner' },
+  { value: 'noble', label: 'Noble' },
+  { value: 'folk_hero', label: 'Folk Hero' },
+  { value: 'acolyte', label: 'Acolyte' },
+  { value: 'entertainer', label: 'Entertainer' },
+  { value: 'outlander', label: 'Outlander' },
+  { value: 'sailor', label: 'Sailor' },
+  { value: 'urchin', label: 'Urchin' },
+  { value: 'guild_artisan', label: 'Guild Artisan' },
 ]
 
 const ABILITY_NAMES = [
@@ -187,7 +295,7 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
           <label className="block text-[11px] font-display font-semibold text-antique/70 mb-2 tracking-wider uppercase">
             Race
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
             {RACES.map((r) => {
               const Icon = r.icon
               return (
@@ -217,7 +325,7 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
           <label className="block text-[11px] font-display font-semibold text-antique/70 mb-2 tracking-wider uppercase">
             Class
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
             {CLASSES.map((c) => {
               const Icon = c.icon
               return (
@@ -247,7 +355,7 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
           <label className="block text-[11px] font-display font-semibold text-antique/70 mb-2 tracking-wider uppercase">
             Background
           </label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1">
             {BACKGROUNDS.map((b) => (
               <button
                 key={b.value}
@@ -309,7 +417,7 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
   )
 }
 
-function serverToClientCharacter(char: ServerCharacter): import('../../types').Character {
+function serverToClientCharacter(char: ServerCharacter): Character {
   return {
     id: char.id,
     name: char.name,
@@ -336,14 +444,16 @@ function serverToClientCharacter(char: ServerCharacter): import('../../types').C
     skills: char.skills,
     savingThrows: Object.entries(char.savingThrows)
       .filter(([, v]) => v)
-      .map(([k]) => k as import('../../types').Ability),
-    conditions: (char.conditions ?? []) as import('../../types').Condition[],
-    equipment: [],
+      .map(([k]) => k as Ability),
+    conditions: (char.conditions ?? []) as Condition[],
+    deathSaves: char.deathSaves as DeathSaves | undefined,
+    equipment: char.equipment ?? [],
     inventory: char.inventory.map((item) => ({
       id: item.id,
       name: item.name,
       quantity: 1,
       description: item.description,
     })),
+    spellSlots: char.spellSlots as SpellSlots | undefined,
   }
 }
