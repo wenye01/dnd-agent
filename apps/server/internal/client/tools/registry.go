@@ -2,6 +2,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -156,17 +157,29 @@ func RegisterDiceTools(registry *Registry, diceService *dice.Service) {
 	})
 }
 
-// intArg extracts an integer argument from the args map.
+// toInt converts an interface{} to int with a default fallback.
+// Handles float64, int, float32, and json.Number types commonly
+// produced by JSON deserialization.
+func toInt(v interface{}, defaultVal int) int {
+	switch val := v.(type) {
+	case float64:
+		return int(val)
+	case int:
+		return val
+	case float32:
+		return int(val)
+	case json.Number:
+		if i, err := val.Int64(); err == nil {
+			return int(i)
+		}
+	}
+	return defaultVal
+}
+
+// intArg extracts an integer argument from the args map using toInt.
 func intArg(args map[string]interface{}, key string, defaultValue int) int {
 	if val, ok := args[key]; ok {
-		switch v := val.(type) {
-		case float64:
-			return int(v)
-		case int:
-			return v
-		case float32:
-			return int(v)
-		}
+		return toInt(val, defaultValue)
 	}
 	return defaultValue
 }

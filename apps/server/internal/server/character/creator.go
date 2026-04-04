@@ -182,9 +182,11 @@ var raceConfigs = map[string]RaceConfig{
 			{Name: "Darkvision", Description: "60 feet"},
 			{Name: "Fey Ancestry", Description: "Advantage on saves against charm, immunity to sleep"},
 			{Name: "Skill Versatility", Description: "Proficiency in two skills of your choice"},
+			{Name: "Ability Score Increase", Description: "+2 Charisma, and +1 to two other ability scores of your choice (choose via manual adjustment; not yet automated)"},
 		},
 		AbilityBonus: map[types.Ability]int{
 			types.Charisma: 2,
+			// TODO: SRD half-elf also gets +1 to two abilities of player's choice
 		},
 	},
 	"half-orc": {

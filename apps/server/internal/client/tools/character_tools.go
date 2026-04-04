@@ -2,14 +2,15 @@
 package tools
 
 import (
-	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/dnd-game/server/internal/server/character"
 	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/dnd-game/server/internal/shared/types"
+	"github.com/google/uuid"
 )
 
 // CharacterStateProvider defines the interface for accessing and modifying
@@ -335,7 +336,7 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 				for _, char := range gs.Party {
 					if char.ID == characterID {
 						item := models.Item{
-							ID:          fmt.Sprintf("item-%d", len(char.Inventory)+1),
+							ID:          uuid.New().String()[:8],
 							Name:        itemName,
 							Description: description,
 							Type:        itemType,
@@ -388,12 +389,14 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			}
 
 			var updatedChar *models.Character
+			var levelUpErr error
 			err := stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
 				for _, char := range gs.Party {
 					if char.ID == characterID {
 						// Get class config for hit die
 						classConfig, ok := character.GetClassConfig(char.Class)
 						if !ok {
+							levelUpErr = fmt.Errorf("class config not found for class %q", char.Class)
 							return
 						}
 
@@ -421,6 +424,9 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if err != nil {
 				return nil, fmt.Errorf("failed to level up: %w", err)
 			}
+			if levelUpErr != nil {
+				return nil, levelUpErr
+			}
 
 			if updatedChar == nil {
 				return nil, fmt.Errorf("character not found: %s", characterID)
@@ -436,29 +442,22 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 	})
 }
 
-// toInt converts an interface{} to int with a default fallback.
-func toInt(v interface{}, defaultVal int) int {
-	switch val := v.(type) {
-	case float64:
-		return int(val)
-	case int:
-		return val
-	case float32:
-		return int(val)
-	case json.Number:
-		if i, err := val.Int64(); err == nil {
-			return int(i)
-		}
-	}
-	return defaultVal
-}
-
-// skillFromString converts a string to a skill type.
+// skillFromString converts a string to a skill type with validation.
 func skillFromString(s string) types.Skill {
-	return types.Skill(strings.ToLower(s))
+	skill := types.Skill(strings.ToLower(s))
+	if _, ok := types.SkillAbility[skill]; !ok {
+		log.Printf("[WARN] skillFromString: unknown skill %q, returning empty value", s)
+		return types.Skill("")
+	}
+	return skill
 }
 
-// conditionFromString converts a string to a condition type.
+// conditionFromString converts a string to a condition type with validation.
 func conditionFromString(s string) types.Condition {
-	return types.Condition(strings.ToLower(s))
+	cond := types.Condition(strings.ToLower(s))
+	if !cond.Valid() {
+		log.Printf("[WARN] conditionFromString: unknown condition %q, returning empty value", s)
+		return types.Condition("")
+	}
+	return cond
 }

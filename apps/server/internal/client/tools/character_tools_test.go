@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
 
@@ -1168,45 +1169,35 @@ func TestIntegration_FullCharacterLifecycle(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestToInt_Conversions(t *testing.T) {
-	tests := []struct {
+	validCases := []struct {
 		input    interface{}
 		expected int
 	}{
 		{float64(42), 42},
 		{int(42), 42},
 		{float32(42), 42},
-		{"not a number", 10}, // default
-		{nil, 99},            // default
+		{json.Number("42"), 42},
 	}
-
-	for _, tt := range tests {
-		result := toInt(tt.input, tt.expected)
-		if tt.input != "not a number" && tt.input != nil {
-			// For valid numeric inputs, expect the converted value
-			// For invalid inputs, expect the default
-			continue
-		}
-		// For invalid inputs
-		if result != tt.expected {
-			t.Errorf("toInt(%v, %d) = %d, expected %d", tt.input, tt.expected, result, tt.expected)
+	for _, tc := range validCases {
+		result := toInt(tc.input, 0)
+		if result != tc.expected {
+			t.Errorf("toInt(%v, 0) = %d, want %d", tc.input, result, tc.expected)
 		}
 	}
 
-	// Positive cases
-	if toInt(float64(42), 0) != 42 {
-		t.Error("Failed to convert float64")
+	invalidCases := []struct {
+		input        interface{}
+		defaultValue int
+	}{
+		{"not a number", 10},
+		{nil, 99},
+		{true, 5},
 	}
-	if toInt(int(42), 0) != 42 {
-		t.Error("Failed to convert int")
-	}
-	if toInt(float32(42), 0) != 42 {
-		t.Error("Failed to convert float32")
-	}
-	if toInt("bad", 10) != 10 {
-		t.Error("Failed to return default for string")
-	}
-	if toInt(nil, 5) != 5 {
-		t.Error("Failed to return default for nil")
+	for _, tc := range invalidCases {
+		result := toInt(tc.input, tc.defaultValue)
+		if result != tc.defaultValue {
+			t.Errorf("toInt(%v, %d) = %d, want default %d", tc.input, tc.defaultValue, result, tc.defaultValue)
+		}
 	}
 }
 
