@@ -57,10 +57,13 @@ func (cm *CombatManager) EndTurn(sessionID string) (map[string]interface{}, erro
 		ended, result := cm.checkCombatEnd(cs)
 		if ended {
 			cs.Status = state.CombatEnded
-			_ = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+			err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 				gs.Combat = cs
 				gs.Phase = state.PhaseExploring
 			})
+			if err != nil {
+				return nil, fmt.Errorf("end turn: failed to persist combat end state: %w", err)
+			}
 			return map[string]interface{}{
 				"status":  "ended",
 				"victory": result.Victory,

@@ -2,6 +2,7 @@ package combat
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -228,16 +229,14 @@ func (cm *CombatManager) rollInitiative(combatants []*state.Combatant) []*state.
 	}
 
 	// Sort by initiative descending, then DEX score descending for ties
-	for i := 0; i < len(entries); i++ {
-		for j := i + 1; j < len(entries); j++ {
-			iDex := cm.getDexScoreForEntry(entries[i], combatants)
-			jDex := cm.getDexScoreForEntry(entries[j], combatants)
-			if entries[j].Initiative > entries[i].Initiative ||
-				(entries[j].Initiative == entries[i].Initiative && jDex > iDex) {
-				entries[i], entries[j] = entries[j], entries[i]
-			}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].Initiative != entries[j].Initiative {
+			return entries[i].Initiative > entries[j].Initiative
 		}
-	}
+		iDex := cm.getDexScoreForEntry(entries[i], combatants)
+		jDex := cm.getDexScoreForEntry(entries[j], combatants)
+		return jDex < iDex
+	})
 
 	return entries
 }

@@ -192,17 +192,12 @@ func applyHealingToCombatant(c *state.Combatant, healing int) *HealResult {
 	// Healing at 0 HP restores consciousness
 	wasUnconscious := c.CurrentHP == 0
 
+	oldHP := c.CurrentHP
 	c.CurrentHP += healing
 	if c.CurrentHP > c.MaxHP {
 		c.CurrentHP = c.MaxHP
 	}
-
-	result.Healing = healing
-	if c.CurrentHP < healing {
-		result.Healing = healing - (c.CurrentHP - healing + healing)
-		// Actual healing applied
-	}
-	result.Healing = healing
+	result.Healing = c.CurrentHP - oldHP
 	result.CurrentHP = c.CurrentHP
 	result.Conscious = wasUnconscious && c.CurrentHP > 0
 

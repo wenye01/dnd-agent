@@ -7,6 +7,33 @@ import (
 	"github.com/dnd-game/server/internal/shared/types"
 )
 
+// findCombatantInPartyOrCombat looks up a combatant by ID, first in the active
+// combat state, then in the party list (converting party characters to
+// Combatant structs). Returns nil if not found.
+func (cm *CombatManager) findCombatantInPartyOrCombat(gs *state.GameState, combatantID string) *state.Combatant {
+	if gs.Combat != nil {
+		if c := cm.getCombatantByID(gs.Combat, combatantID); c != nil {
+			return c
+		}
+	}
+	for _, ch := range gs.Party {
+		if ch.ID == combatantID {
+			return &state.Combatant{
+				ID:         ch.ID,
+				Name:       ch.Name,
+				MaxHP:      ch.MaxHP,
+				CurrentHP:  ch.HP,
+				HitDice:    ch.HitDice,
+				Level:      ch.Level,
+				CONMod:     ch.Stats.GetModifier(types.Constitution),
+				Type:       state.CombatantPlayer,
+				DeathSaves: &ch.DeathSaves,
+			}
+		}
+	}
+	return nil
+}
+
 // ShortRest performs a short rest for a combatant, allowing them to spend
 // hit dice to recover HP. Each hit die restores roll + CON modifier HP.
 func (cm *CombatManager) ShortRest(sessionID, combatantID string, diceToSpend int) (map[string]interface{}, error) {
@@ -18,29 +45,7 @@ func (cm *CombatManager) ShortRest(sessionID, combatantID string, diceToSpend in
 		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
 	}
 
-	// Find the combatant (works in or out of combat)
-	var combatant *state.Combatant
-	if gs.Combat != nil {
-		combatant = cm.getCombatantByID(gs.Combat, combatantID)
-	}
-	if combatant == nil {
-		// Also check party characters
-		for _, ch := range gs.Party {
-			if ch.ID == combatantID {
-				combatant = &state.Combatant{
-					ID:        ch.ID,
-					Name:      ch.Name,
-					MaxHP:     ch.MaxHP,
-					CurrentHP: ch.HP,
-					HitDice:   ch.HitDice,
-					Level:     ch.Level,
-					CONMod:    ch.Stats.GetModifier(types.Constitution),
-					Type:      state.CombatantPlayer,
-				}
-				break
-			}
-		}
-	}
+	combatant := cm.findCombatantInPartyOrCombat(gs, combatantID)
 	if combatant == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("combatant %s not found", combatantID)}
 	}
@@ -129,28 +134,7 @@ func (cm *CombatManager) LongRest(sessionID, combatantID string) (map[string]int
 		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
 	}
 
-	var combatant *state.Combatant
-	if gs.Combat != nil {
-		combatant = cm.getCombatantByID(gs.Combat, combatantID)
-	}
-	if combatant == nil {
-		for _, ch := range gs.Party {
-			if ch.ID == combatantID {
-				combatant = &state.Combatant{
-					ID:         ch.ID,
-					Name:       ch.Name,
-					MaxHP:      ch.MaxHP,
-					CurrentHP:  ch.HP,
-					HitDice:    ch.HitDice,
-					Level:      ch.Level,
-					CONMod:     ch.Stats.GetModifier(types.Constitution),
-					Type:       state.CombatantPlayer,
-					DeathSaves: &ch.DeathSaves,
-				}
-				break
-			}
-		}
-	}
+	combatant := cm.findCombatantInPartyOrCombat(gs, combatantID)
 	if combatant == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("combatant %s not found", combatantID)}
 	}
@@ -230,10 +214,7 @@ func (cm *CombatManager) DeathSave(sessionID, combatantID string) (map[string]in
 		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
 	}
 
-	var combatant *state.Combatant
-	if gs.Combat != nil {
-		combatant = cm.getCombatantByID(gs.Combat, combatantID)
-	}
+	combatant := cm.findCombatantInPartyOrCombat(gs, combatantID)
 	if combatant == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("combatant %s not found", combatantID)}
 	}
@@ -353,10 +334,7 @@ func (cm *CombatManager) Stabilize(sessionID, combatantID string, medicineCheckT
 		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
 	}
 
-	var combatant *state.Combatant
-	if gs.Combat != nil {
-		combatant = cm.getCombatantByID(gs.Combat, combatantID)
-	}
+	combatant := cm.findCombatantInPartyOrCombat(gs, combatantID)
 	if combatant == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("combatant %s not found", combatantID)}
 	}

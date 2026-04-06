@@ -4,6 +4,8 @@ package tools
 import (
 	"fmt"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/dnd-game/server/internal/server/combat"
 	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/state"
@@ -42,6 +44,7 @@ func parseCombatants(raw []interface{}) []*state.Combatant {
 	for _, item := range raw {
 		m, ok := item.(map[string]interface{})
 		if !ok {
+			log.Warn().Interface("item", item).Msg("skipping invalid combatant entry")
 			continue
 		}
 		c := &state.Combatant{

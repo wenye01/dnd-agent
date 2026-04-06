@@ -41,7 +41,10 @@ func GetInitiativeOrder(cs *state.CombatState) []map[string]interface{} {
 // SetInitiative allows manually setting initiative values for combatants.
 // Useful for pre-rolled initiative or scripted encounters.
 func SetInitiative(cm *CombatManager, sessionID string, initiatives map[string]int) error {
-	gs := cm.GetStateManager().GetSession(sessionID)
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	gs := cm.stateManager.GetSession(sessionID)
 	if gs == nil {
 		return &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
 	}
@@ -59,7 +62,7 @@ func SetInitiative(cm *CombatManager, sessionID string, initiatives map[string]i
 	// Re-sort
 	sortInitiatives(gs.Combat)
 
-	return cm.GetStateManager().UpdateSession(sessionID, func(gs *state.GameState) {
+	return cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Already sorted in place
 	})
 }
@@ -93,7 +96,10 @@ func sortInitiatives(cs *state.CombatState) {
 
 // AddCombatantToInitiative adds a late-joining combatant to the initiative order.
 func AddCombatantToInitiative(cm *CombatManager, sessionID string, combatant *state.Combatant, initiative int) error {
-	gs := cm.GetStateManager().GetSession(sessionID)
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	gs := cm.stateManager.GetSession(sessionID)
 	if gs == nil {
 		return &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
 	}
@@ -108,7 +114,7 @@ func AddCombatantToInitiative(cm *CombatManager, sessionID string, combatant *st
 		}
 	}
 
-	return cm.GetStateManager().UpdateSession(sessionID, func(gs *state.GameState) {
+	return cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		gs.Combat.Participants = append(gs.Combat.Participants, combatant)
 		gs.Combat.Initiatives = append(gs.Combat.Initiatives, &state.InitiativeEntry{
 			CharacterID: combatant.ID,
@@ -123,7 +129,10 @@ func AddCombatantToInitiative(cm *CombatManager, sessionID string, combatant *st
 
 // RemoveCombatantFromInitiative removes a combatant from initiative order.
 func RemoveCombatantFromInitiative(cm *CombatManager, sessionID string, combatantID string) error {
-	gs := cm.GetStateManager().GetSession(sessionID)
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	gs := cm.stateManager.GetSession(sessionID)
 	if gs == nil {
 		return &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
 	}
@@ -131,7 +140,7 @@ func RemoveCombatantFromInitiative(cm *CombatManager, sessionID string, combatan
 		return &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
 	}
 
-	return cm.GetStateManager().UpdateSession(sessionID, func(gs *state.GameState) {
+	return cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Remove from initiatives
 		newInitiatives := make([]*state.InitiativeEntry, 0, len(gs.Combat.Initiatives))
 		for _, entry := range gs.Combat.Initiatives {

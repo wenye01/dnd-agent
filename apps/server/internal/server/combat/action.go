@@ -48,6 +48,11 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 		return nil, &CombatError{Code: ErrActionExhausted, Message: "attacker is incapacitated and cannot attack"}
 	}
 
+	// TODO: Check charmed condition -- a charmed creature cannot attack the charmer.
+	// This requires looking up the charmer's ID from the condition's Source field
+	// and comparing it to the target's ID. Not yet implemented because the current
+	// data model does not store the charmer identity in a queryable way.
+
 	// Check action resource
 	if attacker.Action == state.ActionUsed {
 		return nil, &CombatError{Code: ErrActionExhausted, Message: "action already used this turn"}
@@ -448,8 +453,13 @@ func applyConditionAttackModifiers(attacker, target *state.Combatant, advantage,
 	}
 
 	// Target conditions that give advantage to attacks against them
+	// NOTE: prone grants advantage only on melee attacks within 5 feet; ranged
+	// attacks against a prone target actually have disadvantage. Since the
+	// current API does not carry an attack-range parameter, we cannot enforce
+	// this correctly here. When an attack range field is added, split prone
+	// out into separate melee (advantage) and ranged (disadvantage) branches.
 	if hasCondition(target, "blinded") || hasCondition(target, "paralyzed") ||
-		hasCondition(target, "petrified") || hasCondition(target, "prone") ||
+		hasCondition(target, "petrified") ||
 		hasCondition(target, "restrained") || hasCondition(target, "stunned") ||
 		hasCondition(target, "unconscious") {
 		advantage = true

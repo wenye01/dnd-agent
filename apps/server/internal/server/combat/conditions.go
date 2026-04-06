@@ -27,7 +27,13 @@ var conditionEffects = map[string]ConditionModifiers{
 		DefenseAdvantage:   true, // Advantage to attacks against
 	},
 	"charmed": {
-		// Charmed creature can't attack the charmer (handled at action level)
+		// D&D 5e: A charmed creature cannot attack the charmer or target the
+		// charmer with harmful abilities/spells. The charmer has advantage on
+		// any ability check to interact socially with the charmed creature.
+		// TODO: AttackAction should verify the target is not the charmer when
+		// the attacker has the "charmed" condition. This requires storing the
+		// charmer's ID in the ConditionEntry.Source field and checking it at
+		// action resolution time (see action.go AttackAction).
 	},
 	"deafened": {
 		// Auto-fail hearing checks (narrative, no mechanical modifier)
@@ -60,7 +66,13 @@ var conditionEffects = map[string]ConditionModifiers{
 	},
 	"prone": {
 		AttackDisadvantage: true, // Disadvantage on attacks
-		DefenseAdvantage:   true, // Advantage to melee attacks against
+		// D&D 5e: Attacks against a prone creature have advantage only if the
+		// attacker is within 5 feet (melee). Ranged attacks against a prone
+		// creature have disadvantage instead. DefenseAdvantage is intentionally
+		// not set here because the combat system does not currently distinguish
+		// between melee and ranged attacks; applying blanket advantage would be
+		// incorrect for ranged attackers. See applyConditionAttackModifiers in
+		// action.go for the target-side handling.
 	},
 	"restrained": {
 		AttackDisadvantage: true,
