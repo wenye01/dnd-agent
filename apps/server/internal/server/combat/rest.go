@@ -18,16 +18,25 @@ func (cm *CombatManager) findCombatantInPartyOrCombat(gs *state.GameState, comba
 	}
 	for _, ch := range gs.Party {
 		if ch.ID == combatantID {
+			// Create value copies to avoid pointer aliasing with the
+			// original Character struct.  Without copies, mutations
+			// via the returned Combatant would silently modify the
+			// underlying Character data (and vice-versa).
+			ds := ch.DeathSaves
+			hd := ch.HitDice
 			return &state.Combatant{
-				ID:         ch.ID,
-				Name:       ch.Name,
-				MaxHP:      ch.MaxHP,
-				CurrentHP:  ch.HP,
-				HitDice:    ch.HitDice,
-				Level:      ch.Level,
-				CONMod:     ch.Stats.GetModifier(types.Constitution),
-				Type:       state.CombatantPlayer,
-				DeathSaves: &ch.DeathSaves,
+				ID:            ch.ID,
+				Name:          ch.Name,
+				MaxHP:         ch.MaxHP,
+				CurrentHP:     ch.HP,
+				TemporaryHP:   ch.TemporaryHP,
+				AC:            ch.AC,
+				Speed:         ch.Speed,
+				HitDice:       hd,
+				Level:         ch.Level,
+				CONMod:        ch.Stats.GetModifier(types.Constitution),
+				Type:          state.CombatantPlayer,
+				DeathSaves:    &ds,
 			}
 		}
 	}
@@ -161,7 +170,7 @@ func (cm *CombatManager) LongRest(sessionID, combatantID string) (map[string]int
 	}
 
 	// Remove unconscious condition if present
-	removeCondition(combatant, "unconscious")
+	removeCondition(combatant, types.ConditionUnconscious)
 
 	// Update state
 	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
@@ -247,7 +256,7 @@ func (cm *CombatManager) DeathSave(sessionID, combatantID string) (map[string]in
 		combatant.CurrentHP = 1
 		combatant.DeathSaves.Successes = 0
 		combatant.DeathSaves.Failures = 0
-		removeCondition(combatant, "unconscious")
+		removeCondition(combatant, types.ConditionUnconscious)
 
 		result["special"] = "natural_20"
 		result["regainedHp"] = true
@@ -275,7 +284,7 @@ func (cm *CombatManager) DeathSave(sessionID, combatantID string) (map[string]in
 		combatant.DeathSaves.Successes = 3
 		result["stable"] = true
 		result["message"] = fmt.Sprintf("%s stabilizes with 3 successful death saves!", combatant.Name)
-		removeCondition(combatant, "unconscious")
+		removeCondition(combatant, types.ConditionUnconscious)
 	}
 
 	// Check for death (3 failures)
@@ -361,7 +370,7 @@ func (cm *CombatManager) Stabilize(sessionID, combatantID string, medicineCheckT
 	// Stabilize
 	combatant.DeathSaves.Successes = 3
 	combatant.DeathSaves.Failures = 0
-	removeCondition(combatant, "unconscious")
+	removeCondition(combatant, types.ConditionUnconscious)
 
 	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		for _, ch := range gs.Party {

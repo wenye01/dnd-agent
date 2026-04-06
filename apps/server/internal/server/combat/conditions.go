@@ -21,12 +21,12 @@ type ConditionModifiers struct {
 }
 
 // conditionEffects maps each condition to its mechanical effects.
-var conditionEffects = map[string]ConditionModifiers{
-	"blinded": {
+var conditionEffects = map[types.Condition]ConditionModifiers{
+	types.ConditionBlinded: {
 		AttackDisadvantage: true, // Disadvantage on attacks
 		DefenseAdvantage:   true, // Advantage to attacks against
 	},
-	"charmed": {
+	types.ConditionCharmed: {
 		// D&D 5e: A charmed creature cannot attack the charmer or target the
 		// charmer with harmful abilities/spells. The charmer has advantage on
 		// any ability check to interact socially with the charmed creature.
@@ -35,36 +35,36 @@ var conditionEffects = map[string]ConditionModifiers{
 		// charmer's ID in the ConditionEntry.Source field and checking it at
 		// action resolution time (see action.go AttackAction).
 	},
-	"deafened": {
+	types.ConditionDeafened: {
 		// Auto-fail hearing checks (narrative, no mechanical modifier)
 	},
-	"frightened": {
+	types.ConditionFrightened: {
 		AttackDisadvantage: true, // Disadvantage on checks/attacks while source visible
 	},
-	"grappled": {
+	types.ConditionGrappled: {
 		SpeedOverride: 0, // Speed becomes 0
 	},
-	"incapacitated": {
+	types.ConditionIncapacitated: {
 		Incapacitated: true,
 	},
-	"invisible": {
+	types.ConditionInvisible: {
 		AttackAdvantage:     true, // Advantage on attacks
 		DefenseDisadvantage: true, // Disadvantage to be attacked
 	},
-	"paralyzed": {
+	types.ConditionParalyzed: {
 		Incapacitated:  true,
 		AutoFailSTRDEX: true,
 		AutoCritMelee:  true, // Auto-crit on melee attacks against
 	},
-	"petrified": {
+	types.ConditionPetrified: {
 		Incapacitated:    true,
 		AutoFailSTRDEX:   true,
 		DamageResistance: true, // Resistant to all damage
 	},
-	"poisoned": {
+	types.ConditionPoisoned: {
 		AttackDisadvantage: true, // Disadvantage on attacks and checks
 	},
-	"prone": {
+	types.ConditionProne: {
 		AttackDisadvantage: true, // Disadvantage on attacks
 		// D&D 5e: Attacks against a prone creature have advantage only if the
 		// attacker is within 5 feet (melee). Ranged attacks against a prone
@@ -74,23 +74,23 @@ var conditionEffects = map[string]ConditionModifiers{
 		// incorrect for ranged attackers. See applyConditionAttackModifiers in
 		// action.go for the target-side handling.
 	},
-	"restrained": {
+	types.ConditionRestrained: {
 		AttackDisadvantage: true,
 		DefenseAdvantage:   true,
 		SpeedOverride:      0,
 	},
-	"stunned": {
+	types.ConditionStunned: {
 		Incapacitated:    true,
 		AutoFailSTRDEX:   true,
 		DefenseAdvantage: true, // Advantage to attacks against
 	},
-	"unconscious": {
+	types.ConditionUnconscious: {
 		Incapacitated:    true,
 		AutoFailSTRDEX:   true,
 		AutoCritMelee:    true,
 		DefenseAdvantage: true,
 	},
-	"exhaustion": {
+	types.ConditionExhaustion: {
 		// Exhaustion effects depend on level; handled separately
 	},
 }
@@ -120,7 +120,7 @@ func GetConditionModifiers(c *state.Combatant) ConditionModifiers {
 	combined := ConditionModifiers{}
 
 	for _, cond := range c.Conditions {
-		if cond.Condition == "exhaustion" {
+		if cond.Condition == types.ConditionExhaustion {
 			level := cond.Level
 			if level < 1 {
 				level = 1
@@ -192,7 +192,7 @@ func (cm *CombatManager) ApplyCondition(sessionID, targetID string, condition st
 
 	// Check if condition already exists (non-stacking for most conditions)
 	for _, existing := range target.Conditions {
-		if existing.Condition == condition {
+		if existing.Condition == c {
 			// Condition already present; update duration if new is longer
 			if duration > existing.Duration || duration == 0 {
 				existing.Duration = duration
@@ -215,7 +215,7 @@ func (cm *CombatManager) ApplyCondition(sessionID, targetID string, condition st
 
 	// Apply new condition
 	entry := &state.ConditionEntry{
-		Condition: condition,
+		Condition: c,
 		Source:    source,
 		Duration:  duration,
 		Remaining: duration,
@@ -223,18 +223,18 @@ func (cm *CombatManager) ApplyCondition(sessionID, targetID string, condition st
 	target.Conditions = append(target.Conditions, entry)
 
 	// Special handling for unconscious
-	if condition == "unconscious" {
+	if c == types.ConditionUnconscious {
 		// Drop prone when unconscious
 		alreadyProne := false
 		for _, cond := range target.Conditions {
-			if cond.Condition == "prone" {
+			if cond.Condition == types.ConditionProne {
 				alreadyProne = true
 				break
 			}
 		}
 		if !alreadyProne {
 			target.Conditions = append(target.Conditions, &state.ConditionEntry{
-				Condition: "prone",
+				Condition: types.ConditionProne,
 				Source:    "unconscious",
 				Duration:  0,
 				Remaining: 0,
@@ -263,7 +263,7 @@ func (cm *CombatManager) applyExhaustion(sessionID string, target *state.Combata
 	var existingLevel int
 	var existingIdx int = -1
 	for i, cond := range target.Conditions {
-		if cond.Condition == "exhaustion" {
+		if cond.Condition == types.ConditionExhaustion {
 			existingLevel = cond.Level
 			existingIdx = i
 			break
@@ -279,7 +279,7 @@ func (cm *CombatManager) applyExhaustion(sessionID string, target *state.Combata
 		// Level 6 exhaustion = death
 		target.CurrentHP = 0
 		target.Conditions = append(target.Conditions, &state.ConditionEntry{
-			Condition: "dead",
+			Condition: "dead", // internal marker, not a PHB condition
 			Source:    "exhaustion",
 			Duration:  0,
 			Remaining: 0,
@@ -304,7 +304,7 @@ func (cm *CombatManager) applyExhaustion(sessionID string, target *state.Combata
 		target.Conditions[existingIdx].Level = newLevel
 	} else {
 		target.Conditions = append(target.Conditions, &state.ConditionEntry{
-			Condition: "exhaustion",
+			Condition: types.ConditionExhaustion,
 			Source:    "combat",
 			Duration:  0,
 			Remaining: 0,
@@ -331,6 +331,11 @@ func (cm *CombatManager) RemoveCondition(sessionID, targetID string, condition s
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
+	c := types.Condition(condition)
+	if !c.Valid() {
+		return nil, fmt.Errorf("invalid condition: %s", condition)
+	}
+
 	gs := cm.stateManager.GetSession(sessionID)
 	if gs == nil {
 		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
@@ -347,7 +352,7 @@ func (cm *CombatManager) RemoveCondition(sessionID, targetID string, condition s
 	found := false
 	newConditions := make([]*state.ConditionEntry, 0, len(target.Conditions))
 	for _, cond := range target.Conditions {
-		if cond.Condition == condition {
+		if cond.Condition == c {
 			found = true
 			continue
 		}

@@ -150,6 +150,11 @@ func (cm *CombatManager) UseAction(sessionID, combatantID, actionType string) er
 		return &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
 	}
 
+	// Verify it's the combatant's turn
+	if err := cm.validateTurn(sessionID, combatantID); err != nil {
+		return err
+	}
+
 	combatant := cm.getCombatantByID(gs.Combat, combatantID)
 	if combatant == nil {
 		return &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("combatant %s not found", combatantID)}

@@ -83,6 +83,50 @@ func (s *Service) AbilityCheck(modifier, dc int, advantage, disadvantage bool) *
 	return result
 }
 
+// AttackRoll performs an attack roll with D&D 5e nat1/nat20 rules:
+//   - Natural 20 always hits (critical hit)
+//   - Natural 1 always misses
+func (s *Service) AttackRoll(attackBonus, ac int, advantage, disadvantage bool) *CheckResult {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	roll := s.rollD20()
+	result := &CheckResult{
+		Modifier:     attackBonus,
+		DC:           ac,
+		Advantage:    advantage,
+		Disadvantage: disadvantage,
+	}
+
+	// Apply advantage/disadvantage
+	if advantage && !disadvantage {
+		r2 := s.rollD20()
+		if r2 > roll {
+			roll = r2
+		}
+	} else if disadvantage && !advantage {
+		r2 := s.rollD20()
+		if r2 < roll {
+			roll = r2
+		}
+	}
+
+	result.Roll = roll
+	result.Crit = roll == 20
+	result.Total = roll + attackBonus
+
+	// Natural 20 always hits; natural 1 always misses
+	if roll == 20 {
+		result.Success = true
+	} else if roll == 1 {
+		result.Success = false
+	} else {
+		result.Success = result.Total >= ac
+	}
+
+	return result
+}
+
 // rollD20 rolls a single d20.
 func (s *Service) rollD20() int {
 	return s.rnd.Intn(20) + 1

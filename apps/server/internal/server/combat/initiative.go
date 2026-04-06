@@ -2,6 +2,7 @@ package combat
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/dnd-game/server/internal/shared/state"
 )
@@ -68,16 +69,24 @@ func SetInitiative(cm *CombatManager, sessionID string, initiatives map[string]i
 }
 
 // sortInitiatives sorts the initiative entries by initiative descending,
-// with DEX score as tiebreaker.
+// using DEX score as secondary tiebreaker (higher DEX goes first).
+// It also reorders Participants to match the sorted initiative order.
 func sortInitiatives(cs *state.CombatState) {
-	// Simple insertion sort (small N for combat)
-	for i := 1; i < len(cs.Initiatives); i++ {
-		for j := i; j > 0; j-- {
-			if cs.Initiatives[j].Initiative > cs.Initiatives[j-1].Initiative {
-				cs.Initiatives[j], cs.Initiatives[j-1] = cs.Initiatives[j-1], cs.Initiatives[j]
-			}
-		}
+	// Build lookup map for DEX scores
+	dexScore := make(map[string]int, len(cs.Participants))
+	for _, p := range cs.Participants {
+		dexScore[p.ID] = p.DexScore
 	}
+
+	// Sort by initiative descending, then DEX score descending for ties
+	sort.Slice(cs.Initiatives, func(i, j int) bool {
+		if cs.Initiatives[i].Initiative != cs.Initiatives[j].Initiative {
+			return cs.Initiatives[i].Initiative > cs.Initiatives[j].Initiative
+		}
+		// DEX tiebreaker: higher DEX goes first
+		return dexScore[cs.Initiatives[i].CharacterID] > dexScore[cs.Initiatives[j].CharacterID]
+	})
+
 	// Re-order participants to match initiative order
 	participantMap := make(map[string]*state.Combatant)
 	for _, p := range cs.Participants {

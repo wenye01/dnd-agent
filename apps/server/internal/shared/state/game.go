@@ -2,9 +2,11 @@
 package state
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/dnd-game/server/internal/shared/models"
+	"github.com/dnd-game/server/internal/shared/types"
 )
 
 // GamePhase represents the current phase of the game.
@@ -85,8 +87,8 @@ type Combatant struct {
 
 	// Conditions and resistances
 	Conditions        []*ConditionEntry `json:"conditions,omitempty"`
-	DamageResistances []string          `json:"damageResistances,omitempty"`
-	DamageImmunities  []string          `json:"damageImmunities,omitempty"`
+	DamageResistances []types.DamageType `json:"damageResistances,omitempty"`
+	DamageImmunities  []types.DamageType `json:"damageImmunities,omitempty"`
 
 	// Death saves (for player characters)
 	DeathSaves *models.DeathSaves `json:"deathSaves,omitempty"`
@@ -114,7 +116,7 @@ const (
 
 // ConditionEntry represents an active condition on a combatant.
 type ConditionEntry struct {
-	Condition string `json:"condition"`
+	Condition types.Condition `json:"condition"`
 	Source    string `json:"source,omitempty"` // What applied this condition
 	Duration  int    `json:"duration"`         // Total duration in rounds (0 = indefinite)
 	Remaining int    `json:"remaining"`        // Remaining rounds
@@ -197,4 +199,42 @@ func NewGameState(sessionID string) *GameState {
 // currentTime returns the current Unix timestamp in seconds.
 func currentTime() int64 {
 	return time.Now().Unix()
+}
+
+// Validate checks that ConditionEntry has a valid condition and non-negative durations.
+func (c *ConditionEntry) Validate() error {
+	if !c.Condition.Valid() {
+		return fmt.Errorf("invalid condition: %s", c.Condition)
+	}
+	if c.Duration > 0 && c.Remaining < 0 {
+		return fmt.Errorf("remaining duration %d cannot be negative for timed condition", c.Remaining)
+	}
+	return nil
+}
+
+// Validate checks that a Combatant has required fields and valid sub-structures.
+func (c *Combatant) Validate() error {
+	if c.ID == "" {
+		return fmt.Errorf("combatant ID is required")
+	}
+	if c.Name == "" {
+		return fmt.Errorf("combatant name is required")
+	}
+	if c.MaxHP < 0 {
+		return fmt.Errorf("combatant max HP %d cannot be negative", c.MaxHP)
+	}
+	if err := c.HitDice.Validate(); err != nil {
+		return fmt.Errorf("combatant %s hit dice: %w", c.ID, err)
+	}
+	if c.DeathSaves != nil {
+		if err := c.DeathSaves.Validate(); err != nil {
+			return fmt.Errorf("combatant %s death saves: %w", c.ID, err)
+		}
+	}
+	for _, cond := range c.Conditions {
+		if err := cond.Validate(); err != nil {
+			return fmt.Errorf("combatant %s condition: %w", c.ID, err)
+		}
+	}
+	return nil
 }

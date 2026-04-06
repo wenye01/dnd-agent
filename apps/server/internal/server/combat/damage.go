@@ -29,7 +29,7 @@ type HealResult struct {
 
 // ApplyDamageToCombatant applies damage to a combatant, checking resistances,
 // immunities, and temporary HP. The combatant is modified in place.
-func ApplyDamageToCombatant(c *state.Combatant, damage int, damageType string) *DamageResult {
+func ApplyDamageToCombatant(c *state.Combatant, damage int, damageType types.DamageType) *DamageResult {
 	result := &DamageResult{
 		OriginalDamage: damage,
 	}
@@ -110,7 +110,7 @@ func (cm *CombatManager) ApplyDamage(sessionID, targetID string, damage int, dam
 		return nil, fmt.Errorf("invalid damage type: %s", damageType)
 	}
 
-	result := ApplyDamageToCombatant(target, damage, damageType)
+	result := ApplyDamageToCombatant(target, damage, dt)
 
 	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Modified in place
@@ -203,7 +203,7 @@ func applyHealingToCombatant(c *state.Combatant, healing int) *HealResult {
 
 	// Remove unconscious condition if healed above 0
 	if result.Conscious {
-		removeCondition(c, "unconscious")
+		removeCondition(c, types.ConditionUnconscious)
 		if c.DeathSaves != nil {
 			c.DeathSaves.Successes = 0
 			c.DeathSaves.Failures = 0
@@ -256,7 +256,7 @@ func (cm *CombatManager) AddTemporaryHP(sessionID, targetID string, tempHP int) 
 }
 
 // hasDamageResistance checks if a combatant has resistance to a damage type.
-func hasDamageResistance(c *state.Combatant, damageType string) bool {
+func hasDamageResistance(c *state.Combatant, damageType types.DamageType) bool {
 	for _, dt := range c.DamageResistances {
 		if dt == damageType {
 			return true
@@ -266,7 +266,7 @@ func hasDamageResistance(c *state.Combatant, damageType string) bool {
 }
 
 // hasDamageImmunity checks if a combatant has immunity to a damage type.
-func hasDamageImmunity(c *state.Combatant, damageType string) bool {
+func hasDamageImmunity(c *state.Combatant, damageType types.DamageType) bool {
 	for _, dt := range c.DamageImmunities {
 		if dt == damageType {
 			return true
@@ -276,7 +276,7 @@ func hasDamageImmunity(c *state.Combatant, damageType string) bool {
 }
 
 // removeCondition removes a condition from a combatant by name.
-func removeCondition(c *state.Combatant, condition string) {
+func removeCondition(c *state.Combatant, condition types.Condition) {
 	filtered := make([]*state.ConditionEntry, 0, len(c.Conditions))
 	for _, cond := range c.Conditions {
 		if cond.Condition != condition {

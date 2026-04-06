@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dnd-game/server/internal/shared/state"
+	"github.com/dnd-game/server/internal/shared/types"
 )
 
 // ActionType represents the types of combat actions a combatant can take.
@@ -30,6 +31,11 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 	}
 	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
 		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	}
+
+	// Verify it's the attacker's turn
+	if err := cm.validateTurn(sessionID, attackerID); err != nil {
+		return nil, err
 	}
 
 	attacker := cm.getCombatantByID(gs.Combat, attackerID)
@@ -61,8 +67,8 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 	// Apply condition modifiers to advantage/disadvantage
 	advantage, disadvantage = applyConditionAttackModifiers(attacker, target, advantage, disadvantage)
 
-	// Roll attack
-	attackRoll := cm.diceService.AbilityCheck(attackBonus, target.AC, advantage, disadvantage)
+	// Roll attack (uses AttackRoll for proper nat1/nat20 rules)
+	attackRoll := cm.diceService.AttackRoll(attackBonus, target.AC, advantage, disadvantage)
 
 	result := map[string]interface{}{
 		"attacker":    attacker.Name,
@@ -100,7 +106,7 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 		}
 
 		// Apply damage through damage calculator
-		damageResult := ApplyDamageToCombatant(target, totalDamage, damageType)
+		damageResult := ApplyDamageToCombatant(target, totalDamage, types.DamageType(damageType))
 
 		result["damage"] = damageResult.ModifiedDamage
 		result["originalDamage"] = damageResult.OriginalDamage
@@ -120,6 +126,8 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 		} else {
 			result["message"] = fmt.Sprintf("%s hits %s for %d %s damage.", attacker.Name, target.Name, damageResult.ModifiedDamage, damageType)
 		}
+	} else if attackRoll.Roll == 1 {
+		result["message"] = fmt.Sprintf("%s rolls a natural 1 and misses %s!", attacker.Name, target.Name)
 	} else {
 		result["message"] = fmt.Sprintf("%s misses %s (rolled %d vs AC %d).", attacker.Name, target.Name, attackRoll.Total, target.AC)
 	}
@@ -177,6 +185,11 @@ func (cm *CombatManager) HelpAction(sessionID, helperID, targetID string) (map[s
 		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
 	}
 
+	// Verify it's the helper's turn
+	if err := cm.validateTurn(sessionID, helperID); err != nil {
+		return nil, err
+	}
+
 	helper := cm.getCombatantByID(gs.Combat, helperID)
 	if helper == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("helper %s not found", helperID)}
@@ -224,6 +237,11 @@ func (cm *CombatManager) HideAction(sessionID, combatantID string, stealthModifi
 	}
 	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
 		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	}
+
+	// Verify it's the combatant's turn
+	if err := cm.validateTurn(sessionID, combatantID); err != nil {
+		return nil, err
 	}
 
 	combatant := cm.getCombatantByID(gs.Combat, combatantID)
@@ -317,8 +335,8 @@ func (cm *CombatManager) OpportunityAttack(sessionID, attackerID, targetID strin
 	// Consume reaction
 	attacker.Reaction = state.ActionUsed
 
-	// Roll attack (normal, no advantage/disadvantage for opportunity attacks)
-	attackRoll := cm.diceService.AbilityCheck(attackBonus, target.AC, false, false)
+	// Roll attack (uses AttackRoll for proper nat1/nat20 rules)
+	attackRoll := cm.diceService.AttackRoll(attackBonus, target.AC, false, false)
 
 	result := map[string]interface{}{
 		"attacker":    attacker.Name,
@@ -347,7 +365,7 @@ func (cm *CombatManager) OpportunityAttack(sessionID, attackerID, targetID strin
 			totalDamage = rollResult.Total + damageBonus
 		}
 
-		damageResult := ApplyDamageToCombatant(target, totalDamage, damageType)
+		damageResult := ApplyDamageToCombatant(target, totalDamage, types.DamageType(damageType))
 		result["damage"] = damageResult.ModifiedDamage
 		result["currentHp"] = target.CurrentHP
 		result["damageType"] = damageType
@@ -378,6 +396,11 @@ func (cm *CombatManager) performSimpleAction(sessionID, combatantID, actionName 
 	}
 	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
 		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	}
+
+	// Verify it's the combatant's turn
+	if err := cm.validateTurn(sessionID, combatantID); err != nil {
+		return nil, err
 	}
 
 	combatant := cm.getCombatantByID(gs.Combat, combatantID)
@@ -431,7 +454,7 @@ func (cm *CombatManager) rollCriticalDamage(damageDice string, damageBonus int) 
 // hasCondition checks if a combatant has a specific condition.
 func hasCondition(c *state.Combatant, condition string) bool {
 	for _, cond := range c.Conditions {
-		if cond.Condition == condition {
+		if string(cond.Condition) == condition {
 			return true
 		}
 	}

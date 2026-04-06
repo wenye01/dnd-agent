@@ -9,6 +9,7 @@ import (
 	"github.com/dnd-game/server/internal/server/combat"
 	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/state"
+	"github.com/dnd-game/server/internal/shared/types"
 )
 
 // RegisterCombatTools registers all combat-related MCP tools.
@@ -84,7 +85,7 @@ func parseCombatants(raw []interface{}) []*state.Combatant {
 		if res, ok := m["damageResistances"].([]interface{}); ok {
 			for _, r := range res {
 				if s, ok := r.(string); ok {
-					c.DamageResistances = append(c.DamageResistances, s)
+					c.DamageResistances = append(c.DamageResistances, types.DamageType(s))
 				}
 			}
 		}
@@ -93,7 +94,7 @@ func parseCombatants(raw []interface{}) []*state.Combatant {
 		if imm, ok := m["damageImmunities"].([]interface{}); ok {
 			for _, i := range imm {
 				if s, ok := i.(string); ok {
-					c.DamageImmunities = append(c.DamageImmunities, s)
+					c.DamageImmunities = append(c.DamageImmunities, types.DamageType(s))
 				}
 			}
 		}

@@ -89,19 +89,22 @@ func (cm *CombatManager) StartCombat(sessionID string, combatants []*state.Comba
 	// Roll initiative for all combatants
 	initiativeEntries := cm.rollInitiative(combatants)
 
+	// Reorder participants to match sorted initiative order
+	sortedParticipants := cm.reorderParticipantsByInitiative(combatants, initiativeEntries)
+
 	// Create combat state
 	combatState := &state.CombatState{
 		Status:        state.CombatActive,
 		Round:         1,
 		TurnIndex:     0,
 		Initiatives:   initiativeEntries,
-		Participants:  combatants,
+		Participants:  sortedParticipants,
 		ActiveEffects: make([]*state.ActiveEffect, 0),
 	}
 
-	// Set initial turn resources for first combatant
-	if len(combatants) > 0 {
-		cm.resetTurnResources(combatants[0])
+	// Set initial turn resources for first combatant (highest initiative)
+	if len(sortedParticipants) > 0 {
+		cm.resetTurnResources(sortedParticipants[0])
 	}
 
 	// Update game state
@@ -114,14 +117,14 @@ func (cm *CombatManager) StartCombat(sessionID string, combatants []*state.Comba
 	}
 
 	// Build result
-	firstCombatant := combatants[0]
+	firstCombatant := sortedParticipants[0]
 	result := map[string]interface{}{
 		"status":          "active",
 		"round":           1,
 		"currentTurn":     firstCombatant.Name,
 		"currentTurnId":   firstCombatant.ID,
 		"initiativeOrder": initiativeEntries,
-		"combatants":      combatants,
+		"combatants":      sortedParticipants,
 	}
 
 	return result, nil
@@ -274,6 +277,51 @@ func (cm *CombatManager) resetTurnResources(c *state.Combatant) {
 	c.Action = state.ActionAvailable
 	c.BonusAction = state.ActionAvailable
 	c.Reaction = state.ActionAvailable
+}
+
+// reorderParticipantsByInitiative returns a new slice of combatants ordered
+// to match the sorted initiative entries.
+func (cm *CombatManager) reorderParticipantsByInitiative(combatants []*state.Combatant, initiatives []*state.InitiativeEntry) []*state.Combatant {
+	participantMap := make(map[string]*state.Combatant, len(combatants))
+	for _, c := range combatants {
+		participantMap[c.ID] = c
+	}
+	sorted := make([]*state.Combatant, 0, len(initiatives))
+	for _, entry := range initiatives {
+		if c, ok := participantMap[entry.CharacterID]; ok {
+			sorted = append(sorted, c)
+		}
+	}
+	return sorted
+}
+
+// validateTurn checks that the given combatant is the current turn holder
+// in the active combat for the given session. Returns an error if:
+//   - the session does not exist
+//   - combat is not active
+//   - the combatant is not the current turn holder
+//
+// The caller is responsible for holding the appropriate lock (cm.mu).
+func (cm *CombatManager) validateTurn(sessionID, combatantID string) error {
+	gs := cm.stateManager.GetSession(sessionID)
+	if gs == nil {
+		return &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
+	}
+	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
+		return &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	}
+
+	current := cm.getCurrentCombatant(gs.Combat)
+	if current == nil {
+		return &CombatError{Code: ErrCombatantNotFound, Message: "no current combatant"}
+	}
+	if current.ID != combatantID {
+		return &CombatError{
+			Code:    ErrNotYourTurn,
+			Message: fmt.Sprintf("not your turn (current turn: %s)", current.ID),
+		}
+	}
+	return nil
 }
 
 // checkCombatEnd checks if combat should end (one side fully defeated).

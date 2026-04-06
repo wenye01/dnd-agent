@@ -6,6 +6,7 @@ import (
 	"github.com/dnd-game/server/internal/server/dice"
 	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/state"
+	"github.com/dnd-game/server/internal/shared/types"
 )
 
 // ---------------------------------------------------------------------------
@@ -46,7 +47,7 @@ func newEnemyCombatant(id, name string, maxHP, currentHP int) *state.Combatant {
 // exists in the combatant's condition list.
 func hasConditionInList(c *state.Combatant, name string) bool {
 	for _, cond := range c.Conditions {
-		if cond.Condition == name {
+		if string(cond.Condition) == name {
 			return true
 		}
 	}
@@ -57,7 +58,7 @@ func hasConditionInList(c *state.Combatant, name string) bool {
 func countConditionEntries(c *state.Combatant, name string) int {
 	n := 0
 	for _, cond := range c.Conditions {
-		if cond.Condition == name {
+		if string(cond.Condition) == name {
 			n++
 		}
 	}
@@ -118,7 +119,7 @@ func TestApplyDamageToCombatant(t *testing.T) {
 
 	t.Run("damage resistance halves damage", func(t *testing.T) {
 		c := newEnemyCombatant("e1", "Goblin", 20, 20)
-		c.DamageResistances = []string{"fire"}
+		c.DamageResistances = []types.DamageType{types.DamageFire}
 
 		result := ApplyDamageToCombatant(c, 10, "fire")
 
@@ -135,7 +136,7 @@ func TestApplyDamageToCombatant(t *testing.T) {
 
 	t.Run("damage resistance odd number rounds down", func(t *testing.T) {
 		c := newEnemyCombatant("e1", "Goblin", 20, 20)
-		c.DamageResistances = []string{"fire"}
+		c.DamageResistances = []types.DamageType{types.DamageFire}
 
 		result := ApplyDamageToCombatant(c, 7, "fire")
 
@@ -150,7 +151,7 @@ func TestApplyDamageToCombatant(t *testing.T) {
 
 	t.Run("damage immunity results in zero damage", func(t *testing.T) {
 		c := newEnemyCombatant("e1", "Fire Elemental", 20, 20)
-		c.DamageImmunities = []string{"fire"}
+		c.DamageImmunities = []types.DamageType{types.DamageFire}
 
 		result := ApplyDamageToCombatant(c, 15, "fire")
 
@@ -265,7 +266,7 @@ func TestApplyDamageToCombatant(t *testing.T) {
 
 	t.Run("resistance plus temporary HP combined", func(t *testing.T) {
 		c := newEnemyCombatant("e1", "Fire Elemental", 20, 15)
-		c.DamageResistances = []string{"fire"}
+		c.DamageResistances = []types.DamageType{types.DamageFire}
 		c.TemporaryHP = 3
 
 		// 10 fire damage -> 5 from resistance, then 3 absorbed by temp HP -> 2 real damage
@@ -1299,7 +1300,7 @@ func TestApplyConditionAttackModifiers(t *testing.T) {
 			attacker := newPlayerCombatant("attacker", "Attacker", 20, 20)
 			for _, c := range tt.attackerConds {
 				attacker.Conditions = append(attacker.Conditions, &state.ConditionEntry{
-					Condition: c,
+					Condition: types.Condition(c),
 					Duration:  0,
 					Remaining: 0,
 				})
@@ -1308,7 +1309,7 @@ func TestApplyConditionAttackModifiers(t *testing.T) {
 			target := newEnemyCombatant("target", "Target", 20, 20)
 			for _, c := range tt.targetConds {
 				target.Conditions = append(target.Conditions, &state.ConditionEntry{
-					Condition: c,
+					Condition: types.Condition(c),
 					Duration:  0,
 					Remaining: 0,
 				})
