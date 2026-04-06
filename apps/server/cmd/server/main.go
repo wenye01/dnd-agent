@@ -11,16 +11,17 @@ import (
 	"time"
 
 	"github.com/dnd-game/server/configs"
-	"github.com/joho/godotenv"
 	"github.com/dnd-game/server/internal/api/rest"
 	"github.com/dnd-game/server/internal/api/websocket"
 	"github.com/dnd-game/server/internal/client/llm"
 	"github.com/dnd-game/server/internal/client/session"
 	"github.com/dnd-game/server/internal/client/tools"
 	"github.com/dnd-game/server/internal/persistence"
+	"github.com/dnd-game/server/internal/server/combat"
 	"github.com/dnd-game/server/internal/server/dice"
 	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -58,9 +59,13 @@ func main() {
 	// Create dice service
 	diceService := dice.NewService()
 
+	// Create combat manager
+	combatManager := combat.NewCombatManager(stateManager, diceService)
+
 	// Create tool registry
 	toolRegistry := tools.NewRegistry()
 	tools.RegisterDiceTools(toolRegistry, diceService)
+	tools.RegisterCombatTools(toolRegistry, combatManager)
 	log.Info().Int("tools", len(toolRegistry.List())).Msg("tools registered")
 
 	// Create WebSocket hub

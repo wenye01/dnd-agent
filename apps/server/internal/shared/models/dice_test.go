@@ -7,7 +7,7 @@ import (
 
 func TestDiceResult_Serialization(t *testing.T) {
 	tests := []struct {
-		name string
+		name   string
 		result DiceResult
 	}{
 		{

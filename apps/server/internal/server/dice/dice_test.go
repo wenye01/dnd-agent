@@ -93,7 +93,7 @@ func TestRoller_Roll(t *testing.T) {
 		result, err := svc.Roll("1d20+5")
 
 		if err != nil {
-				t.Errorf("Roll() error = %v", err)
+			t.Errorf("Roll() error = %v", err)
 		}
 		if result.Total != result.Dice[0]+5 {
 			t.Errorf("Total should equal dice roll + modifier")

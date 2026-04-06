@@ -55,12 +55,12 @@ func TestCharacter(t *testing.T) {
 
 	t.Run("character with skills", func(t *testing.T) {
 		char := &models.Character{
-			ID:     "char-1",
-			Name:   "Rogue",
+			ID:   "char-1",
+			Name: "Rogue",
 			Skills: map[types.Skill]bool{
-				types.Stealth:      true,
+				types.Stealth:       true,
 				types.SleightOfHand: true,
-				types.Athletics:    false,
+				types.Athletics:     false,
 			},
 		}
 
@@ -74,8 +74,8 @@ func TestCharacter(t *testing.T) {
 
 	t.Run("character with inventory", func(t *testing.T) {
 		char := &models.Character{
-			ID:    "char-1",
-			Name:  "Adventurer",
+			ID:   "char-1",
+			Name: "Adventurer",
 			Inventory: []models.Item{
 				{ID: "item-1", Name: "Longsword", Type: "weapon"},
 				{ID: "item-2", Name: "Health Potion", Type: "consumable"},
@@ -166,11 +166,11 @@ func TestAbilityScores(t *testing.T) {
 			score    int
 			expected int
 		}{
-			{1, -5},   // (1-10)/2 = -4.5 -> -5 (floor division)
-			{2, -4},   // (2-10)/2 = -4
-			{4, -3},   // (4-10)/2 = -3
-			{6, -2},   // (6-10)/2 = -2
-			{8, -1},   // (8-10)/2 = -1
+			{1, -5}, // (1-10)/2 = -4.5 -> -5 (floor division)
+			{2, -4}, // (2-10)/2 = -4
+			{4, -3}, // (4-10)/2 = -3
+			{6, -2}, // (6-10)/2 = -2
+			{8, -1}, // (8-10)/2 = -1
 		}
 
 		for _, tt := range tests {

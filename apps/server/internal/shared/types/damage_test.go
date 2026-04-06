@@ -4,9 +4,9 @@ import "testing"
 
 func TestDamageType_Valid(t *testing.T) {
 	tests := []struct {
-		name        string
-		damageType  DamageType
-		expected    bool
+		name       string
+		damageType DamageType
+		expected   bool
 	}{
 		{
 			name:       "acid is valid",
@@ -133,9 +133,9 @@ func TestDamageType_AllConstantsDefined(t *testing.T) {
 
 func TestCondition_Valid(t *testing.T) {
 	tests := []struct {
-		name       string
-		condition  Condition
-		expected   bool
+		name      string
+		condition Condition
+		expected  bool
 	}{
 		{
 			name:      "blinded is valid",
@@ -269,4 +269,3 @@ func TestCondition_AllConstantsDefined(t *testing.T) {
 		}
 	})
 }
-

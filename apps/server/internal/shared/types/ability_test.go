@@ -118,98 +118,98 @@ func TestSkill(t *testing.T) {
 
 func TestSkillAbility(t *testing.T) {
 	tests := []struct {
-		name         string
-		skill        Skill
+		name            string
+		skill           Skill
 		expectedAbility Ability
 	}{
 		{
-			name:         "acrobatics uses dexterity",
-			skill:        Acrobatics,
+			name:            "acrobatics uses dexterity",
+			skill:           Acrobatics,
 			expectedAbility: Dexterity,
 		},
 		{
-			name:         "animal handling uses wisdom",
-			skill:        AnimalHandling,
+			name:            "animal handling uses wisdom",
+			skill:           AnimalHandling,
 			expectedAbility: Wisdom,
 		},
 		{
-			name:         "arcana uses intelligence",
-			skill:        Arcana,
+			name:            "arcana uses intelligence",
+			skill:           Arcana,
 			expectedAbility: Intelligence,
 		},
 		{
-			name:         "athletics uses strength",
-			skill:        Athletics,
+			name:            "athletics uses strength",
+			skill:           Athletics,
 			expectedAbility: Strength,
 		},
 		{
-			name:         "deception uses charisma",
-			skill:        Deception,
+			name:            "deception uses charisma",
+			skill:           Deception,
 			expectedAbility: Charisma,
 		},
 		{
-			name:         "history uses intelligence",
-			skill:        History,
+			name:            "history uses intelligence",
+			skill:           History,
 			expectedAbility: Intelligence,
 		},
 		{
-			name:         "insight uses wisdom",
-			skill:        Insight,
+			name:            "insight uses wisdom",
+			skill:           Insight,
 			expectedAbility: Wisdom,
 		},
 		{
-			name:         "intimidation uses charisma",
-			skill:        Intimidation,
+			name:            "intimidation uses charisma",
+			skill:           Intimidation,
 			expectedAbility: Charisma,
 		},
 		{
-			name:         "investigation uses intelligence",
-			skill:        Investigation,
+			name:            "investigation uses intelligence",
+			skill:           Investigation,
 			expectedAbility: Intelligence,
 		},
 		{
-			name:         "medicine uses wisdom",
-			skill:        Medicine,
+			name:            "medicine uses wisdom",
+			skill:           Medicine,
 			expectedAbility: Wisdom,
 		},
 		{
-			name:         "nature uses intelligence",
-			skill:        Nature,
+			name:            "nature uses intelligence",
+			skill:           Nature,
 			expectedAbility: Intelligence,
 		},
 		{
-			name:         "perception uses wisdom",
-			skill:        Perception,
+			name:            "perception uses wisdom",
+			skill:           Perception,
 			expectedAbility: Wisdom,
 		},
 		{
-			name:         "performance uses charisma",
-			skill:        Performance,
+			name:            "performance uses charisma",
+			skill:           Performance,
 			expectedAbility: Charisma,
 		},
 		{
-			name:         "persuasion uses charisma",
-			skill:        Persuasion,
+			name:            "persuasion uses charisma",
+			skill:           Persuasion,
 			expectedAbility: Charisma,
 		},
 		{
-			name:         "religion uses intelligence",
-			skill:        Religion,
+			name:            "religion uses intelligence",
+			skill:           Religion,
 			expectedAbility: Intelligence,
 		},
 		{
-			name:         "sleight of hand uses dexterity",
-			skill:        SleightOfHand,
+			name:            "sleight of hand uses dexterity",
+			skill:           SleightOfHand,
 			expectedAbility: Dexterity,
 		},
 		{
-			name:         "stealth uses dexterity",
-			skill:        Stealth,
+			name:            "stealth uses dexterity",
+			skill:           Stealth,
 			expectedAbility: Dexterity,
 		},
 		{
-			name:         "survival uses wisdom",
-			skill:        Survival,
+			name:            "survival uses wisdom",
+			skill:           Survival,
 			expectedAbility: Wisdom,
 		},
 	}
@@ -267,4 +267,3 @@ func TestSkillAbility_Coverage(t *testing.T) {
 		}
 	})
 }
-

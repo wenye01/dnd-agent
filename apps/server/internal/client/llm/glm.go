@@ -50,26 +50,26 @@ func (p *GLMProvider) GetModel() string {
 
 // glmRequest represents a GLM API request.
 type glmRequest struct {
-	Model       string           `json:"model"`
-	Messages    []glmMessage     `json:"messages"`
-	Temperature float64          `json:"temperature,omitempty"`
-	MaxTokens   int              `json:"max_tokens,omitempty"`
-	Stream      bool             `json:"stream,omitempty"`
-	Tools       []glmTool        `json:"tools,omitempty"`
+	Model       string       `json:"model"`
+	Messages    []glmMessage `json:"messages"`
+	Temperature float64      `json:"temperature,omitempty"`
+	MaxTokens   int          `json:"max_tokens,omitempty"`
+	Stream      bool         `json:"stream,omitempty"`
+	Tools       []glmTool    `json:"tools,omitempty"`
 }
 
 // glmMessage represents a message in GLM API.
 type glmMessage struct {
-	Role       string           `json:"role"`
-	Content    string           `json:"content,omitempty"`
-	ToolCalls  []glmToolCall    `json:"tool_calls,omitempty"`
-	ToolCallID string           `json:"tool_call_id,omitempty"`
+	Role       string        `json:"role"`
+	Content    string        `json:"content,omitempty"`
+	ToolCalls  []glmToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string        `json:"tool_call_id,omitempty"`
 }
 
 // glmToolCall represents a tool call in a GLM message.
 type glmToolCall struct {
-	ID       string             `json:"id,omitempty"`
-	Type     string             `json:"type,omitempty"`
+	ID       string              `json:"id,omitempty"`
+	Type     string              `json:"type,omitempty"`
 	Function glmToolCallFunction `json:"function"`
 }
 
@@ -81,7 +81,7 @@ type glmToolCallFunction struct {
 
 // glmTool represents a tool definition.
 type glmTool struct {
-	Type     string           `json:"type"`
+	Type     string          `json:"type"`
 	Function glmToolFunction `json:"function"`
 }
 
@@ -99,12 +99,12 @@ type glmStreamResponse struct {
 	Object  string `json:"object"`
 	Model   string `json:"model"`
 	Choices []struct {
-		Index        int `json:"index"`
-		Delta        struct {
-			Role              string `json:"role,omitempty"`
-			Content           string `json:"content,omitempty"`
-			ReasoningContent  string `json:"reasoning_content,omitempty"`
-			ToolCalls         []struct {
+		Index int `json:"index"`
+		Delta struct {
+			Role             string `json:"role,omitempty"`
+			Content          string `json:"content,omitempty"`
+			ReasoningContent string `json:"reasoning_content,omitempty"`
+			ToolCalls        []struct {
 				ID       string `json:"id,omitempty"`
 				Type     string `json:"type,omitempty"`
 				Function struct {

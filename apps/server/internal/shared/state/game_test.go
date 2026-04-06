@@ -106,16 +106,16 @@ func TestGameState_PartyManagement(t *testing.T) {
 		state := NewGameState("test-session")
 
 		char := &models.Character{
-			ID:      "char-1",
-			Name:    "Test Hero",
-			Race:    "human",
-			Class:   "fighter",
-			Level:   1,
-			HP:      10,
-			MaxHP:   10,
-			AC:      15,
-			Stats:   models.AbilityScores{Strength: 16, Dexterity: 12, Constitution: 14, Intelligence: 10, Wisdom: 10, Charisma: 10},
-			Skills:  make(map[types.Skill]bool),
+			ID:        "char-1",
+			Name:      "Test Hero",
+			Race:      "human",
+			Class:     "fighter",
+			Level:     1,
+			HP:        10,
+			MaxHP:     10,
+			AC:        15,
+			Stats:     models.AbilityScores{Strength: 16, Dexterity: 12, Constitution: 14, Intelligence: 10, Wisdom: 10, Charisma: 10},
+			Skills:    make(map[types.Skill]bool),
 			Inventory: []models.Item{},
 		}
 
@@ -153,7 +153,11 @@ func TestCombatState(t *testing.T) {
 				{CharacterID: "char-1", Initiative: 15, HasActed: false},
 				{CharacterID: "char-2", Initiative: 12, HasActed: false},
 			},
-			Participants: []string{"char-1", "char-2", "enemy-1"},
+			Participants: []*Combatant{
+				{ID: "char-1", Name: "Hero 1", Type: CombatantPlayer, MaxHP: 10, CurrentHP: 10, AC: 15},
+				{ID: "char-2", Name: "Hero 2", Type: CombatantPlayer, MaxHP: 6, CurrentHP: 6, AC: 10},
+				{ID: "enemy-1", Name: "Goblin", Type: CombatantEnemy, MaxHP: 7, CurrentHP: 7, AC: 12},
+			},
 			ActiveEffects: []*ActiveEffect{
 				{
 					ID:         "effect-1",
@@ -202,7 +206,7 @@ func TestScenarioState(t *testing.T) {
 			Name:    "The Lost Mine",
 			Chapter: "Chapter 1",
 			Flags: map[string]interface{}{
-				"goblin_king_defeated": true,
+				"goblin_king_defeated":  true,
 				"found_secret_treasure": false,
 			},
 			NPCs: map[string]*NPCState{
@@ -286,7 +290,9 @@ func TestGameState_Serialization(t *testing.T) {
 			Initiatives: []*InitiativeEntry{
 				{CharacterID: "char-1", Initiative: 15, HasActed: true},
 			},
-			Participants:  []string{"char-1"},
+			Participants: []*Combatant{
+				{ID: "char-1", Name: "Hero 1", Type: CombatantPlayer, MaxHP: 10, CurrentHP: 10, AC: 15},
+			},
 			ActiveEffects: []*ActiveEffect{},
 		}
 
@@ -314,4 +320,3 @@ func TestGameState_Serialization(t *testing.T) {
 		}
 	})
 }
-

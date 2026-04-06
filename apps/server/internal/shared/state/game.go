@@ -32,13 +32,93 @@ type GameState struct {
 	Metadata     *GameMetadata       `json:"metadata"`
 }
 
+// CombatStatus represents the current status of a combat encounter.
+type CombatStatus string
+
+const (
+	// CombatIdle means no combat is active.
+	CombatIdle CombatStatus = "idle"
+	// CombatActive means combat is in progress.
+	CombatActive CombatStatus = "active"
+	// CombatEnded means combat has concluded.
+	CombatEnded CombatStatus = "ended"
+)
+
 // CombatState represents the state of combat.
 type CombatState struct {
+	Status        CombatStatus       `json:"status"`
 	Round         int                `json:"round"`
 	TurnIndex     int                `json:"turnIndex"`
 	Initiatives   []*InitiativeEntry `json:"initiatives"`
-	Participants  []string           `json:"participants"`
+	Participants  []*Combatant       `json:"participants"`
 	ActiveEffects []*ActiveEffect    `json:"activeEffects"`
+}
+
+// CombatantType distinguishes players from enemies and NPCs.
+type CombatantType string
+
+const (
+	// CombatantPlayer is a player-controlled character.
+	CombatantPlayer CombatantType = "player"
+	// CombatantNPC is a non-player character (friendly/neutral).
+	CombatantNPC CombatantType = "npc"
+	// CombatantEnemy is a hostile creature.
+	CombatantEnemy CombatantType = "enemy"
+)
+
+// Combatant represents a participant in combat.
+type Combatant struct {
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	Type        CombatantType `json:"type"`
+	MaxHP       int           `json:"maxHp"`
+	CurrentHP   int           `json:"currentHp"`
+	TemporaryHP int           `json:"temporaryHp"`
+	AC          int           `json:"ac"`
+	Speed       int           `json:"speed"`
+	DexScore    int           `json:"dexScore"` // Used as tiebreaker for initiative
+
+	// Turn resources
+	Action      ActionState `json:"action"`
+	BonusAction ActionState `json:"bonusAction"`
+	Reaction    ActionState `json:"reaction"`
+
+	// Conditions and resistances
+	Conditions        []*ConditionEntry `json:"conditions,omitempty"`
+	DamageResistances []string          `json:"damageResistances,omitempty"`
+	DamageImmunities  []string          `json:"damageImmunities,omitempty"`
+
+	// Death saves (for player characters)
+	DeathSaves *models.DeathSaves `json:"deathSaves,omitempty"`
+
+	// Hit dice (for rest/recovery)
+	HitDice models.HitDiceInfo `json:"hitDice"`
+
+	// Reference to character ID for syncing back
+	CharacterID string `json:"characterId,omitempty"`
+
+	// Level and CON modifier for hit dice recovery
+	Level  int `json:"level"`
+	CONMod int `json:"conMod"`
+}
+
+// ActionState tracks whether an action resource is available or used.
+type ActionState string
+
+const (
+	// ActionAvailable means the resource has not been used this turn.
+	ActionAvailable ActionState = "available"
+	// ActionUsed means the resource has been consumed this turn.
+	ActionUsed ActionState = "used"
+)
+
+// ConditionEntry represents an active condition on a combatant.
+type ConditionEntry struct {
+	Condition string `json:"condition"`
+	Source    string `json:"source,omitempty"` // What applied this condition
+	Duration  int    `json:"duration"`         // Total duration in rounds (0 = indefinite)
+	Remaining int    `json:"remaining"`        // Remaining rounds
+	Level     int    `json:"level,omitempty"`  // For exhaustion (1-6)
 }
 
 // InitiativeEntry represents a creature's position in the initiative order.

@@ -27,10 +27,10 @@ import (
 
 // Default values for character creation.
 const (
-	defaultBaseHP   = 8  // Default base HP when class hit dice lookup fails
-	defaultSpeed    = 30 // Default movement speed in feet
-	minHP           = 1  // Minimum HP for any character
-	defaultAbility  = 10 // Default ability score
+	defaultBaseHP  = 8  // Default base HP when class hit dice lookup fails
+	defaultSpeed   = 30 // Default movement speed in feet
+	minHP          = 1  // Minimum HP for any character
+	defaultAbility = 10 // Default ability score
 )
 
 // ID prefix for character entities.
@@ -66,13 +66,13 @@ type RaceConfig struct {
 
 // ClassConfig holds configuration for a playable class.
 type ClassConfig struct {
-	Name              string
-	HitDice           int
-	SavingThrows      []types.Ability
-	Skills            []types.Skill // Class skill proficiencies (choose from)
-	SkillChoices      int           // Number of skills to choose
-	StartingGoldDice  string        // D&D 5e starting wealth formula
-	StartingGoldAvg   int           // Simplified average for quick creation
+	Name             string
+	HitDice          int
+	SavingThrows     []types.Ability
+	Skills           []types.Skill // Class skill proficiencies (choose from)
+	SkillChoices     int           // Number of skills to choose
+	StartingGoldDice string        // D&D 5e starting wealth formula
+	StartingGoldAvg  int           // Simplified average for quick creation
 }
 
 // BackgroundConfig holds configuration for a character background.
@@ -129,31 +129,31 @@ var raceConfigs = map[string]RaceConfig{
 // Supported classes configuration.
 var classConfigs = map[string]ClassConfig{
 	"fighter": {
-		Name:              "fighter",
-		HitDice:           10,
-		SavingThrows:      []types.Ability{types.Strength, types.Constitution},
-		Skills:            []types.Skill{types.Acrobatics, types.AnimalHandling, types.Athletics, types.History, types.Insight, types.Intimidation, types.Perception, types.Survival},
-		SkillChoices:      2,
-		StartingGoldDice:  "5d4 x 10 gp",
-		StartingGoldAvg:   125, // Average of 5d4 is 12.5, x 10 = 125
+		Name:             "fighter",
+		HitDice:          10,
+		SavingThrows:     []types.Ability{types.Strength, types.Constitution},
+		Skills:           []types.Skill{types.Acrobatics, types.AnimalHandling, types.Athletics, types.History, types.Insight, types.Intimidation, types.Perception, types.Survival},
+		SkillChoices:     2,
+		StartingGoldDice: "5d4 x 10 gp",
+		StartingGoldAvg:  125, // Average of 5d4 is 12.5, x 10 = 125
 	},
 	"wizard": {
-		Name:              "wizard",
-		HitDice:           6,
-		SavingThrows:      []types.Ability{types.Intelligence, types.Wisdom},
-		Skills:            []types.Skill{types.Arcana, types.History, types.Insight, types.Investigation, types.Medicine, types.Religion},
-		SkillChoices:      2,
-		StartingGoldDice:  "3d6 x 10 gp",
-		StartingGoldAvg:   105, // Average of 3d6 is 10.5, x 10 = 105
+		Name:             "wizard",
+		HitDice:          6,
+		SavingThrows:     []types.Ability{types.Intelligence, types.Wisdom},
+		Skills:           []types.Skill{types.Arcana, types.History, types.Insight, types.Investigation, types.Medicine, types.Religion},
+		SkillChoices:     2,
+		StartingGoldDice: "3d6 x 10 gp",
+		StartingGoldAvg:  105, // Average of 3d6 is 10.5, x 10 = 105
 	},
 	"rogue": {
-		Name:              "rogue",
-		HitDice:           8,
-		SavingThrows:      []types.Ability{types.Dexterity, types.Intelligence},
-		Skills:            []types.Skill{types.Acrobatics, types.Athletics, types.Deception, types.Insight, types.Intimidation, types.Investigation, types.Perception, types.Performance, types.Persuasion, types.SleightOfHand, types.Stealth},
-		SkillChoices:      4,
-		StartingGoldDice:  "4d4 x 10 gp",
-		StartingGoldAvg:   100, // Average of 4d4 is 10, x 10 = 100
+		Name:             "rogue",
+		HitDice:          8,
+		SavingThrows:     []types.Ability{types.Dexterity, types.Intelligence},
+		Skills:           []types.Skill{types.Acrobatics, types.Athletics, types.Deception, types.Insight, types.Intimidation, types.Investigation, types.Perception, types.Performance, types.Persuasion, types.SleightOfHand, types.Stealth},
+		SkillChoices:     4,
+		StartingGoldDice: "4d4 x 10 gp",
+		StartingGoldAvg:  100, // Average of 4d4 is 10, x 10 = 100
 	},
 }
 
@@ -183,12 +183,12 @@ var backgroundConfigs = map[string]BackgroundConfig{
 
 // CreateParams defines the parameters for creating a basic character.
 type CreateParams struct {
-	Name          string          `json:"name"`
-	Race          string          `json:"race"`
-	Class         string          `json:"class"`
-	Background    string          `json:"background"`
-	AbilityScores map[string]int  `json:"abilityScores"`
-	SkillChoices  []types.Skill   `json:"skillChoices,omitempty"` // Optional: chosen class skills
+	Name          string         `json:"name"`
+	Race          string         `json:"race"`
+	Class         string         `json:"class"`
+	Background    string         `json:"background"`
+	AbilityScores map[string]int `json:"abilityScores"`
+	SkillChoices  []types.Skill  `json:"skillChoices,omitempty"` // Optional: chosen class skills
 }
 
 // CreateBasic creates a new character with the given parameters.
@@ -307,8 +307,8 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 	char := &models.Character{
 		ID:               generateID(),
 		Name:             params.Name,
-		Race:             race,       // Use normalized value
-		Class:            class,      // Use normalized value
+		Race:             race,  // Use normalized value
+		Class:            class, // Use normalized value
 		Level:            level,
 		HP:               maxHP,
 		MaxHP:            maxHP,

@@ -206,10 +206,10 @@ func TestDecodeClientMessage(t *testing.T) {
 			wantReqID: "",
 		},
 		{
-			name:      "valid map action message",
-			jsonData:  `{"type":"map_action","payload":{"x":5}}`,
-			wantErr:   false,
-			wantType:  MsgTypeMapAction,
+			name:     "valid map action message",
+			jsonData: `{"type":"map_action","payload":{"x":5}}`,
+			wantErr:  false,
+			wantType: MsgTypeMapAction,
 		},
 		{
 			name:     "invalid JSON",
@@ -218,9 +218,9 @@ func TestDecodeClientMessage(t *testing.T) {
 		},
 		{
 			name:     "empty payload",
-			jsonData:  `{"type":"user_input","payload":null}`,
-			wantErr:   false,
-			wantType:  MsgTypeUserInput,
+			jsonData: `{"type":"user_input","payload":null}`,
+			wantErr:  false,
+			wantType: MsgTypeUserInput,
 		},
 	}
 

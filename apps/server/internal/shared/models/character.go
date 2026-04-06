@@ -10,16 +10,6 @@ type RaceTrait struct {
 }
 
 // Character represents a D&D character.
-//
-// TODO(future): Consider adding the following fields for full D&D 5e support:
-// - ExperiencePoints (XP tracking)
-// - HitDice (current/max for healing during short rest)
-// - DeathSaves (success/failure counters)
-// - Inspiration (boolean)
-// - Features []Feature (class/racial features)
-// - Spells []Spell (for spellcasters)
-// - Equipment []Equipment (detailed equipment with weight)
-// - Proficiencies []Proficiency (tool, weapon, armor proficiencies)
 type Character struct {
 	ID                string                 `json:"id"`
 	Name              string                 `json:"name"`
@@ -28,6 +18,7 @@ type Character struct {
 	Level             int                    `json:"level"`
 	HP                int                    `json:"hp"`
 	MaxHP             int                    `json:"maxHp"`
+	TemporaryHP       int                    `json:"temporaryHp,omitempty"` // Temporary hit points
 	AC                int                    `json:"ac"`
 	Stats             AbilityScores          `json:"stats"`
 	Skills            map[types.Skill]bool   `json:"skills"` // true = proficient
@@ -39,6 +30,11 @@ type Character struct {
 	Speed             int                    `json:"speed"`            // Movement speed in feet
 	Gold              int                    `json:"gold"`             // Gold pieces
 	RacialTraits      []RaceTrait            `json:"racialTraits"`     // Racial abilities and traits
+	HitDice           HitDiceInfo            `json:"hitDice"`          // Hit dice for short rest healing
+	DeathSaves        DeathSaves             `json:"deathSaves"`       // Death save counters
+	DamageResistances []types.DamageType     `json:"damageResistances,omitempty"`
+	DamageImmunities  []types.DamageType     `json:"damageImmunities,omitempty"`
+	IsDead            bool                   `json:"isDead,omitempty"` // Character has permanently died
 }
 
 // AbilityScores represents the six ability scores.
@@ -76,6 +72,19 @@ func (a AbilityScores) GetModifier(ability types.Ability) int {
 		mod -= 1
 	}
 	return mod
+}
+
+// HitDiceInfo tracks hit dice available for short rest healing.
+type HitDiceInfo struct {
+	Total   int `json:"total"`   // Total hit dice (equals character level)
+	Current int `json:"current"` // Currently available hit dice
+	Size    int `json:"size"`    // Die size (6 for wizard, 8 for rogue, 10 for fighter, 12 for barbarian)
+}
+
+// DeathSaves tracks death saving throw progress.
+type DeathSaves struct {
+	Successes int `json:"successes"` // Successes (3 = stable)
+	Failures  int `json:"failures"`  // Failures (3 = dead)
 }
 
 // Item represents an item in the game.

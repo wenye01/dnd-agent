@@ -687,11 +687,11 @@ func TestCreateMultipleCharacters(t *testing.T) {
 // createTestCharacter creates a simple test character model.
 func createTestCharacter(id, name, race, class string) *models.Character {
 	return &models.Character{
-		ID:       id,
-		Name:     name,
-		Race:     race,
-		Class:    class,
-		Level:    1,
+		ID:         id,
+		Name:       name,
+		Race:       race,
+		Class:      class,
+		Level:      1,
 		Background: "soldier",
 		Stats: models.AbilityScores{
 			Strength:     10,
