@@ -263,7 +263,7 @@ var classConfigs = map[string]ClassConfig{
 		SavingThrows:        []types.Ability{types.Intelligence, types.Wisdom},
 		Skills:              []types.Skill{types.Arcana, types.History, types.Insight, types.Investigation, types.Medicine, types.Religion},
 		SkillChoices:        2,
-		ArmorProficiencies:  []string{"light armor"},
+		ArmorProficiencies:  []string{"none"},
 		WeaponProficiencies: []string{"daggers", "darts", "slings", "quarterstaffs", "light crossbows"},
 		StartingGoldDice:    "3d6 x 10 gp",
 		StartingGoldAvg:     105,
@@ -286,7 +286,7 @@ var classConfigs = map[string]ClassConfig{
 		Skills:              []types.Skill{types.History, types.Insight, types.Medicine, types.Persuasion, types.Religion},
 		SkillChoices:        2,
 		ArmorProficiencies:  []string{"all armor", "shields"},
-		WeaponProficiencies: []string{"simple weapons", "maces (war)", "warhammers"},
+		WeaponProficiencies: []string{"simple weapons"},
 		StartingGoldDice:    "5d4 x 10 gp",
 		StartingGoldAvg:     125,
 	},
@@ -571,7 +571,9 @@ func CreateBasic(params CreateParams) (*models.Character, error) {
 		SavingThrows:     savingThrows,
 		Speed:            raceConfig.Speed,
 		Gold:             classConfig.StartingGoldAvg,
-		RacialTraits:     raceConfig.Traits,
+		RacialTraits:        raceConfig.Traits,
+		ArmorProficiencies:  classConfig.ArmorProficiencies,
+		WeaponProficiencies: classConfig.WeaponProficiencies,
 	}
 
 	return char, nil
