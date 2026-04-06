@@ -2,6 +2,7 @@ package tools
 
 import (
 	"encoding/json"
+	"strings"
 	"sync"
 	"testing"
 
@@ -9,6 +10,11 @@ import (
 	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/dnd-game/server/internal/shared/types"
 )
+
+// containsSubstring checks if s contains substr (case-insensitive helper for tests).
+func containsSubstring(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
 
 // mockStateProvider implements CharacterStateProvider for testing.
 type mockStateProvider struct {
@@ -385,6 +391,23 @@ func TestCreateCharacterTool_MultipleCharactersInParty(t *testing.T) {
 	}
 }
 
+func TestCreateCharacterTool_TooManyExtraAbilityBonuses(t *testing.T) {
+	registry, provider := setupTestRegistry()
+	provider.createSession("test-session")
+
+	tool, _ := registry.Get("create_character")
+	args := baseCreateArgs()
+	args["extra_ability_bonuses"] = []interface{}{"str", "dex", "cha"}
+
+	_, err := tool.Handler(args)
+	if err == nil {
+		t.Error("Expected error for more than 2 extra_ability_bonuses")
+	}
+	if err != nil && !containsSubstring(err.Error(), "extra_ability_bonuses") {
+		t.Errorf("Expected error message to mention extra_ability_bonuses, got: %v", err)
+	}
+}
+
 func TestCreateCharacterTool_DuplicateName(t *testing.T) {
 	registry, provider := setupTestRegistry()
 	provider.createSession("test-session")
@@ -686,6 +709,128 @@ func TestUpdateCharacterTool_CharacterNotFound(t *testing.T) {
 	}
 }
 
+func TestUpdateCharacterTool_InvalidHP(t *testing.T) {
+	// Each sub-test uses its own session+character to avoid state leakage,
+	// since update_character applies mutations to the pointer before validating.
+	tests := []struct {
+		name        string
+		updateArgs  func(sessionID, charID string) map[string]interface{}
+		errContains string
+	}{
+		{
+			name: "HP exceeds MaxHP",
+			updateArgs: func(sid, cid string) map[string]interface{} {
+				return map[string]interface{}{
+					"session_id":    sid,
+					"character_id":  cid,
+					"hp":            float64(999),
+				}
+			},
+			errContains: "cannot exceed max_hp",
+		},
+		{
+			name: "HP negative",
+			updateArgs: func(sid, cid string) map[string]interface{} {
+				return map[string]interface{}{
+					"session_id":    sid,
+					"character_id":  cid,
+					"hp":            float64(-1),
+				}
+			},
+			errContains: "hp must be >= 0",
+		},
+		{
+			name: "MaxHP less than 1",
+			updateArgs: func(sid, cid string) map[string]interface{} {
+				return map[string]interface{}{
+					"session_id":    sid,
+					"character_id":  cid,
+					"max_hp":        float64(0),
+				}
+			},
+			errContains: "max_hp must be >= 1",
+		},
+		{
+			name: "AC negative",
+			updateArgs: func(sid, cid string) map[string]interface{} {
+				return map[string]interface{}{
+					"session_id":    sid,
+					"character_id":  cid,
+					"ac":            float64(-1),
+				}
+			},
+			errContains: "ac must be >= 0",
+		},
+		{
+			name: "Gold negative",
+			updateArgs: func(sid, cid string) map[string]interface{} {
+				return map[string]interface{}{
+					"session_id":    sid,
+					"character_id":  cid,
+					"gold":          float64(-5),
+				}
+			},
+			errContains: "gold must be >= 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registry, provider := setupTestRegistry()
+			sessionID := "test-session-" + tt.name
+			provider.createSession(sessionID)
+
+			createTool, _ := registry.Get("create_character")
+			createArgs := baseCreateArgs()
+			createArgs["session_id"] = sessionID
+			createArgs["name"] = "Test_" + tt.name
+			createResult, _ := createTool.Handler(createArgs)
+			createdChar := createResult.(map[string]interface{})["character"].(*models.Character)
+
+			updateTool, _ := registry.Get("update_character")
+			_, err := updateTool.Handler(tt.updateArgs(sessionID, createdChar.ID))
+			if err == nil {
+				t.Errorf("Expected error for %s", tt.name)
+			} else if !containsSubstring(err.Error(), tt.errContains) {
+				t.Errorf("Expected error containing %q, got %q", tt.errContains, err.Error())
+			}
+		})
+	}
+}
+
+func TestUpdateCharacterTool_DuplicateConditions(t *testing.T) {
+	registry, provider := setupTestRegistry()
+	provider.createSession("test-session")
+
+	// Create a character first
+	createTool, _ := registry.Get("create_character")
+	createResult, _ := createTool.Handler(baseCreateArgs())
+	createdChar := createResult.(map[string]interface{})["character"].(*models.Character)
+
+	updateTool, _ := registry.Get("update_character")
+
+	// Add "poisoned" twice in the same call
+	result, err := updateTool.Handler(map[string]interface{}{
+		"session_id":     "test-session",
+		"character_id":   createdChar.ID,
+		"conditions_add": []interface{}{"poisoned", "poisoned"},
+	})
+	if err != nil {
+		t.Fatalf("update_character failed: %v", err)
+	}
+
+	updatedChar := result.(map[string]interface{})["character"].(*models.Character)
+	poisonedCount := 0
+	for _, c := range updatedChar.Conditions {
+		if string(c) == "poisoned" {
+			poisonedCount++
+		}
+	}
+	if poisonedCount != 1 {
+		t.Errorf("Expected exactly 1 'poisoned' condition, got %d", poisonedCount)
+	}
+}
+
 func TestUpdateCharacterTool_MissingRequiredArgs(t *testing.T) {
 	registry, _ := setupTestRegistry()
 
@@ -741,6 +886,29 @@ func TestAddToInventoryTool_Success(t *testing.T) {
 	}
 	if count, _ := resultMap["inventory_count"].(int); count != 1 {
 		t.Errorf("Expected inventory_count 1, got %d", count)
+	}
+}
+
+func TestAddToInventoryTool_InvalidItemType(t *testing.T) {
+	registry, provider := setupTestRegistry()
+	provider.createSession("test-session")
+
+	createTool, _ := registry.Get("create_character")
+	createResult, _ := createTool.Handler(baseCreateArgs())
+	createdChar := createResult.(map[string]interface{})["character"].(*models.Character)
+
+	addTool, _ := registry.Get("add_to_inventory")
+	_, err := addTool.Handler(map[string]interface{}{
+		"session_id":    "test-session",
+		"character_id":  createdChar.ID,
+		"item_name":     "Invalid Thing",
+		"item_type":     "invalid_type",
+	})
+	if err == nil {
+		t.Error("Expected error for invalid item_type")
+	}
+	if err != nil && !containsSubstring(err.Error(), "invalid item_type") {
+		t.Errorf("Expected error to mention invalid item_type, got: %v", err)
 	}
 }
 

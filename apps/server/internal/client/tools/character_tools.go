@@ -124,6 +124,14 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 					}
 				}
 			}
+			// Validate extra ability bonuses count
+			if len(params.ExtraAbilityBonuses) > 2 {
+				return nil, fmt.Errorf("extra_ability_bonuses allows at most 2 abilities, got %d", len(params.ExtraAbilityBonuses))
+			}
+			// Verify session exists before creating character
+			if stateProvider.GetGameState(sessionID) == nil {
+				return nil, fmt.Errorf("session not found: %s", sessionID)
+			}
 			char, err := character.CreateBasic(params)
 			if err != nil {
 				return nil, fmt.Errorf("character creation failed: %w", err)
@@ -185,19 +193,28 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if sessionID == "" || characterID == "" {
 				return nil, fmt.Errorf("session_id and character_id are required")
 			}
-			gs := stateProvider.GetGameState(sessionID)
-			if gs == nil {
-				return nil, fmt.Errorf("session not found: %s", sessionID)
-			}
-			for _, char := range gs.Party {
-				if char.ID == characterID {
-					return map[string]interface{}{
-						"success":   true,
-						"character": char,
-					}, nil
+			var foundChar *models.Character
+			err := stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
+				for _, char := range gs.Party {
+					if char.ID == characterID {
+						foundChar = char
+						return
+					}
 				}
+			})
+			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					return nil, fmt.Errorf("session not found: %s", sessionID)
+				}
+				return nil, fmt.Errorf("failed to get character: %w", err)
 			}
-			return nil, fmt.Errorf("character not found: %s", characterID)
+			if foundChar == nil {
+				return nil, fmt.Errorf("character not found: %s", characterID)
+			}
+			return map[string]interface{}{
+				"success":   true,
+				"character": foundChar,
+			}, nil
 		},
 	})
 	registry.Register(Tool{
@@ -249,7 +266,10 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if sessionID == "" || characterID == "" {
 				return nil, fmt.Errorf("session_id and character_id are required")
 			}
-			var updatedChar *models.Character
+			var (
+				updatedChar *models.Character
+				opErr       error
+			)
 			err := stateProvider.UpdateGameState(sessionID, func(gs *state.GameState) {
 				for _, char := range gs.Party {
 					if char.ID == characterID {
@@ -266,12 +286,43 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 						if v, ok := args["gold"]; ok {
 							char.Gold = toInt(v, char.Gold)
 						}
+						// Validate numeric constraints
+						if char.MaxHP < 1 {
+							opErr = fmt.Errorf("max_hp must be >= 1, got %d", char.MaxHP)
+							return
+						}
+						if char.HP < 0 {
+							opErr = fmt.Errorf("hp must be >= 0, got %d", char.HP)
+							return
+						}
+						if char.HP > char.MaxHP {
+							opErr = fmt.Errorf("hp (%d) cannot exceed max_hp (%d)", char.HP, char.MaxHP)
+							return
+						}
+						if char.AC < 0 {
+							opErr = fmt.Errorf("ac must be >= 0, got %d", char.AC)
+							return
+						}
+						if char.Gold < 0 {
+							opErr = fmt.Errorf("gold must be >= 0, got %d", char.Gold)
+							return
+						}
 						// Add conditions
 						if conditionsAdd, ok := args["conditions_add"].([]interface{}); ok {
 							for _, c := range conditionsAdd {
 								if s, ok := c.(string); ok {
 									if cond, valid := conditionFromString(s); valid {
-										char.Conditions = append(char.Conditions, cond)
+										// Check for duplicate before adding
+										exists := false
+										for _, existing := range char.Conditions {
+											if existing == cond {
+												exists = true
+												break
+											}
+										}
+										if !exists {
+											char.Conditions = append(char.Conditions, cond)
+										}
 									}
 								}
 							}
@@ -284,9 +335,9 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 									removeSet[strings.ToLower(s)] = true
 								}
 							}
-							filtered := char.Conditions[:0]
+							filtered := make([]types.Condition, 0, len(char.Conditions))
 							for _, c := range char.Conditions {
-								if !removeSet[conditionKey(c)] {
+								if !removeSet[string(c)] {
 									filtered = append(filtered, c)
 								}
 							}
@@ -299,6 +350,9 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to update character: %w", err)
+			}
+			if opErr != nil {
+				return nil, opErr
 			}
 			if updatedChar == nil {
 				return nil, fmt.Errorf("character not found: %s", characterID)
@@ -347,7 +401,15 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 			if sessionID == "" || characterID == "" || itemName == "" {
 				return nil, fmt.Errorf("session_id, character_id, and item_name are required")
 			}
-			if itemType == "" {
+			validItemTypes := map[string]bool{
+				"weapon": true, "armor": true, "potion": true,
+				"tool": true, "gear": true, "treasure": true,
+			}
+			if itemType != "" {
+				if !validItemTypes[itemType] {
+					return nil, fmt.Errorf("invalid item_type %q (valid: weapon, armor, potion, tool, gear, treasure)", itemType)
+				}
+			} else {
 				itemType = "gear"
 			}
 			var updatedChar *models.Character
@@ -355,7 +417,7 @@ func RegisterCharacterTools(registry *Registry, stateProvider CharacterStateProv
 				for _, char := range gs.Party {
 					if char.ID == characterID {
 						item := models.Item{
-							ID:          uuid.New().String()[:8],
+							ID:          uuid.New().String()[:12],
 							Name:        itemName,
 							Description: description,
 							Type:        itemType,
@@ -499,10 +561,4 @@ func conditionFromString(s string) (types.Condition, bool) {
 		return types.Condition(""), false
 	}
 	return cond, true
-}
-
-// conditionKey returns the string key for a Condition, for use in map lookups.
-// All conditions are stored lowercased by conditionFromString, so this is a no-op cast.
-func conditionKey(c types.Condition) string {
-	return string(c)
 }
