@@ -1,2 +1,2 @@
 // Game Entities
-export {}
+export { UnitSprite } from '../objects/UnitSprite'
