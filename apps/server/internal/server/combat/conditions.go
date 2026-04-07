@@ -9,15 +9,19 @@ import (
 
 // ConditionModifiers describes how a condition affects rolls.
 type ConditionModifiers struct {
-	AttackAdvantage     bool // True if condition grants advantage on attacks
-	AttackDisadvantage  bool // True if condition grants disadvantage on attacks
-	DefenseAdvantage    bool // True if attacks against have advantage
-	DefenseDisadvantage bool // True if attacks against have disadvantage
-	SpeedOverride       int  // If > 0, sets speed to this value
-	Incapacitated       bool // True if cannot take actions/reactions
-	AutoFailSTRDEX      bool // True if auto-fails STR/DEX saves
-	AutoCritMelee       bool // True if melee attacks against are auto-crits
-	DamageResistance    bool // True if resistant to all damage
+	AttackAdvantage          bool // True if condition grants advantage on attacks
+	AttackDisadvantage       bool // True if condition grants disadvantage on attacks
+	AbilityCheckDisadvantage bool // True if condition grants disadvantage on ability checks
+	SavingThrowDisadvantage  bool // True if condition grants disadvantage on saving throws
+	DefenseAdvantage         bool // True if attacks against have advantage
+	DefenseDisadvantage      bool // True if attacks against have disadvantage
+	SpeedOverride            int  // If non-zero, sets speed to this value (0 = immobile)
+	SpeedHalved              bool // True if speed is halved
+	MaxHPHalved              bool // True if hit point maximum is halved
+	Incapacitated            bool // True if cannot take actions/reactions
+	AutoFailSTRDEX           bool // True if auto-fails STR/DEX saves
+	AutoCritMelee            bool // True if melee attacks against are auto-crits
+	DamageResistance         bool // True if resistant to all damage
 }
 
 // conditionEffects maps each condition to its mechanical effects.
@@ -96,22 +100,32 @@ var conditionEffects = map[types.Condition]ConditionModifiers{
 }
 
 // exhaustionLevelEffects returns modifiers for a given exhaustion level.
+// D&D 5e PHB exhaustion table:
+//   Level 1: Disadvantage on ability checks
+//   Level 2: Speed halved
+//   Level 3: Disadvantage on attack rolls and saving throws
+//   Level 4: Hit point maximum halved
+//   Level 5: Speed reduced to 0
+//   Level 6: Death
 func exhaustionLevelEffects(level int) ConditionModifiers {
 	mod := ConditionModifiers{}
 	if level >= 1 {
-		mod.AttackDisadvantage = true // Disadvantage on ability checks
+		mod.AbilityCheckDisadvantage = true
 	}
-	// Level 2: speed halved (handled in speed calculation)
-	// Level 3: disadvantage on attacks and saving throws
+	if level >= 2 {
+		mod.SpeedHalved = true
+	}
 	if level >= 3 {
 		mod.AttackDisadvantage = true
+		mod.SavingThrowDisadvantage = true
 	}
-	// Level 4: hit point maximum halved
-	// Level 5: speed reduced to 0
+	if level >= 4 {
+		mod.MaxHPHalved = true
+	}
 	if level >= 5 {
 		mod.SpeedOverride = 0
 	}
-	// Level 6: death
+	// Level 6: death (handled in applyExhaustion)
 	return mod
 }
 
@@ -142,15 +156,19 @@ func GetConditionModifiers(c *state.Combatant) ConditionModifiers {
 // for boolean fields, and the non-zero value for integer fields.
 func mergeModifiers(a, b ConditionModifiers) ConditionModifiers {
 	return ConditionModifiers{
-		AttackAdvantage:     a.AttackAdvantage || b.AttackAdvantage,
-		AttackDisadvantage:  a.AttackDisadvantage || b.AttackDisadvantage,
-		DefenseAdvantage:    a.DefenseAdvantage || b.DefenseAdvantage,
-		DefenseDisadvantage: a.DefenseDisadvantage || b.DefenseDisadvantage,
-		SpeedOverride:       nonzero(a.SpeedOverride, b.SpeedOverride),
-		Incapacitated:       a.Incapacitated || b.Incapacitated,
-		AutoFailSTRDEX:      a.AutoFailSTRDEX || b.AutoFailSTRDEX,
-		AutoCritMelee:       a.AutoCritMelee || b.AutoCritMelee,
-		DamageResistance:    a.DamageResistance || b.DamageResistance,
+		AttackAdvantage:          a.AttackAdvantage || b.AttackAdvantage,
+		AttackDisadvantage:       a.AttackDisadvantage || b.AttackDisadvantage,
+		AbilityCheckDisadvantage: a.AbilityCheckDisadvantage || b.AbilityCheckDisadvantage,
+		SavingThrowDisadvantage:  a.SavingThrowDisadvantage || b.SavingThrowDisadvantage,
+		DefenseAdvantage:         a.DefenseAdvantage || b.DefenseAdvantage,
+		DefenseDisadvantage:      a.DefenseDisadvantage || b.DefenseDisadvantage,
+		SpeedOverride:            nonzero(a.SpeedOverride, b.SpeedOverride),
+		SpeedHalved:              a.SpeedHalved || b.SpeedHalved,
+		MaxHPHalved:              a.MaxHPHalved || b.MaxHPHalved,
+		Incapacitated:            a.Incapacitated || b.Incapacitated,
+		AutoFailSTRDEX:           a.AutoFailSTRDEX || b.AutoFailSTRDEX,
+		AutoCritMelee:            a.AutoCritMelee || b.AutoCritMelee,
+		DamageResistance:         a.DamageResistance || b.DamageResistance,
 	}
 }
 

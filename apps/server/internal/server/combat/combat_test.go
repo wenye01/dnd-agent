@@ -1045,33 +1045,100 @@ func TestGetConditionModifiers(t *testing.T) {
 		}
 	})
 
-	t.Run("exhaustion level 1 gives attack disadvantage", func(t *testing.T) {
-		c := newPlayerCombatant("p1", "Hero", 20, 20)
-		c.Conditions = []*state.ConditionEntry{
-			{Condition: "exhaustion", Duration: 0, Remaining: 0, Level: 1},
-		}
+	t.Run("exhaustion level 1 gives ability check disadvantage (not attack disadvantage)", func(t *testing.T) {
+			c := newPlayerCombatant("p1", "Hero", 20, 20)
+			c.Conditions = []*state.ConditionEntry{
+				{Condition: "exhaustion", Duration: 0, Remaining: 0, Level: 1},
+			}
 
-		mod := GetConditionModifiers(c)
+			mod := GetConditionModifiers(c)
 
-		if !mod.AttackDisadvantage {
-			t.Error("exhaustion level 1 should give AttackDisadvantage")
-		}
-	})
+			if !mod.AbilityCheckDisadvantage {
+				t.Error("exhaustion level 1 should give AbilityCheckDisadvantage")
+			}
+			if mod.AttackDisadvantage {
+				t.Error("exhaustion level 1 should NOT give AttackDisadvantage (that is level 3+)")
+			}
+		})
 
-	t.Run("exhaustion level 0 treated as level 1", func(t *testing.T) {
-		c := newPlayerCombatant("p1", "Hero", 20, 20)
-		c.Conditions = []*state.ConditionEntry{
-			{Condition: "exhaustion", Duration: 0, Remaining: 0, Level: 0},
-		}
+		t.Run("exhaustion level 0 treated as level 1", func(t *testing.T) {
+			c := newPlayerCombatant("p1", "Hero", 20, 20)
+			c.Conditions = []*state.ConditionEntry{
+				{Condition: "exhaustion", Duration: 0, Remaining: 0, Level: 0},
+			}
 
-		mod := GetConditionModifiers(c)
+			mod := GetConditionModifiers(c)
 
-		if !mod.AttackDisadvantage {
-			t.Error("exhaustion level 0 should be treated as level 1")
-		}
-	})
+			if !mod.AbilityCheckDisadvantage {
+				t.Error("exhaustion level 0 should be treated as level 1 (AbilityCheckDisadvantage)")
+			}
+		})
 
-	t.Run("unconscious gives all modifiers", func(t *testing.T) {
+		t.Run("exhaustion level 2 gives speed halved", func(t *testing.T) {
+			c := newPlayerCombatant("p1", "Hero", 20, 20)
+			c.Conditions = []*state.ConditionEntry{
+				{Condition: "exhaustion", Duration: 0, Remaining: 0, Level: 2},
+			}
+
+			mod := GetConditionModifiers(c)
+
+			if !mod.AbilityCheckDisadvantage {
+				t.Error("exhaustion level 2 should give AbilityCheckDisadvantage (from level 1)")
+			}
+			if !mod.SpeedHalved {
+				t.Error("exhaustion level 2 should give SpeedHalved")
+			}
+		})
+
+		t.Run("exhaustion level 3 gives attack and saving throw disadvantage", func(t *testing.T) {
+			c := newPlayerCombatant("p1", "Hero", 20, 20)
+			c.Conditions = []*state.ConditionEntry{
+				{Condition: "exhaustion", Duration: 0, Remaining: 0, Level: 3},
+			}
+
+			mod := GetConditionModifiers(c)
+
+			if !mod.AttackDisadvantage {
+				t.Error("exhaustion level 3 should give AttackDisadvantage")
+			}
+			if !mod.SavingThrowDisadvantage {
+				t.Error("exhaustion level 3 should give SavingThrowDisadvantage")
+			}
+			if !mod.AbilityCheckDisadvantage {
+				t.Error("exhaustion level 3 should still give AbilityCheckDisadvantage (from level 1)")
+			}
+			if !mod.SpeedHalved {
+				t.Error("exhaustion level 3 should still give SpeedHalved (from level 2)")
+			}
+		})
+
+		t.Run("exhaustion level 4 gives max HP halved", func(t *testing.T) {
+			c := newPlayerCombatant("p1", "Hero", 20, 20)
+			c.Conditions = []*state.ConditionEntry{
+				{Condition: "exhaustion", Duration: 0, Remaining: 0, Level: 4},
+			}
+
+			mod := GetConditionModifiers(c)
+
+			if !mod.MaxHPHalved {
+				t.Error("exhaustion level 4 should give MaxHPHalved")
+			}
+		})
+
+		t.Run("exhaustion level 5 gives speed 0", func(t *testing.T) {
+			c := newPlayerCombatant("p1", "Hero", 20, 20)
+			c.Conditions = []*state.ConditionEntry{
+				{Condition: "exhaustion", Duration: 0, Remaining: 0, Level: 5},
+			}
+
+			mod := GetConditionModifiers(c)
+
+			if mod.SpeedOverride != 0 {
+				t.Errorf("exhaustion level 5 SpeedOverride = %d, want 0", mod.SpeedOverride)
+			}
+		})
+
+		t.Run("unconscious gives all modifiers", func(t *testing.T) {
 		c := newPlayerCombatant("p1", "Hero", 20, 20)
 		c.Conditions = []*state.ConditionEntry{
 			{Condition: "unconscious", Duration: 0, Remaining: 0},
