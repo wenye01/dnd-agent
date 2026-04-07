@@ -106,16 +106,16 @@ func TestGameState_PartyManagement(t *testing.T) {
 		state := NewGameState("test-session")
 
 		char := &models.Character{
-			ID:      "char-1",
-			Name:    "Test Hero",
-			Race:    "human",
-			Class:   "fighter",
-			Level:   1,
-			HP:      10,
-			MaxHP:   10,
-			AC:      15,
-			Stats:   models.AbilityScores{Strength: 16, Dexterity: 12, Constitution: 14, Intelligence: 10, Wisdom: 10, Charisma: 10},
-			Skills:  make(map[types.Skill]bool),
+			ID:        "char-1",
+			Name:      "Test Hero",
+			Race:      "human",
+			Class:     "fighter",
+			Level:     1,
+			HP:        10,
+			MaxHP:     10,
+			AC:        15,
+			Stats:     models.AbilityScores{Strength: 16, Dexterity: 12, Constitution: 14, Intelligence: 10, Wisdom: 10, Charisma: 10},
+			Skills:    make(map[types.Skill]bool),
 			Inventory: []models.Item{},
 		}
 
@@ -153,7 +153,11 @@ func TestCombatState(t *testing.T) {
 				{CharacterID: "char-1", Initiative: 15, HasActed: false},
 				{CharacterID: "char-2", Initiative: 12, HasActed: false},
 			},
-			Participants: []string{"char-1", "char-2", "enemy-1"},
+			Participants: []*Combatant{
+				{ID: "char-1", Name: "Hero 1", Type: CombatantPlayer, MaxHP: 10, CurrentHP: 10, AC: 15},
+				{ID: "char-2", Name: "Hero 2", Type: CombatantPlayer, MaxHP: 6, CurrentHP: 6, AC: 10},
+				{ID: "enemy-1", Name: "Goblin", Type: CombatantEnemy, MaxHP: 7, CurrentHP: 7, AC: 12},
+			},
 			ActiveEffects: []*ActiveEffect{
 				{
 					ID:         "effect-1",
@@ -202,7 +206,7 @@ func TestScenarioState(t *testing.T) {
 			Name:    "The Lost Mine",
 			Chapter: "Chapter 1",
 			Flags: map[string]interface{}{
-				"goblin_king_defeated": true,
+				"goblin_king_defeated":  true,
 				"found_secret_treasure": false,
 			},
 			NPCs: map[string]*NPCState{
@@ -286,7 +290,9 @@ func TestGameState_Serialization(t *testing.T) {
 			Initiatives: []*InitiativeEntry{
 				{CharacterID: "char-1", Initiative: 15, HasActed: true},
 			},
-			Participants:  []string{"char-1"},
+			Participants: []*Combatant{
+				{ID: "char-1", Name: "Hero 1", Type: CombatantPlayer, MaxHP: 10, CurrentHP: 10, AC: 15},
+			},
 			ActiveEffects: []*ActiveEffect{},
 		}
 
@@ -315,3 +321,295 @@ func TestGameState_Serialization(t *testing.T) {
 	})
 }
 
+// ===========================================================================
+// Combatant.Validate tests
+// ===========================================================================
+
+func TestCombatant_Validate(t *testing.T) {
+	t.Run("valid combatant", func(t *testing.T) {
+		c := &Combatant{
+			ID:        "player-1",
+			Name:      "Hero",
+			Type:      CombatantPlayer,
+			MaxHP:     20,
+			CurrentHP: 15,
+			AC:        16,
+			HitDice:   models.HitDiceInfo{Total: 5, Current: 3, Size: 10},
+		}
+		if err := c.Validate(); err != nil {
+			t.Errorf("Validate() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("missing ID", func(t *testing.T) {
+		c := &Combatant{
+			Name:      "Hero",
+			Type:      CombatantPlayer,
+			MaxHP:     20,
+			CurrentHP: 15,
+			HitDice:   models.HitDiceInfo{Total: 5, Current: 3, Size: 8},
+		}
+		if err := c.Validate(); err == nil {
+			t.Error("Validate() should return error for missing ID")
+		}
+	})
+
+	t.Run("missing Name", func(t *testing.T) {
+		c := &Combatant{
+			ID:        "player-1",
+			Type:      CombatantPlayer,
+			MaxHP:     20,
+			CurrentHP: 15,
+			HitDice:   models.HitDiceInfo{Total: 5, Current: 3, Size: 8},
+		}
+		if err := c.Validate(); err == nil {
+			t.Error("Validate() should return error for missing Name")
+		}
+	})
+
+	t.Run("negative MaxHP", func(t *testing.T) {
+		c := &Combatant{
+			ID:        "player-1",
+			Name:      "Hero",
+			Type:      CombatantPlayer,
+			MaxHP:     -5,
+			CurrentHP: 0,
+			HitDice:   models.HitDiceInfo{Total: 5, Current: 3, Size: 8},
+		}
+		if err := c.Validate(); err == nil {
+			t.Error("Validate() should return error for negative MaxHP")
+		}
+	})
+
+	t.Run("zero MaxHP is valid", func(t *testing.T) {
+		c := &Combatant{
+			ID:        "player-1",
+			Name:      "Dead Hero",
+			Type:      CombatantPlayer,
+			MaxHP:     0,
+			CurrentHP: 0,
+			HitDice:   models.HitDiceInfo{Total: 5, Current: 3, Size: 8},
+		}
+		if err := c.Validate(); err != nil {
+			t.Errorf("Validate() error = %v, want nil for zero MaxHP", err)
+		}
+	})
+
+	t.Run("invalid hit dice propagates error", func(t *testing.T) {
+		c := &Combatant{
+			ID:        "player-1",
+			Name:      "Hero",
+			Type:      CombatantPlayer,
+			MaxHP:     20,
+			CurrentHP: 15,
+			HitDice:   models.HitDiceInfo{Total: 5, Current: 10, Size: 8}, // current > total
+		}
+		if err := c.Validate(); err == nil {
+			t.Error("Validate() should return error for invalid hit dice")
+		}
+	})
+
+	t.Run("invalid death saves propagates error", func(t *testing.T) {
+		c := &Combatant{
+			ID:        "player-1",
+			Name:      "Hero",
+			Type:      CombatantPlayer,
+			MaxHP:     20,
+			CurrentHP: 0,
+			HitDice:   models.HitDiceInfo{Total: 5, Current: 3, Size: 8},
+			DeathSaves: &models.DeathSaves{
+				Successes: 5, // exceeds max of 3
+			},
+		}
+		if err := c.Validate(); err == nil {
+			t.Error("Validate() should return error for invalid death saves")
+		}
+	})
+
+	t.Run("nil death saves is valid", func(t *testing.T) {
+		c := &Combatant{
+			ID:        "enemy-1",
+			Name:      "Goblin",
+			Type:      CombatantEnemy,
+			MaxHP:     7,
+			CurrentHP: 7,
+			HitDice:   models.HitDiceInfo{Total: 1, Current: 1, Size: 6},
+		}
+		if err := c.Validate(); err != nil {
+			t.Errorf("Validate() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("invalid condition propagates error", func(t *testing.T) {
+		c := &Combatant{
+			ID:        "player-1",
+			Name:      "Hero",
+			Type:      CombatantPlayer,
+			MaxHP:     20,
+			CurrentHP: 15,
+			HitDice:   models.HitDiceInfo{Total: 5, Current: 3, Size: 8},
+			Conditions: []*ConditionEntry{
+				{Condition: types.Condition("not_a_condition"), Duration: 0, Remaining: 0},
+			},
+		}
+		if err := c.Validate(); err == nil {
+			t.Error("Validate() should return error for invalid condition")
+		}
+	})
+}
+
+// ===========================================================================
+// ConditionEntry.Validate tests
+// ===========================================================================
+
+func TestConditionEntry_Validate(t *testing.T) {
+	t.Run("valid indefinite condition", func(t *testing.T) {
+		ce := &ConditionEntry{
+			Condition: types.ConditionBlinded,
+			Source:    "spell",
+			Duration:  0,
+			Remaining: 0,
+		}
+		if err := ce.Validate(); err != nil {
+			t.Errorf("Validate() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("valid timed condition", func(t *testing.T) {
+		ce := &ConditionEntry{
+			Condition: types.ConditionPoisoned,
+			Source:    "trap",
+			Duration:  3,
+			Remaining: 2,
+		}
+		if err := ce.Validate(); err != nil {
+			t.Errorf("Validate() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("invalid condition string", func(t *testing.T) {
+		ce := &ConditionEntry{
+			Condition: types.Condition("confused"),
+			Duration:  0,
+			Remaining: 0,
+		}
+		if err := ce.Validate(); err == nil {
+			t.Error("Validate() should return error for invalid condition")
+		}
+	})
+
+	t.Run("empty condition string", func(t *testing.T) {
+		ce := &ConditionEntry{
+			Condition: types.Condition(""),
+			Duration:  0,
+			Remaining: 0,
+		}
+		if err := ce.Validate(); err == nil {
+			t.Error("Validate() should return error for empty condition")
+		}
+	})
+
+	t.Run("negative remaining duration for timed condition", func(t *testing.T) {
+		ce := &ConditionEntry{
+			Condition: types.ConditionBlinded,
+			Duration:  3,
+			Remaining: -1,
+		}
+		if err := ce.Validate(); err == nil {
+			t.Error("Validate() should return error for negative remaining duration on timed condition")
+		}
+	})
+
+	t.Run("zero remaining is valid for indefinite", func(t *testing.T) {
+		ce := &ConditionEntry{
+			Condition: types.ConditionProne,
+			Duration:  0,
+			Remaining: 0,
+		}
+		if err := ce.Validate(); err != nil {
+			t.Errorf("Validate() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("exhaustion condition is valid", func(t *testing.T) {
+		ce := &ConditionEntry{
+			Condition: types.ConditionExhaustion,
+			Duration:  0,
+			Remaining: 0,
+			Level:     2,
+		}
+		if err := ce.Validate(); err != nil {
+			t.Errorf("Validate() error = %v, want nil", err)
+		}
+	})
+}
+
+// ===========================================================================
+// CombatStatus constant tests
+// ===========================================================================
+
+func TestCombatStatus_Constants(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   CombatStatus
+		expected string
+	}{
+		{"idle", CombatIdle, "idle"},
+		{"active", CombatActive, "active"},
+		{"ended", CombatEnded, "ended"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if string(tt.status) != tt.expected {
+				t.Errorf("CombatStatus = %q, want %q", tt.status, tt.expected)
+			}
+		})
+	}
+
+	t.Run("all three statuses are distinct", func(t *testing.T) {
+		statuses := map[CombatStatus]bool{
+			CombatIdle:   true,
+			CombatActive: true,
+			CombatEnded:  true,
+		}
+		if len(statuses) != 3 {
+			t.Errorf("Expected 3 distinct combat statuses, got %d", len(statuses))
+		}
+	})
+}
+
+// ===========================================================================
+// CombatantType constant tests
+// ===========================================================================
+
+func TestCombatantType_Constants(t *testing.T) {
+	tests := []struct {
+		name         string
+		combatantType CombatantType
+		expected     string
+	}{
+		{"player", CombatantPlayer, "player"},
+		{"npc", CombatantNPC, "npc"},
+		{"enemy", CombatantEnemy, "enemy"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if string(tt.combatantType) != tt.expected {
+				t.Errorf("CombatantType = %q, want %q", tt.combatantType, tt.expected)
+			}
+		})
+	}
+
+	t.Run("all three types are distinct", func(t *testing.T) {
+		types := map[CombatantType]bool{
+			CombatantPlayer: true,
+			CombatantNPC:    true,
+			CombatantEnemy:  true,
+		}
+		if len(types) != 3 {
+			t.Errorf("Expected 3 distinct combatant types, got %d", len(types))
+		}
+	})
+}

@@ -11,16 +11,17 @@ import (
 	"time"
 
 	"github.com/dnd-game/server/configs"
-	"github.com/joho/godotenv"
 	"github.com/dnd-game/server/internal/api/rest"
 	"github.com/dnd-game/server/internal/api/websocket"
 	"github.com/dnd-game/server/internal/client/llm"
 	"github.com/dnd-game/server/internal/client/session"
 	"github.com/dnd-game/server/internal/client/tools"
 	"github.com/dnd-game/server/internal/persistence"
+	"github.com/dnd-game/server/internal/server/combat"
 	"github.com/dnd-game/server/internal/server/dice"
 	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -58,10 +59,13 @@ func main() {
 	// Create dice service
 	diceService := dice.NewService()
 
+	// Create combat manager
+	combatManager := combat.NewCombatManager(stateManager, diceService)
+
 	// Create tool registry
 	toolRegistry := tools.NewRegistry()
 	tools.RegisterDiceTools(toolRegistry, diceService)
-	tools.RegisterCharacterTools(toolRegistry, &characterStateAdapter{sm: stateManager})
+	tools.RegisterCombatTools(toolRegistry, combatManager)
 	log.Info().Int("tools", len(toolRegistry.List())).Msg("tools registered")
 
 	// Create WebSocket hub
@@ -237,19 +241,6 @@ func (a *persistenceAdapter) SaveState(sessionID string, st interface{}) error {
 
 func (a *persistenceAdapter) LoadState(sessionID string) (interface{}, error) {
 	return a.Manager.LoadState(sessionID)
-}
-
-// characterStateAdapter adapts *state.Manager to tools.CharacterStateProvider interface.
-type characterStateAdapter struct {
-	sm *state.Manager
-}
-
-func (a *characterStateAdapter) GetGameState(sessionID string) *state.GameState {
-	return a.sm.GetSession(sessionID)
-}
-
-func (a *characterStateAdapter) UpdateGameState(sessionID string, updateFn func(*state.GameState)) error {
-	return a.sm.UpdateSession(sessionID, updateFn)
 }
 
 // loggerMiddleware is a Gin middleware for request logging.

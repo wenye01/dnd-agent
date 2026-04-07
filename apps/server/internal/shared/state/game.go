@@ -2,9 +2,11 @@
 package state
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/dnd-game/server/internal/shared/models"
+	"github.com/dnd-game/server/internal/shared/types"
 )
 
 // GamePhase represents the current phase of the game.
@@ -32,13 +34,94 @@ type GameState struct {
 	Metadata     *GameMetadata       `json:"metadata"`
 }
 
+// CombatStatus represents the current status of a combat encounter.
+type CombatStatus string
+
+const (
+	// CombatIdle means no combat is active.
+	CombatIdle CombatStatus = "idle"
+	// CombatActive means combat is in progress.
+	CombatActive CombatStatus = "active"
+	// CombatEnded means combat has concluded.
+	CombatEnded CombatStatus = "ended"
+)
+
 // CombatState represents the state of combat.
 type CombatState struct {
+	Status        CombatStatus       `json:"status"`
 	Round         int                `json:"round"`
 	TurnIndex     int                `json:"turnIndex"`
 	Initiatives   []*InitiativeEntry `json:"initiatives"`
-	Participants  []string           `json:"participants"`
+	Participants  []*Combatant       `json:"participants"`
 	ActiveEffects []*ActiveEffect    `json:"activeEffects"`
+}
+
+// CombatantType distinguishes players from enemies and NPCs.
+type CombatantType string
+
+const (
+	// CombatantPlayer is a player-controlled character.
+	CombatantPlayer CombatantType = "player"
+	// CombatantNPC is a non-player character (friendly/neutral).
+	CombatantNPC CombatantType = "npc"
+	// CombatantEnemy is a hostile creature.
+	CombatantEnemy CombatantType = "enemy"
+)
+
+// Combatant represents a participant in combat.
+type Combatant struct {
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	Type        CombatantType `json:"type"`
+	MaxHP       int           `json:"maxHp"`
+	CurrentHP   int           `json:"currentHp"`
+	TemporaryHP int           `json:"temporaryHp"`
+	AC          int           `json:"ac"`
+	Speed       int           `json:"speed"`
+	DexScore    int           `json:"dexScore"` // Used as tiebreaker for initiative
+
+	// Turn resources
+	Action      ActionState `json:"action"`
+	BonusAction ActionState `json:"bonusAction"`
+	Reaction    ActionState `json:"reaction"`
+
+	// Conditions and resistances
+	Conditions        []*ConditionEntry `json:"conditions,omitempty"`
+	DamageResistances []types.DamageType `json:"damageResistances,omitempty"`
+	DamageImmunities  []types.DamageType `json:"damageImmunities,omitempty"`
+
+	// Death saves (for player characters)
+	DeathSaves *models.DeathSaves `json:"deathSaves,omitempty"`
+
+	// Hit dice (for rest/recovery)
+	HitDice models.HitDiceInfo `json:"hitDice"`
+
+	// Reference to character ID for syncing back
+	CharacterID string `json:"characterId,omitempty"`
+
+	// Level and CON modifier for hit dice recovery
+	Level  int `json:"level"`
+	CONMod int `json:"conMod"`
+}
+
+// ActionState tracks whether an action resource is available or used.
+type ActionState string
+
+const (
+	// ActionAvailable means the resource has not been used this turn.
+	ActionAvailable ActionState = "available"
+	// ActionUsed means the resource has been consumed this turn.
+	ActionUsed ActionState = "used"
+)
+
+// ConditionEntry represents an active condition on a combatant.
+type ConditionEntry struct {
+	Condition types.Condition `json:"condition"`
+	Source    string `json:"source,omitempty"` // What applied this condition
+	Duration  int    `json:"duration"`         // Total duration in rounds (0 = indefinite)
+	Remaining int    `json:"remaining"`        // Remaining rounds
+	Level     int    `json:"level,omitempty"`  // For exhaustion (1-6)
+	Trigger   string `json:"trigger,omitempty"` // For ready action: the trigger condition
 }
 
 // InitiativeEntry represents a creature's position in the initiative order.
@@ -117,4 +200,42 @@ func NewGameState(sessionID string) *GameState {
 // currentTime returns the current Unix timestamp in seconds.
 func currentTime() int64 {
 	return time.Now().Unix()
+}
+
+// Validate checks that ConditionEntry has a valid condition and non-negative durations.
+func (c *ConditionEntry) Validate() error {
+	if !c.Condition.Valid() {
+		return fmt.Errorf("invalid condition: %s", c.Condition)
+	}
+	if c.Duration > 0 && c.Remaining < 0 {
+		return fmt.Errorf("remaining duration %d cannot be negative for timed condition", c.Remaining)
+	}
+	return nil
+}
+
+// Validate checks that a Combatant has required fields and valid sub-structures.
+func (c *Combatant) Validate() error {
+	if c.ID == "" {
+		return fmt.Errorf("combatant ID is required")
+	}
+	if c.Name == "" {
+		return fmt.Errorf("combatant name is required")
+	}
+	if c.MaxHP < 0 {
+		return fmt.Errorf("combatant max HP %d cannot be negative", c.MaxHP)
+	}
+	if err := c.HitDice.Validate(); err != nil {
+		return fmt.Errorf("combatant %s hit dice: %w", c.ID, err)
+	}
+	if c.DeathSaves != nil {
+		if err := c.DeathSaves.Validate(); err != nil {
+			return fmt.Errorf("combatant %s death saves: %w", c.ID, err)
+		}
+	}
+	for _, cond := range c.Conditions {
+		if err := cond.Validate(); err != nil {
+			return fmt.Errorf("combatant %s condition: %w", c.ID, err)
+		}
+	}
+	return nil
 }

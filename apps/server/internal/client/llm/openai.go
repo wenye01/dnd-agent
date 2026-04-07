@@ -261,4 +261,3 @@ func CreateToolSchema(params string) map[string]interface{} {
 	}
 	return schema
 }
-
