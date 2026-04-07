@@ -185,7 +185,7 @@ describe('useGameMessages', () => {
         type: 'state_update',
         payload: {
           stateType: 'combat',
-          data: { round: 1, turnIndex: 0, initiatives: [20, 15], participants: ['char-1', 'char-2'] },
+          data: { status: 'active', round: 1, turnIndex: 0, initiatives: [20, 15], participants: ['char-1', 'char-2'] },
         },
         timestamp: Date.now(),
       })
@@ -197,7 +197,7 @@ describe('useGameMessages', () => {
 
     it('should handle null combat data (combat end) via WebSocket', () => {
       useGameStore.getState().updateCombat({
-        round: 2, turnIndex: 1, initiatives: [20, 15], participants: ['char-1', 'monster-1'], activeEffects: [],
+        status: 'active', round: 2, turnIndex: 1, initiatives: [20, 15], participants: ['char-1', 'monster-1'], activeEffects: [],
       })
 
       renderHook(() => useGameMessages())
@@ -436,7 +436,7 @@ describe('useGameMessages', () => {
       handler({ type: 'combat_event', payload: { eventType: 'attack', target: 'goblin-1' }, timestamp: Date.now() })
 
       const content = useChatStore.getState().messages[0].content
-      expect(content).toContain('Attack action')
+      expect(content).toContain('attacks')
       expect(content).toContain('goblin-1')
     })
 
@@ -447,8 +447,7 @@ describe('useGameMessages', () => {
       handler({ type: 'combat_event', payload: { eventType: 'attack' }, timestamp: Date.now() })
 
       const content = useChatStore.getState().messages[0].content
-      expect(content).toContain('Attack action')
-      expect(content).not.toContain('targeting')
+      expect(content).toContain('attacks')
     })
 
     it('should handle spell event with target', () => {
@@ -458,7 +457,7 @@ describe('useGameMessages', () => {
       handler({ type: 'combat_event', payload: { eventType: 'spell', target: 'dragon' }, timestamp: Date.now() })
 
       const content = useChatStore.getState().messages[0].content
-      expect(content).toContain('Cast spell')
+      expect(content).toContain('casts a spell')
       expect(content).toContain('dragon')
     })
 
@@ -468,7 +467,7 @@ describe('useGameMessages', () => {
 
       handler({ type: 'combat_event', payload: { eventType: 'item' }, timestamp: Date.now() })
 
-      expect(useChatStore.getState().messages[0].content).toContain('Use item action')
+      expect(useChatStore.getState().messages[0].content).toContain('item')
     })
 
     it('should handle move event', () => {
@@ -477,7 +476,7 @@ describe('useGameMessages', () => {
 
       handler({ type: 'combat_event', payload: { eventType: 'move' }, timestamp: Date.now() })
 
-      expect(useChatStore.getState().messages[0].content).toContain('Move action')
+      expect(useChatStore.getState().messages[0].content).toContain('moves')
     })
 
     it('should handle dodge event', () => {
@@ -486,7 +485,7 @@ describe('useGameMessages', () => {
 
       handler({ type: 'combat_event', payload: { eventType: 'dodge' }, timestamp: Date.now() })
 
-      expect(useChatStore.getState().messages[0].content).toContain('Dodge action')
+      expect(useChatStore.getState().messages[0].content).toContain('dodges')
     })
 
     it('should handle disengage event', () => {
@@ -495,7 +494,7 @@ describe('useGameMessages', () => {
 
       handler({ type: 'combat_event', payload: { eventType: 'disengage' }, timestamp: Date.now() })
 
-      expect(useChatStore.getState().messages[0].content).toContain('Disengage action')
+      expect(useChatStore.getState().messages[0].content).toContain('disengages')
     })
   })
 

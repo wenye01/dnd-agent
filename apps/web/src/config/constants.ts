@@ -28,5 +28,25 @@ export type ServerMessageType = typeof WS_MESSAGE_TYPES.SERVER[number]
 // State update types
 export const STATE_UPDATE_TYPES = ['game', 'party', 'combat', 'map'] as const
 
-// Combat event types
-export const COMBAT_EVENT_TYPES = ['turn_start', 'turn_end', 'round_start', 'round_end', 'combat_start', 'combat_end'] as const
+// Combat event types (matches backend combat.EventType constants)
+export const COMBAT_EVENT_TYPES = [
+  'combat_start',
+  'combat_end',
+  'initiative_rolled',
+  'turn_start',
+  'turn_end',
+  'round_end',
+  'attack',
+  'damage',
+  'heal',
+  'death',
+  'unconscious',
+  'condition_applied',
+  'condition_removed',
+  'opportunity_attack',
+  'move',
+  'spell',
+  'item',
+  'dodge',
+  'disengage',
+] as const

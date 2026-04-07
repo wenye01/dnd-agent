@@ -1,2 +1,3 @@
 // Game Scenes
-export {}
+export { BaseScene } from './BaseScene'
+export { CombatScene } from './CombatScene'

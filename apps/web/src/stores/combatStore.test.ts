@@ -1,0 +1,390 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { useCombatStore, type TargetMode } from './combatStore'
+import type { Combatant, CombatState } from '@/types'
+import { eventBus } from '@/events'
+import { GameEvents } from '@/events/gameEvents'
+
+function createMockCombatant(overrides: Partial<Combatant> = {}): Combatant {
+  return {
+    id: 'fighter-1',
+    name: 'Hero',
+    type: 'player',
+    maxHp: 30,
+    currentHp: 30,
+    temporaryHp: 0,
+    ac: 16,
+    speed: 30,
+    dexScore: 14,
+    action: 'available',
+    bonusAction: 'available',
+    reaction: 'available',
+    conditions: [],
+    ...overrides,
+  }
+}
+
+function createMockCombatState(overrides: Partial<CombatState> = {}): CombatState {
+  return {
+    status: 'active',
+    round: 1,
+    turnIndex: 0,
+    initiatives: [
+      { characterId: 'fighter-1', initiative: 18, hasActed: false },
+      { characterId: 'goblin-1', initiative: 12, hasActed: false },
+    ],
+    participants: [
+      createMockCombatant({ id: 'fighter-1', name: 'Hero', type: 'player' }),
+      createMockCombatant({
+        id: 'goblin-1',
+        name: 'Goblin',
+        type: 'enemy',
+        cr: 0.25,
+      }),
+    ],
+    activeEffects: [],
+    ...overrides,
+  }
+}
+
+describe('combatStore', () => {
+  beforeEach(() => {
+    useCombatStore.getState().reset()
+    eventBus.clear()
+  })
+
+  describe('initial state', () => {
+    it('should have null combat', () => {
+      expect(useCombatStore.getState().combat).toBeNull()
+    })
+
+    it('should not be combat active', () => {
+      expect(useCombatStore.getState().isCombatActive).toBe(false)
+    })
+
+    it('should have no current unit', () => {
+      expect(useCombatStore.getState().currentUnitId).toBeNull()
+    })
+
+    it('should have target mode none', () => {
+      expect(useCombatStore.getState().targetMode).toBe('none')
+    })
+
+    it('should have empty valid targets', () => {
+      expect(useCombatStore.getState().validTargetIds).toEqual([])
+    })
+
+    it('should have no selected target', () => {
+      expect(useCombatStore.getState().selectedTargetId).toBeNull()
+    })
+
+    it('should have empty move range', () => {
+      expect(useCombatStore.getState().moveRange).toEqual([])
+    })
+
+    it('should have empty log entries', () => {
+      expect(useCombatStore.getState().logEntries).toEqual([])
+    })
+  })
+
+  describe('setCombat', () => {
+    it('should set combat state', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      expect(useCombatStore.getState().combat).toEqual(combat)
+    })
+
+    it('should set isCombatActive to true when status is active', () => {
+      const combat = createMockCombatState({ status: 'active' })
+      useCombatStore.getState().setCombat(combat)
+
+      expect(useCombatStore.getState().isCombatActive).toBe(true)
+    })
+
+    it('should set isCombatActive to false when status is idle', () => {
+      const combat = createMockCombatState({ status: 'idle' })
+      useCombatStore.getState().setCombat(combat)
+
+      expect(useCombatStore.getState().isCombatActive).toBe(false)
+    })
+
+    it('should set isCombatActive to false when status is ended', () => {
+      const combat = createMockCombatState({ status: 'ended' })
+      useCombatStore.getState().setCombat(combat)
+
+      expect(useCombatStore.getState().isCombatActive).toBe(false)
+    })
+
+    it('should set combat to null', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+      useCombatStore.getState().setCombat(null)
+
+      expect(useCombatStore.getState().combat).toBeNull()
+      expect(useCombatStore.getState().isCombatActive).toBe(false)
+    })
+  })
+
+  describe('setCurrentUnit', () => {
+    it('should set current unit id', () => {
+      useCombatStore.getState().setCurrentUnit('fighter-1')
+      expect(useCombatStore.getState().currentUnitId).toBe('fighter-1')
+    })
+
+    it('should clear current unit with null', () => {
+      useCombatStore.getState().setCurrentUnit('fighter-1')
+      useCombatStore.getState().setCurrentUnit(null)
+      expect(useCombatStore.getState().currentUnitId).toBeNull()
+    })
+  })
+
+  describe('setTargetMode', () => {
+    it('should set target mode', () => {
+      useCombatStore.getState().setTargetMode('attack')
+      expect(useCombatStore.getState().targetMode).toBe('attack')
+    })
+
+    it('should accept all valid target modes', () => {
+      const modes: TargetMode[] = ['none', 'attack', 'spell', 'item']
+      for (const mode of modes) {
+        useCombatStore.getState().setTargetMode(mode)
+        expect(useCombatStore.getState().targetMode).toBe(mode)
+      }
+    })
+  })
+
+  describe('setValidTargets', () => {
+    it('should set valid target ids', () => {
+      useCombatStore.getState().setValidTargets(['goblin-1', 'goblin-2'])
+      expect(useCombatStore.getState().validTargetIds).toEqual(['goblin-1', 'goblin-2'])
+    })
+  })
+
+  describe('setSelectedTarget', () => {
+    it('should set selected target id', () => {
+      useCombatStore.getState().setSelectedTarget('goblin-1')
+      expect(useCombatStore.getState().selectedTargetId).toBe('goblin-1')
+    })
+  })
+
+  describe('setMoveRange', () => {
+    it('should set move range cells', () => {
+      const cells = [{ x: 1, y: 0 }, { x: 2, y: 0 }]
+      useCombatStore.getState().setMoveRange(cells)
+      expect(useCombatStore.getState().moveRange).toEqual(cells)
+    })
+  })
+
+  describe('addLogEntry', () => {
+    it('should add a log entry with text and type', () => {
+      useCombatStore.getState().addLogEntry('Combat has started!', 'system')
+      const entries = useCombatStore.getState().logEntries
+
+      expect(entries).toHaveLength(1)
+      expect(entries[0].text).toBe('Combat has started!')
+      expect(entries[0].type).toBe('system')
+      expect(entries[0].id).toBeDefined()
+      expect(entries[0].timestamp).toBeTypeOf('number')
+    })
+
+    it('should append entries preserving order', () => {
+      useCombatStore.getState().addLogEntry('First', 'info')
+      useCombatStore.getState().addLogEntry('Second', 'damage')
+
+      const entries = useCombatStore.getState().logEntries
+      expect(entries).toHaveLength(2)
+      expect(entries[0].text).toBe('First')
+      expect(entries[1].text).toBe('Second')
+    })
+
+    it('should support all log entry types', () => {
+      const types = ['info', 'damage', 'heal', 'status', 'turn', 'system'] as const
+      for (const type of types) {
+        useCombatStore.getState().addLogEntry(`Entry ${type}`, type)
+      }
+      const entries = useCombatStore.getState().logEntries
+      expect(entries).toHaveLength(types.length)
+      types.forEach((type, i) => {
+        expect(entries[i].type).toBe(type)
+      })
+    })
+  })
+
+  describe('getCombatant', () => {
+    it('should return undefined when no combat state', () => {
+      expect(useCombatStore.getState().getCombatant('fighter-1')).toBeUndefined()
+    })
+
+    it('should find combatant by id', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      const found = useCombatStore.getState().getCombatant('fighter-1')
+      expect(found).toBeDefined()
+      expect(found?.name).toBe('Hero')
+    })
+
+    it('should return undefined for non-existent id', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      expect(useCombatStore.getState().getCombatant('nonexistent')).toBeUndefined()
+    })
+  })
+
+  describe('updateCombatant', () => {
+    it('should update specific fields on a combatant', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().updateCombatant('fighter-1', { currentHp: 20 })
+
+      const updated = useCombatStore.getState().getCombatant('fighter-1')
+      expect(updated?.currentHp).toBe(20)
+    })
+
+    it('should not modify other combatants', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().updateCombatant('fighter-1', { currentHp: 20 })
+
+      const goblin = useCombatStore.getState().getCombatant('goblin-1')
+      expect(goblin?.currentHp).toBe(30)
+    })
+
+    it('should do nothing when combat is null', () => {
+      useCombatStore.getState().updateCombatant('fighter-1', { currentHp: 20 })
+      expect(useCombatStore.getState().combat).toBeNull()
+    })
+
+    it('should not add a new combatant for unknown id', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().updateCombatant('unknown', { currentHp: 10 })
+
+      // map() creates a new entry for unknown id (it maps all elements, matching none)
+      // So the unknown id is NOT found by map and the array remains unchanged
+      const participants = useCombatStore.getState().combat?.participants
+      expect(participants).toHaveLength(2)
+      expect(useCombatStore.getState().getCombatant('unknown')).toBeUndefined()
+    })
+
+    it('should update multiple fields at once', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().updateCombatant('fighter-1', {
+        currentHp: 10,
+        conditions: [{ condition: 'poisoned', duration: 0, remaining: 0 }],
+        action: 'used',
+      })
+
+      const updated = useCombatStore.getState().getCombatant('fighter-1')
+      expect(updated?.currentHp).toBe(10)
+      expect(updated?.conditions).toEqual([{ condition: 'poisoned', duration: 0, remaining: 0 }])
+      expect(updated?.action).toBe('used')
+    })
+  })
+
+  describe('requestMove', () => {
+    it('should emit COMBAT_MOVE_CONFIRM event with current unit and position', () => {
+      const handler = vi.fn()
+      eventBus.on(GameEvents.COMBAT_MOVE_CONFIRM, handler)
+
+      useCombatStore.getState().setCurrentUnit('fighter-1')
+      useCombatStore.getState().requestMove({ x: 3, y: 2 })
+
+      expect(handler).toHaveBeenCalledOnce()
+      expect(handler).toHaveBeenCalledWith({
+        unitId: 'fighter-1',
+        position: { x: 3, y: 2 },
+      })
+    })
+
+    it('should not emit event when no current unit', () => {
+      const handler = vi.fn()
+      eventBus.on(GameEvents.COMBAT_MOVE_CONFIRM, handler)
+
+      useCombatStore.getState().requestMove({ x: 3, y: 2 })
+
+      expect(handler).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('requestAttack', () => {
+    it('should emit COMBAT_TARGET_SELECT event with source and target ids', () => {
+      const handler = vi.fn()
+      eventBus.on(GameEvents.COMBAT_TARGET_SELECT, handler)
+
+      useCombatStore.getState().setCurrentUnit('fighter-1')
+      useCombatStore.getState().requestAttack('goblin-1')
+
+      expect(handler).toHaveBeenCalledOnce()
+      expect(handler).toHaveBeenCalledWith({
+        sourceId: 'fighter-1',
+        targetId: 'goblin-1',
+      })
+    })
+
+    it('should not emit event when no current unit', () => {
+      const handler = vi.fn()
+      eventBus.on(GameEvents.COMBAT_TARGET_SELECT, handler)
+
+      useCombatStore.getState().requestAttack('goblin-1')
+
+      expect(handler).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('requestAction', () => {
+    it('should emit COMBAT_UNIT_SELECT event with action and data', () => {
+      const handler = vi.fn()
+      eventBus.on(GameEvents.COMBAT_UNIT_SELECT, handler)
+
+      useCombatStore.getState().requestAction('dodge')
+      expect(handler).toHaveBeenCalledWith({ action: 'dodge' })
+    })
+
+    it('should spread additional data into the event payload', () => {
+      const handler = vi.fn()
+      eventBus.on(GameEvents.COMBAT_UNIT_SELECT, handler)
+
+      useCombatStore.getState().requestAction('spell', { spellId: 'fireball', level: 3 })
+
+      expect(handler).toHaveBeenCalledWith({
+        action: 'spell',
+        spellId: 'fireball',
+        level: 3,
+      })
+    })
+  })
+
+  describe('reset', () => {
+    it('should reset all state to initial values', () => {
+      const combat = createMockCombatState()
+      const store = useCombatStore.getState()
+
+      store.setCombat(combat)
+      store.setCurrentUnit('fighter-1')
+      store.setTargetMode('attack')
+      store.setValidTargets(['goblin-1'])
+      store.setSelectedTarget('goblin-1')
+      store.setMoveRange([{ x: 1, y: 0 }])
+      store.addLogEntry('Test', 'info')
+
+      store.reset()
+
+      const state = useCombatStore.getState()
+      expect(state.combat).toBeNull()
+      expect(state.isCombatActive).toBe(false)
+      expect(state.currentUnitId).toBeNull()
+      expect(state.targetMode).toBe('none')
+      expect(state.validTargetIds).toEqual([])
+      expect(state.selectedTargetId).toBeNull()
+      expect(state.moveRange).toEqual([])
+      expect(state.logEntries).toEqual([])
+    })
+  })
+})
