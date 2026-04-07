@@ -308,7 +308,7 @@ func TestCreateCharacter_InvalidRace(t *testing.T) {
 
 	body := CreateCharacterRequest{
 		Name:       "Test",
-		Race:       "dragonborn",
+		Race:       "thri-kreen", // Not supported
 		Class:      "fighter",
 		Background: "soldier",
 		AbilityScores: map[string]int{

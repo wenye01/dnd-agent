@@ -33,12 +33,14 @@ type Character struct {
 	SavingThrows      map[types.Ability]bool `json:"savingThrows"`     // Saving throw proficiencies
 	Speed             int                    `json:"speed"`            // Movement speed in feet
 	Gold              int                    `json:"gold"`             // Gold pieces
-	RacialTraits      []RaceTrait            `json:"racialTraits"`     // Racial abilities and traits
-	HitDice           HitDiceInfo            `json:"hitDice"`          // Hit dice for short rest healing
-	DeathSaves        DeathSaves             `json:"deathSaves"`       // Death save counters
-	DamageResistances []types.DamageType     `json:"damageResistances,omitempty"`
-	DamageImmunities  []types.DamageType     `json:"damageImmunities,omitempty"`
-	IsDead            bool                   `json:"isDead,omitempty"` // Character has permanently died
+	RacialTraits         []RaceTrait            `json:"racialTraits"`         // Racial abilities and traits
+	HitDice             HitDiceInfo            `json:"hitDice"`              // Hit dice for short rest healing
+	DeathSaves          DeathSaves             `json:"deathSaves"`           // Death save counters
+	DamageResistances   []types.DamageType     `json:"damageResistances,omitempty"`
+	DamageImmunities    []types.DamageType     `json:"damageImmunities,omitempty"`
+	IsDead              bool                   `json:"isDead,omitempty"`     // Character has permanently died
+	ArmorProficiencies  []string               `json:"armorProficiencies"`   // Armor proficiencies from class
+	WeaponProficiencies []string               `json:"weaponProficiencies"`  // Weapon proficiencies from class
 }
 
 // AbilityScores represents the six ability scores.
