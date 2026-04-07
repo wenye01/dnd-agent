@@ -3,6 +3,7 @@ package combat
 import (
 	"fmt"
 
+	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/dnd-game/server/internal/shared/types"
 )
@@ -25,18 +26,23 @@ func (cm *CombatManager) findCombatantInPartyOrCombat(gs *state.GameState, comba
 			ds := ch.DeathSaves
 			hd := ch.HitDice
 			return &state.Combatant{
-				ID:            ch.ID,
-				Name:          ch.Name,
-				MaxHP:         ch.MaxHP,
-				CurrentHP:     ch.HP,
-				TemporaryHP:   ch.TemporaryHP,
-				AC:            ch.AC,
-				Speed:         ch.Speed,
-				HitDice:       hd,
-				Level:         ch.Level,
-				CONMod:        ch.Stats.GetModifier(types.Constitution),
-				Type:          state.CombatantPlayer,
-				DeathSaves:    &ds,
+				ID:          ch.ID,
+				Name:        ch.Name,
+				MaxHP:       ch.MaxHP,
+				CurrentHP:   ch.HP,
+				TemporaryHP: ch.TemporaryHP,
+				AC:          ch.AC,
+				Speed:       ch.Speed,
+				HitDice:     hd,
+				Level:       ch.Level,
+				CONMod:      ch.Stats.GetModifier(types.Constitution),
+				Type:        state.CombatantPlayer,
+				// Allocate a new DeathSaves struct to avoid returning a
+				// pointer to the loop-iteration-local copy of ch.DeathSaves.
+				DeathSaves: &models.DeathSaves{
+					Successes: ds.Successes,
+					Failures:  ds.Failures,
+				},
 			}
 		}
 	}
@@ -312,6 +318,8 @@ func (cm *CombatManager) DeathSave(sessionID, combatantID string) (map[string]in
 		for _, ch := range gs.Party {
 			if ch.ID == combatantID {
 				ch.HP = combatant.CurrentHP
+				// ch.DeathSaves is a value type (models.DeathSaves),
+				// so dereference the pointer to copy the value.
 				ch.DeathSaves = *combatant.DeathSaves
 				break
 			}
@@ -320,6 +328,8 @@ func (cm *CombatManager) DeathSave(sessionID, combatantID string) (map[string]in
 			if c := cm.getCombatantByID(gs.Combat, combatantID); c != nil {
 				c.CurrentHP = combatant.CurrentHP
 				if c.DeathSaves != nil {
+					// c.DeathSaves is a pointer (*models.DeathSaves),
+					// so assign the pointer directly.
 					c.DeathSaves = combatant.DeathSaves
 				}
 			}
