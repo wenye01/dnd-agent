@@ -67,6 +67,11 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 	// Apply condition modifiers to advantage/disadvantage
 	advantage, disadvantage = applyConditionAttackModifiers(attacker, target, advantage, disadvantage)
 
+	// Check for Help action effect (advantage against target)
+	if hasActiveEffect(gs.Combat, "advantage_against", targetID) {
+		advantage = true
+	}
+
 	// Roll attack (uses AttackRoll for proper nat1/nat20 rules)
 	attackRoll := cm.diceService.AttackRoll(attackBonus, target.AC, advantage, disadvantage)
 
@@ -291,9 +296,9 @@ func (cm *CombatManager) ReadyAction(sessionID, combatantID, trigger string) (ma
 			Source:    "ready_action",
 			Duration:  1,
 			Remaining: 1,
+			Trigger:   trigger,
 		})
 		// Ready action uses reaction when triggered
-		// For now, we just mark the ready state
 	})
 }
 
@@ -507,4 +512,21 @@ func boolToString(b bool, ifTrue, ifFalse string) string {
 		return ifTrue
 	}
 	return ifFalse
+}
+
+// hasActiveEffect checks if there's an active effect with a specific condition on a target.
+func hasActiveEffect(cs *state.CombatState, effectCondition, targetID string) bool {
+	if cs == nil {
+		return false
+	}
+	for _, effect := range cs.ActiveEffects {
+		if effect.TargetID == targetID {
+			for _, c := range effect.Conditions {
+				if c == effectCondition {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

@@ -4,8 +4,6 @@ package tools
 import (
 	"fmt"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/dnd-game/server/internal/server/combat"
 	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/state"
@@ -38,20 +36,33 @@ func RegisterCombatTools(registry *Registry, combatMgr *combat.CombatManager) {
 	registerOpportunityAttack(registry, combatMgr)
 }
 
+// validCombatantTypes are the allowed combatant types.
+var validCombatantTypes = map[string]bool{
+	"player": true,
+	"npc":    true,
+	"enemy":  true,
+}
+
 // parseCombatants converts raw interface{} combatants data into state.Combatant structs.
-func parseCombatants(raw []interface{}) []*state.Combatant {
+func parseCombatants(raw []interface{}) ([]*state.Combatant, error) {
 	combatants := make([]*state.Combatant, 0, len(raw))
 
-	for _, item := range raw {
+	for i, item := range raw {
 		m, ok := item.(map[string]interface{})
 		if !ok {
-			log.Warn().Interface("item", item).Msg("skipping invalid combatant entry")
-			continue
+			return nil, fmt.Errorf("invalid combatant entry at index %d: expected object", i)
 		}
+
+		// Validate combatant type
+		combatantType := getStrVal(m, "type")
+		if !validCombatantTypes[combatantType] {
+			return nil, fmt.Errorf("invalid combatant type '%s' at index %d: must be 'player', 'npc', or 'enemy'", combatantType, i)
+		}
+
 		c := &state.Combatant{
 			ID:          getStrVal(m, "id"),
 			Name:        getStrVal(m, "name"),
-			Type:        state.CombatantType(getStrVal(m, "type")),
+			Type:        state.CombatantType(combatantType),
 			MaxHP:       getIntVal(m, "maxHp", 10),
 			CurrentHP:   getIntVal(m, "currentHp", 10),
 			TemporaryHP: getIntVal(m, "temporaryHp", 0),
@@ -101,7 +112,7 @@ func parseCombatants(raw []interface{}) []*state.Combatant {
 
 		combatants = append(combatants, c)
 	}
-	return combatants
+	return combatants, nil
 }
 
 // getStrVal extracts a string value from a map.
@@ -177,7 +188,10 @@ func registerStartCombat(registry *Registry, combatMgr *combat.CombatManager) {
 				return nil, fmt.Errorf("combatants must be an array")
 			}
 
-			combatants := parseCombatants(combatantsRaw)
+			combatants, err := parseCombatants(combatantsRaw)
+			if err != nil {
+				return nil, err
+			}
 			return combatMgr.StartCombat(sessionID, combatants)
 		},
 	})

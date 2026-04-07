@@ -121,6 +121,7 @@ type ConditionEntry struct {
 	Duration  int    `json:"duration"`         // Total duration in rounds (0 = indefinite)
 	Remaining int    `json:"remaining"`        // Remaining rounds
 	Level     int    `json:"level,omitempty"`  // For exhaustion (1-6)
+	Trigger   string `json:"trigger,omitempty"` // For ready action: the trigger condition
 }
 
 // InitiativeEntry represents a creature's position in the initiative order.
