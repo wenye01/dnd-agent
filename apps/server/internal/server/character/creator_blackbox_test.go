@@ -54,8 +54,8 @@ func TestBlackbox_ElfWizard_PRD(t *testing.T) {
 }
 
 func TestBlackbox_AllRaceClassCombinations(t *testing.T) {
-	races := []string{"human", "elf", "dwarf"}
-	classes := []string{"fighter", "wizard", "rogue"}
+	races := []string{"human", "elf", "dwarf", "halfling", "dragonborn", "gnome", "half-elf", "half-orc", "tiefling"}
+	classes := []string{"fighter", "wizard", "rogue", "cleric", "bard", "druid", "monk", "paladin", "ranger", "sorcerer", "warlock"}
 
 	for _, race := range races {
 		for _, class := range classes {
@@ -131,7 +131,7 @@ func TestBlackbox_Serialization(t *testing.T) {
 func TestBlackbox_ErrorHandling(t *testing.T) {
 	_, err := CreateBasic(CreateParams{
 		Name:          "Test",
-		Race:          "dragonborn",
+		Race:          "invalid_race",
 		Class:         "fighter",
 		Background:    "soldier",
 		AbilityScores: map[string]int{"str": 10, "dex": 10, "con": 10, "int": 10, "wis": 10, "cha": 10},
@@ -143,7 +143,7 @@ func TestBlackbox_ErrorHandling(t *testing.T) {
 	_, err = CreateBasic(CreateParams{
 		Name:          "Test",
 		Race:          "human",
-		Class:         "paladin",
+		Class:         "invalid_class",
 		Background:    "soldier",
 		AbilityScores: map[string]int{"str": 10, "dex": 10, "con": 10, "int": 10, "wis": 10, "cha": 10},
 	})
@@ -155,7 +155,7 @@ func TestBlackbox_ErrorHandling(t *testing.T) {
 		Name:          "Test",
 		Race:          "human",
 		Class:         "fighter",
-		Background:    "noble",
+		Background:    "invalid_background",
 		AbilityScores: map[string]int{"str": 10, "dex": 10, "con": 10, "int": 10, "wis": 10, "cha": 10},
 	})
 	if err == nil {
