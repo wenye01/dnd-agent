@@ -1,7 +1,8 @@
 /**
  * Reusable animation preset configurations for Phaser tweens.
  *
- * TODO: These presets are currently defined but not yet adopted by
+ * TODO: Planned for v0.4 animation refactor pass.
+ * These presets are currently defined but not yet adopted by
  * AttackEffect, DamageNumber, Character, Enemy etc. (which inline their tweens).
  * A follow-up pass should migrate those call sites to use these shared configs
  * to eliminate duplication and centralize animation timing constants.

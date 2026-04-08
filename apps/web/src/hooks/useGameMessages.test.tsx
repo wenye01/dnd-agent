@@ -185,7 +185,7 @@ describe('useGameMessages', () => {
         type: 'state_update',
         payload: {
           stateType: 'combat',
-          data: { status: 'active', round: 1, turnIndex: 0, initiatives: [20, 15], participants: ['char-1', 'char-2'] },
+          data: { status: 'active', round: 1, turnIndex: 0, initiatives: [20, 15], participants: ['char-1', 'char-2'], activeEffects: [] },
         },
         timestamp: Date.now(),
       })

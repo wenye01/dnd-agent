@@ -35,7 +35,16 @@ export function GameContainer({ className }: GameContainerProps) {
       }
     }
 
+    initializedRef.current = true
+
     return () => {
+      // Stop all running scenes before destroying (StrictMode safe)
+      if (initializedRef.current && gameManager.getGame()) {
+        const activeScene = gameManager.getScene()
+        if (activeScene) {
+          activeScene.scene.stop()
+        }
+      }
       gameManager.destroy()
     }
   }, [])

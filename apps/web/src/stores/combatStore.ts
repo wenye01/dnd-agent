@@ -87,8 +87,8 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   setMoveRange: (cells) => set({ moveRange: cells }),
 
   addLogEntry: (text, type) =>
-    set((state) => ({
-      logEntries: [
+    set((state) => {
+      const entries = [
         ...state.logEntries,
         {
           id: `log-${++_logIdCounter}`,
@@ -96,8 +96,10 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
           timestamp: Date.now(),
           type,
         },
-      ],
-    })),
+      ]
+      // Keep at most 100 entries to prevent unbounded growth
+      return { logEntries: entries.length > 100 ? entries.slice(-100) : entries }
+    }),
 
   getCombatant: (id) => {
     return get().combat?.participants.find((p) => p.id === id)

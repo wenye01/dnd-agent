@@ -11,7 +11,6 @@ export class Enemy extends BaseEntity {
   private bodyGraphic: Phaser.GameObjects.Graphics
   private crLabel: Phaser.GameObjects.Text
   private initialLetter: Phaser.GameObjects.Text
-  private hurtTween: Phaser.Tweens.Tween | null = null
 
   constructor(
     scene: Phaser.Scene,
@@ -55,21 +54,10 @@ export class Enemy extends BaseEntity {
 
   /** Play hurt flash. */
   playHurt(): void {
-    if (this.hurtTween) this.hurtTween.stop()
-    this.bodyGraphic.clear()
-    this.drawBody(0xff2222)
-
-    this.hurtTween = this.scene.tweens.add({
-      targets: this,
-      alpha: 0.5,
-      duration: 80,
-      yoyo: true,
-      repeat: 2,
-      onComplete: () => {
-        this.bodyGraphic.clear()
-        this.drawBody(COLORS.ENEMY)
-        this.setAlpha(1)
-      },
+    super.playHurt(() => {
+      this.bodyGraphic.clear()
+      this.drawBody(COLORS.ENEMY)
+      this.setAlpha(1)
     })
   }
 

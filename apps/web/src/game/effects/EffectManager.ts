@@ -18,6 +18,14 @@ interface EntityLookup {
   getEntity(id: string): BaseEntity | undefined
 }
 
+/** Extract the magic school from an opaque event data payload. */
+function extractSchool(data: unknown): string | undefined {
+  if (data && typeof data === 'object' && 'school' in (data as Record<string, unknown>)) {
+    return (data as Record<string, unknown>).school as string
+  }
+  return undefined
+}
+
 export class EffectManager {
   private scene: Phaser.Scene
   private entityLookup: EntityLookup
@@ -137,9 +145,7 @@ export class EffectManager {
       this.scene,
       source.x,
       source.y,
-      event.data && typeof event.data === 'object' && 'school' in (event.data as Record<string, unknown>)
-        ? (event.data as Record<string, unknown>).school as string
-        : undefined,
+      extractSchool(event.data),
       target?.x,
       target?.y,
     )

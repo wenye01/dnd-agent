@@ -14,6 +14,7 @@ export abstract class BaseEntity extends Phaser.GameObjects.Container {
   public gridPosition: GridPosition
   public direction: Direction = 'down'
   public isSelected = false
+  protected hurtTween: Phaser.Tweens.Tween | null = null
 
   constructor(
     scene: Phaser.Scene,
@@ -77,6 +78,24 @@ export abstract class BaseEntity extends Phaser.GameObjects.Container {
   /** Get current grid position from pixel position. */
   getGridPos(): GridPosition {
     return worldToGrid(this.x, this.y)
+  }
+
+  /** Play hurt flash animation. The redrawFn callback redraws the entity in its hurt color. */
+  playHurt(redrawFn: () => void): void {
+    if (this.hurtTween) this.hurtTween.stop()
+    redrawFn()
+
+    this.hurtTween = this.scene.tweens.add({
+      targets: this,
+      alpha: 0.5,
+      duration: 80,
+      yoyo: true,
+      repeat: 2,
+      onComplete: () => {
+        redrawFn()
+        this.setAlpha(1)
+      },
+    })
   }
 
   /** Death animation: shrink and fade, then destroy. */

@@ -51,6 +51,7 @@ function isCombatData(data: unknown): data is CombatState {
     typeof obj.round === 'number' &&
     typeof obj.turnIndex === 'number' &&
     Array.isArray(obj.initiatives) &&
+    Array.isArray(obj.activeEffects) &&
     ('status' in obj && typeof obj.status === 'string')
   )
 }

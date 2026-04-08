@@ -38,7 +38,8 @@ export class GridLayer {
     this.graphics.strokePath()
   }
 
-  private drawObstacles(walls: boolean[][]): void {
+  /** @internal TODO: wire up when backend sends wall data */
+  drawObstacles(walls: boolean[][]): void {
     this.obstacleGraphics.fillStyle(COLORS.OBSTACLE_FILL, COLORS.OBSTACLE_ALPHA)
 
     for (let y = 0; y < walls.length; y++) {

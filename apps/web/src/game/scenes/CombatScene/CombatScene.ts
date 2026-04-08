@@ -13,7 +13,7 @@ import { GameUIManager } from '../../ui/GameUIManager'
 import { Character } from '../../entities/Character'
 import { Enemy } from '../../entities/Enemy'
 import { BaseEntity } from '../../entities/BaseEntity'
-import { TILE_SIZE, FEET_PER_TILE, GRID_WIDTH, GRID_HEIGHT, DEFAULT_RANGED_RANGE, DEFAULT_SPELL_RANGE } from '../../constants'
+import { TILE_SIZE, FEET_PER_TILE, GRID_WIDTH, GRID_HEIGHT, DEFAULT_MELEE_RANGE, DEFAULT_SPELL_RANGE } from '../../constants'
 import { worldToGrid, type GridPosition } from '../../utils/CoordinateUtils'
 import { getMoveRange } from '../../utils/PathFinding'
 import { isValidCell, buildObstacleGrid } from '../../utils/GridUtils'
@@ -361,14 +361,22 @@ export class CombatScene extends BaseScene {
     const sourceEntity = this.entities.get(currentUnitId)
     if (!sourceEntity) return
 
-    // Default attack range: TODO read from combatant weapon/spell data
-    const range = mode === 'attack' ? DEFAULT_RANGED_RANGE : DEFAULT_SPELL_RANGE
+    // Determine range value: melee attacks use DEFAULT_MELEE_RANGE by default,
+    // ranged attacks use DEFAULT_RANGED_RANGE. TODO: read from weapon data.
+    const range = mode === 'attack' ? DEFAULT_MELEE_RANGE : DEFAULT_SPELL_RANGE
 
-    // Get range cells (Manhattan distance)
+    // Get range cells.
+    // Melee (range <= 2 tiles): use Chebyshev distance for square coverage (8 adjacent cells).
+    // Ranged/spell: use Manhattan distance for diamond coverage.
+    const isMelee = range <= 2
     const rangeCells: GridPosition[] = []
     for (let dy = -range; dy <= range; dy++) {
       for (let dx = -range; dx <= range; dx++) {
-        if (Math.abs(dx) + Math.abs(dy) <= range) {
+        if (dx === 0 && dy === 0) continue // exclude self
+        const inRange = isMelee
+          ? Math.max(Math.abs(dx), Math.abs(dy)) <= range
+          : Math.abs(dx) + Math.abs(dy) <= range
+        if (inRange) {
           const cell = { x: sourceEntity.gridPosition.x + dx, y: sourceEntity.gridPosition.y + dy }
           if (isValidCell(cell)) {
             rangeCells.push(cell)

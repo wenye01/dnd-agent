@@ -11,7 +11,6 @@ export class Character extends BaseEntity {
   public combatant: Combatant
   private bodyGraphic: Phaser.GameObjects.Graphics
   private initialLetter: Phaser.GameObjects.Text
-  private hurtTween: Phaser.Tweens.Tween | null = null
 
   constructor(
     scene: Phaser.Scene,
@@ -49,23 +48,7 @@ export class Character extends BaseEntity {
 
   /** Play hurt flash animation. */
   playHurt(): void {
-    if (this.hurtTween) this.hurtTween.stop()
-    this.bodyGraphic.clear()
-    this.bodyGraphic.fillStyle(0xff8888, 1)
-    this.bodyGraphic.fillCircle(0, 0, TILE_SIZE / 2 - 6)
-    this.bodyGraphic.lineStyle(2, 0xff4444, 0.6)
-    this.bodyGraphic.strokeCircle(0, 0, TILE_SIZE / 2 - 6)
-
-    this.hurtTween = this.scene.tweens.add({
-      targets: this,
-      alpha: 0.5,
-      duration: 80,
-      yoyo: true,
-      repeat: 2,
-      onComplete: () => {
-        this.redrawNormal()
-      },
-    })
+    super.playHurt(() => this.redrawNormal())
   }
 
   /** Play attack lunge toward a target position. */
