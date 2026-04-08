@@ -85,14 +85,23 @@ describe('PathFinding', () => {
       expect(path[path.length - 1]).toEqual({ x: 3, y: 3 })
     })
 
-    it('should find path that allows end cell even if it is an obstacle', () => {
+    it('should find path that allows end cell even if it is an obstacle (when opt-in)', () => {
       const obstacles = createEmptyObstacles()
-      // End cell is obstacle (but should be allowed for targeting)
-      obstacles[3][0] = true
+      // End cell (x=3, y=0) is an obstacle — only reachable when allowEndObstacle is set
+      obstacles[0][3] = true
 
-      const path = findPath({ x: 0, y: 0 }, { x: 3, y: 0 }, obstacles)
+      const path = findPath({ x: 0, y: 0 }, { x: 3, y: 0 }, obstacles, { allowEndObstacle: true })
       expect(path.length).toBeGreaterThan(0)
       expect(path[path.length - 1]).toEqual({ x: 3, y: 0 })
+    })
+
+    it('should return empty path when end cell is an obstacle (default behavior)', () => {
+      const obstacles = createEmptyObstacles()
+      // End cell (x=3, y=0) is an obstacle; default behavior blocks this
+      obstacles[0][3] = true
+
+      const path = findPath({ x: 0, y: 0 }, { x: 3, y: 0 }, obstacles)
+      expect(path).toEqual([])
     })
   })
 
@@ -170,12 +179,10 @@ describe('PathFinding', () => {
     it('should compute correct count for range 2 on empty grid', () => {
       const obstacles = createEmptyObstacles()
       const range = getMoveRange({ x: 5, y: 4 }, 2, obstacles)
-      // Range 2 on 4-dir: 4 + 4 + 4 = 12 cells (diamond shape minus center)
-      // Actually: dist=1: 4 cells, dist=2: 4 cells = 8 total
-      // Wait, let me recalculate. From (5,4), Manhattan distance <= 2:
-      // dist=1: (4,4), (6,4), (5,3), (5,5) = 4 cells
-      // dist=2: (3,4), (7,4), (5,2), (5,6), (4,3), (6,3), (4,5), (6,5) = 8 cells
-      // total = 12
+      // Manhattan distance <= 2 from (5,4):
+      //   dist=1: 4 cardinal neighbors
+      //   dist=2: 8 diagonal-adjacent cells
+      //   total = 12 (excludes start cell)
       expect(range).toHaveLength(12)
     })
 

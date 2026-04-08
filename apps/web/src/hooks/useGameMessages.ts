@@ -231,11 +231,9 @@ export function useGameMessages() {
         eventText = `${payload.target ?? characterId ?? 'Unknown'} takes ${amount} damage`
         if (payload.damageType) eventText += ` (${payload.damageType})`
         logType = 'damage'
-        // Update combatant HP
+        // Update combatant HP using functional update to avoid race conditions
         if (payload.target) {
-          combatStore.updateCombatant(payload.target, {
-            currentHp: (combatStore.getCombatant(payload.target)?.currentHp ?? 0) - amount,
-          })
+          combatStore.applyDamage(payload.target, amount)
         }
         eventBus.emit(GameEvents.EFFECT_DAMAGE, payload)
         break
@@ -245,12 +243,7 @@ export function useGameMessages() {
         eventText = `${characterId ?? 'Unknown'} heals ${healAmount} HP`
         logType = 'heal'
         if (characterId) {
-          combatStore.updateCombatant(characterId, {
-            currentHp: Math.min(
-              (combatStore.getCombatant(characterId)?.currentHp ?? 0) + healAmount,
-              combatStore.getCombatant(characterId)?.maxHp ?? 999,
-            ),
-          })
+          combatStore.applyHeal(characterId, healAmount)
         }
         eventBus.emit(GameEvents.EFFECT_HEAL, payload)
         break

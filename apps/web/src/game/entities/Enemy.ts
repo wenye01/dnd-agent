@@ -95,6 +95,7 @@ export class Enemy extends BaseEntity {
 
   private drawBody(color: number): void {
     const r = TILE_SIZE / 2 - 6
+    this.bodyGraphic.clear()
     this.bodyGraphic.fillStyle(color, 1)
     // Draw diamond shape
     this.bodyGraphic.fillTriangle(0, -r, r, 0, 0, r)
@@ -102,6 +103,6 @@ export class Enemy extends BaseEntity {
     this.bodyGraphic.lineStyle(2, 0xffffff, 0.3)
     this.bodyGraphic.strokeTriangle(0, -r, r, 0, 0, r)
     this.bodyGraphic.strokeTriangle(0, -r, -r, 0, 0, r)
-    this.add(this.bodyGraphic)
+    // Note: bodyGraphic is already added to container in constructor; no need to re-add
   }
 }

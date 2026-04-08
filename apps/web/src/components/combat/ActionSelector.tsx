@@ -62,8 +62,21 @@ export function ActionSelector() {
       </div>
       <div className="grid grid-cols-3 gap-1 px-1">
         {ACTIONS.map((action) => {
-          const isUsed =
-            (action.key === 'attack' && currentCombatant.action === 'used')
+          const isUsed = (() => {
+            switch (action.key) {
+              case 'attack':
+              case 'item':
+              case 'dodge':
+              case 'disengage':
+                return currentCombatant.action === 'used'
+              case 'spell':
+                return currentCombatant.bonusAction === 'used'
+              case 'move':
+                return false // Move doesn't consume action resources; controlled by backend speed
+              default:
+                return false
+            }
+          })()
 
           return (
             <button

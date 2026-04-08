@@ -13,12 +13,10 @@ interface GameContainerProps {
 
 export function GameContainer({ className }: GameContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const initializedRef = useRef(false)
   const phase = useGameStore((s) => s.gameState?.phase)
 
   useEffect(() => {
-    if (!containerRef.current || initializedRef.current) return
-    initializedRef.current = true
+    if (!containerRef.current) return
 
     // Ensure container has an id for Phaser parent
     const container = containerRef.current
@@ -26,21 +24,19 @@ export function GameContainer({ className }: GameContainerProps) {
       container.id = 'game-container'
     }
 
-    // Register combat scene before init
-    gameManager.getGame() // Will be null before init
-
-    // We use a workaround: init creates the game, then we register scenes
+    // Initialize or re-initialize Phaser game (handles HMR / remount gracefully)
     gameManager.init(container.id)
 
     // Register the combat scene
     const game = gameManager.getGame()
     if (game) {
-      game.scene.add('combat', CombatScene, false)
+      if (!game.scene.getScene('combat')) {
+        game.scene.add('combat', CombatScene, false)
+      }
     }
 
     return () => {
       gameManager.destroy()
-      initializedRef.current = false
     }
   }, [])
 

@@ -8,14 +8,13 @@ export class GridLayer {
   private graphics: Phaser.GameObjects.Graphics
   private obstacleGraphics: Phaser.GameObjects.Graphics
 
-  constructor(scene: Phaser.Scene, walls?: boolean[][]) {
+  constructor(scene: Phaser.Scene) {
     this.graphics = scene.add.graphics()
     this.graphics.setDepth(0)
     this.obstacleGraphics = scene.add.graphics()
     this.obstacleGraphics.setDepth(0)
 
     this.drawGrid()
-    if (walls) this.drawObstacles(walls)
   }
 
   private drawGrid(): void {

@@ -23,14 +23,17 @@ function heuristic(a: GridPosition, b: GridPosition): number {
 /**
  * Find the shortest path from start to end, avoiding obstacles.
  * Returns an array of grid positions (including start and end), or empty if no path.
+ * @param allowEndObstacle If true, the end cell may be an obstacle (useful for attack targeting).
+ *   Default false — pure movement should never target an obstacle cell.
  */
 export function findPath(
   start: GridPosition,
   end: GridPosition,
   obstacles: boolean[][],
+  { allowEndObstacle = false }: { allowEndObstacle?: boolean } = {},
 ): GridPosition[] {
   if (!isValidCell(start) || !isValidCell(end)) return []
-  if (obstacles[end.y]?.[end.x]) return []
+  if (!allowEndObstacle && obstacles[end.y]?.[end.x]) return []
 
   const openSet: AStarNode[] = []
   const closedSet = new Set<string>()
@@ -70,8 +73,8 @@ export function findPath(
     for (const neighbor of getNeighbors({ x: current.x, y: current.y })) {
       if (!isValidCell(neighbor)) continue
       if (closedSet.has(`${neighbor.x},${neighbor.y}`)) continue
-      // Allow the end cell even if it is an obstacle (it may be occupied by the target)
-      if (obstacles[neighbor.y]?.[neighbor.x] && !(neighbor.x === end.x && neighbor.y === end.y)) continue
+      // Allow the end cell only when explicitly requested (e.g., attack targeting)
+      if (obstacles[neighbor.y]?.[neighbor.x] && !(allowEndObstacle && neighbor.x === end.x && neighbor.y === end.y)) continue
 
       const g = current.g + 1
       const h = heuristic(neighbor, end)

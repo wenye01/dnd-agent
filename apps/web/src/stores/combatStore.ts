@@ -45,6 +45,8 @@ interface CombatStore {
   // Combatant helpers
   getCombatant: (id: string) => Combatant | undefined
   updateCombatant: (id: string, updates: Partial<Combatant>) => void
+  applyDamage: (targetId: string, amount: number) => void
+  applyHeal: (targetId: string, amount: number) => void
 
   // WebSocket request dispatchers
   requestMove: (position: { x: number; y: number }) => void
@@ -54,6 +56,9 @@ interface CombatStore {
   // Reset
   reset: () => void
 }
+
+// Module-level counter for unique log entry IDs (avoids Date.now() collisions)
+let _logIdCounter = 0
 
 export const useCombatStore = create<CombatStore>((set, get) => ({
   combat: null,
@@ -86,7 +91,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       logEntries: [
         ...state.logEntries,
         {
-          id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          id: `log-${++_logIdCounter}`,
           text,
           timestamp: Date.now(),
           type,
@@ -103,6 +108,30 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       if (!state.combat) return state
       const participants = state.combat.participants.map((p) =>
         p.id === id ? { ...p, ...updates } : p,
+      )
+      return { combat: { ...state.combat, participants } }
+    }),
+
+  /** Safely apply damage using functional update to avoid race conditions. */
+  applyDamage: (targetId, amount) =>
+    set((state) => {
+      if (!state.combat) return state
+      const participants = state.combat.participants.map((p) =>
+        p.id === targetId
+          ? { ...p, currentHp: Math.max(0, p.currentHp - amount) }
+          : p,
+      )
+      return { combat: { ...state.combat, participants } }
+    }),
+
+  /** Safely apply healing using functional update; caps at maxHp. */
+  applyHeal: (targetId, amount) =>
+    set((state) => {
+      if (!state.combat) return state
+      const participants = state.combat.participants.map((p) =>
+        p.id === targetId
+          ? { ...p, currentHp: Math.min(p.maxHp, p.currentHp + amount) }
+          : p,
       )
       return { combat: { ...state.combat, participants } }
     }),
