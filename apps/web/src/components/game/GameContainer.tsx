@@ -13,6 +13,7 @@ interface GameContainerProps {
 
 export function GameContainer({ className }: GameContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const initializedRef = useRef(false)
   const phase = useGameStore((s) => s.gameState?.phase)
 
   useEffect(() => {

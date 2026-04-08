@@ -1,7 +1,7 @@
 /**
  * CombatScene: the main Phaser battle scene.
  * Renders grid, entities, ranges, and effects.
- * Communicates with React via eventBus and combatStore.
+ * Communicates with React via eventBus and useCombatStore.
  */
 import { BaseScene } from '../BaseScene'
 import { GridLayer } from './GridLayer'
@@ -18,7 +18,7 @@ import { worldToGrid, type GridPosition } from '../../utils/CoordinateUtils'
 import { getMoveRange } from '../../utils/PathFinding'
 import { isValidCell, buildObstacleGrid } from '../../utils/GridUtils'
 import { eventBus, GameEvents } from '../../../events'
-import { useCombatStore as combatStore } from '../../../stores/combatStore'
+import { useCombatStore } from '../../../stores/combatStore'
 import type { CombatState } from '../../../types'
 import type { CombatEventPayload } from '../../../services/websocket'
 
@@ -99,7 +99,7 @@ export class CombatScene extends BaseScene {
   }
 
   private onCellClick(cell: GridPosition): void {
-    const store = combatStore.getState()
+    const store = useCombatStore.getState()
 
     // If in move mode and cell is in move range, request move
     if (this.moveRange.contains(cell)) {
@@ -136,7 +136,7 @@ export class CombatScene extends BaseScene {
 
   private setupStoreSubscriptions(): void {
     // Subscribe to combat state changes
-    const unsub = combatStore.subscribe((state, prevState) => {
+    const unsub = useCombatStore.subscribe((state, prevState) => {
       // Update entities when participants change
       if (state.combat?.participants !== prevState.combat?.participants) {
         this.syncEntities(state.combat)
@@ -208,7 +208,7 @@ export class CombatScene extends BaseScene {
     const unsubTurnStart = eventBus.on(GameEvents.COMBAT_TURN_START, (data) => {
       const d = data as { unitId?: string }
       if (d.unitId) {
-        combatStore.getState().setCurrentUnit(d.unitId)
+        useCombatStore.getState().setCurrentUnit(d.unitId)
         this.updateTurnIndicator(d.unitId)
         this.showMoveRangeForUnit(d.unitId)
       }
@@ -226,10 +226,10 @@ export class CombatScene extends BaseScene {
   // ---------- Sync ----------
 
   private syncWithStore(): void {
-    const combat = combatStore.getState().combat
+    const combat = useCombatStore.getState().combat
     this.syncEntities(combat)
     if (combat) {
-      const currentUnitId = combatStore.getState().currentUnitId
+      const currentUnitId = useCombatStore.getState().currentUnitId
       if (currentUnitId) {
         this.updateTurnIndicator(currentUnitId)
       }
@@ -324,7 +324,7 @@ export class CombatScene extends BaseScene {
     const entity = this.entities.get(unitId)
     if (!entity) return
 
-    const combat = combatStore.getState().combat
+    const combat = useCombatStore.getState().combat
     if (!combat) return
 
     const combatant = combat.participants.find((p) => p.id === unitId)
@@ -347,7 +347,7 @@ export class CombatScene extends BaseScene {
       `${entity.gridPosition.x},${entity.gridPosition.y}`,
     )
 
-    combatStore.getState().setMoveRange(range)
+    useCombatStore.getState().setMoveRange(range)
   }
 
   private updateTargetHighlight(mode: string, validTargetIds: string[]): void {
@@ -355,7 +355,7 @@ export class CombatScene extends BaseScene {
     if (mode === 'none' || validTargetIds.length === 0) return
 
     // Calculate attack range based on current unit
-    const currentUnitId = combatStore.getState().currentUnitId
+    const currentUnitId = useCombatStore.getState().currentUnitId
     if (!currentUnitId) return
 
     const sourceEntity = this.entities.get(currentUnitId)
