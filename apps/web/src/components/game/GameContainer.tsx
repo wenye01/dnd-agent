@@ -25,6 +25,12 @@ export function GameContainer({ className }: GameContainerProps) {
       container.id = 'game-container'
     }
 
+    // Clean up any leftover canvas from StrictMode re-mount or HMR
+    const existingCanvas = container.querySelector('canvas')
+    if (existingCanvas) {
+      existingCanvas.remove()
+    }
+
     // Initialize or re-initialize Phaser game (handles HMR / remount gracefully)
     gameManager.init(container.id)
 

@@ -164,36 +164,22 @@ export class CombatScene extends BaseScene {
   // ---------- Event Bus Listeners ----------
 
   private setupEventListeners(): void {
-    // Listen for effect events dispatched by useGameMessages
-    const unsubEffect = eventBus.on(GameEvents.EFFECT_ATTACK, (data) => {
-      this.effectManager.handleCombatEvent(data as CombatEventPayload)
-    })
-    this.addUnsubscribe(unsubEffect)
-
-    const unsubDamage = eventBus.on(GameEvents.EFFECT_DAMAGE, (data) => {
-      this.effectManager.handleCombatEvent(data as CombatEventPayload)
-    })
-    this.addUnsubscribe(unsubDamage)
-
-    const unsubHeal = eventBus.on(GameEvents.EFFECT_HEAL, (data) => {
-      this.effectManager.handleCombatEvent(data as CombatEventPayload)
-    })
-    this.addUnsubscribe(unsubHeal)
-
-    const unsubSpell = eventBus.on(GameEvents.EFFECT_SPELL, (data) => {
-      this.effectManager.handleCombatEvent(data as CombatEventPayload)
-    })
-    this.addUnsubscribe(unsubSpell)
-
-    const unsubStatus = eventBus.on(GameEvents.EFFECT_STATUS, (data) => {
-      this.effectManager.handleCombatEvent(data as CombatEventPayload)
-    })
-    this.addUnsubscribe(unsubStatus)
-
-    const unsubDeath = eventBus.on(GameEvents.EFFECT_DEATH, (data) => {
-      this.effectManager.handleCombatEvent(data as CombatEventPayload)
-    })
-    this.addUnsubscribe(unsubDeath)
+    // Effect events → all routed to EffectManager
+    const effectEvents = [
+      GameEvents.EFFECT_ATTACK,
+      GameEvents.EFFECT_DAMAGE,
+      GameEvents.EFFECT_HEAL,
+      GameEvents.EFFECT_SPELL,
+      GameEvents.EFFECT_STATUS,
+      GameEvents.EFFECT_DEATH,
+    ]
+    for (const evt of effectEvents) {
+      this.addUnsubscribe(
+        eventBus.on(evt, (data) => {
+          this.effectManager.handleCombatEvent(data as CombatEventPayload)
+        }),
+      )
+    }
 
     const unsubCombatStart = eventBus.on(GameEvents.COMBAT_START, () => {
       this.syncWithStore()

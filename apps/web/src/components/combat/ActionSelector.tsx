@@ -70,7 +70,7 @@ export function ActionSelector() {
               case 'disengage':
                 return currentCombatant.action === 'used'
               case 'spell':
-                return currentCombatant.bonusAction === 'used'
+                return currentCombatant.action === 'used'
               case 'move':
                 return false // Move doesn't consume action resources; controlled by backend speed
               default:

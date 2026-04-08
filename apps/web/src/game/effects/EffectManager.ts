@@ -69,7 +69,8 @@ export class EffectManager {
     const target = this.entityLookup.getEntity(event.target ?? '')
     if (!source || !target) return
 
-    // Determine if melee or ranged (simple heuristic: distance)
+    // TODO: Read weapon range from Combatant data instead of pixel-distance heuristic.
+    // Current approach: assume melee within 2 tiles (128px), else ranged.
     const dx = Math.abs(source.x - target.x)
     const dy = Math.abs(source.y - target.y)
     const distance = Math.sqrt(dx * dx + dy * dy)
