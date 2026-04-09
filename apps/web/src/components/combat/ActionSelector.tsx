@@ -63,6 +63,9 @@ export function ActionSelector() {
       <div className="grid grid-cols-3 gap-1 px-1">
         {ACTIONS.map((action) => {
           const isUsed = (() => {
+            // STYLE(P1-7): 'spell' case is identical to 'attack'/'item'/'dodge'/'disengage'.
+            //   Kept separate to allow future differentiation (e.g., bonus-action spells).
+            //   If no such plan exists, merge 'spell' into the fall-through group above.
             switch (action.key) {
               case 'attack':
               case 'item':

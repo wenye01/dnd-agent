@@ -49,7 +49,11 @@ export function findPath(
   openSet.push(startNode)
 
   while (openSet.length > 0) {
-    // Pick node with lowest f
+    // OPT(P0-2): Linear scan O(n) to find the node with the lowest f-score.
+    //   For the current grid size (12×9=108 cells, max ~108 nodes in openSet), this is
+    //   sub-millisecond in JS engines and findPath is called once per user click (not per frame).
+    //   No optimization needed until grid exceeds ~50×50. If needed later, replace with a
+    //   binary heap (as the backend Pathfinder in Go already uses container/heap).
     let lowestIdx = 0
     for (let i = 1; i < openSet.length; i++) {
       if (openSet[i].f < openSet[lowestIdx].f) lowestIdx = i

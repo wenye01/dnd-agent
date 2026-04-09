@@ -115,6 +115,14 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }),
 
   /** Safely apply damage using functional update to avoid race conditions. */
+  // BUG(P2-1): Does not handle temporaryHp per D&D 5e PHB rules.
+  //   The backend (combat/damage.go) correctly applies: tempHp absorbs first → remaining hits currentHp.
+  //   This frontend optimistic update skips tempHp and deducts directly from currentHp,
+  //   causing a brief UI mismatch until the backend state syncs back (overwriting this value).
+  //   FIX: Add temporaryHp absorption logic here matching the backend's ApplyDamageToCombatant order:
+  //     1. If tempHp >= damage → tempHp -= damage, damage = 0
+  //     2. Else → damage -= tempHp, tempHp = 0
+  //     3. currentHp = max(0, currentHp - remaining damage)
   applyDamage: (targetId, amount) =>
     set((state) => {
       if (!state.combat) return state

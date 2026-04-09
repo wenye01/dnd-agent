@@ -126,6 +126,11 @@ export class CombatScene extends BaseScene {
     eventBus.emit(GameEvents.COMBAT_CELL_CLICK, { x: cell.x, y: cell.y })
   }
 
+  // NO-OPT(P1-5): O(n) linear scan over all entities to find one at a given grid cell.
+  //   Called once per pointerdown (user click), not per frame. With typical combat having
+  //   5-12 entities and <10 clicks/sec, this is ~100-120 comparisons/sec — negligible.
+  //   A position index (Map<"x,y", BaseEntity>) would make this O(1) but adds sync
+  //   overhead on every entity create/move/destroy. Not worth it until entities exceed ~30.
   private getEntityAtCell(cell: GridPosition): BaseEntity | undefined {
     for (const entity of this.entities.values()) {
       if (entity.gridPosition.x === cell.x && entity.gridPosition.y === cell.y) {

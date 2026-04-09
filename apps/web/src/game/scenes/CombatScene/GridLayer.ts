@@ -38,7 +38,9 @@ export class GridLayer {
     this.graphics.strokePath()
   }
 
-  /** @internal TODO: wire up when backend sends wall data */
+  // TODO(P2-2): Wire up when backend sends wall/obstacle data.
+  //   Note: @internal was used here incorrectly — @internal means "API not for external consumers"
+  //   (filtered by API Extractor tools). The correct TSDoc tag for unimplemented work is @todo.
   drawObstacles(walls: boolean[][]): void {
     this.obstacleGraphics.fillStyle(COLORS.OBSTACLE_FILL, COLORS.OBSTACLE_ALPHA)
 

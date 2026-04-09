@@ -1,11 +1,16 @@
 /**
  * Reusable animation preset configurations for Phaser tweens.
  *
- * TODO: Planned for v0.4 animation refactor pass.
- * These presets are currently defined but not yet adopted by
- * AttackEffect, DamageNumber, Character, Enemy etc. (which inline their tweens).
- * A follow-up pass should migrate those call sites to use these shared configs
- * to eliminate duplication and centralize animation timing constants.
+ * TECH-DEBT(P1-4): These presets are fully defined with tests (AnimationUtils.test.ts, 103 lines)
+ * but NOT imported by any production code. All animation call sites (AttackEffect, DamageNumber,
+ * Character, Enemy, SelectionRing, TurnIndicator, HealingEffect, SpellEffect, StatusEffect)
+ * inline their own tween configs instead of using these shared functions.
+ *
+ * Two options for resolution:
+ *   A) Remove this file + its tests now, re-add when v0.4 migration begins (reduces maintenance).
+ *   B) Keep as a "contract" for v0.4 refactor — migrate one call site per PR to adopt these.
+ *
+ * TODO: Planned for v0.4 animation refactor pass — see PRD Phase 4 milestone.
  */
 import { ANIMATIONS } from '../constants'
 

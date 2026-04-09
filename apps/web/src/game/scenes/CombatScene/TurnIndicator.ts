@@ -37,6 +37,11 @@ export class TurnIndicator {
 
   /** Clear the turn indicator. */
   clear(): void {
+    // NOTE(P1-6): Uses tween.stop() (async: marks PENDING_REMOVE, cleaned next frame)
+    //   rather than scene.tweens.killTweensOf(ring) (sync: immediate destroy).
+    //   Safe because Phaser's Tween.update() short-circuits on PENDING_REMOVE state,
+    //   so yoyo callbacks never fire on a destroyed ring.
+    //   TargetHighlight.clear() uses killTweensOf for consistency — consider unifying here.
     if (this.pulseTween) {
       this.pulseTween.stop()
       this.pulseTween = null

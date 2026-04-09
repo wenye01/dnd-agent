@@ -84,6 +84,12 @@ export class EffectManager {
     }
 
     // Source entity attack animation
+    // TECH-DEBT(P0-3): `as Character | Enemy` type assertion + runtime `'playAttack' in` guard.
+    //   This works because only Character/Enemy subclasses exist today, but if new BaseEntity
+    //   subclasses (NPC, Prop) are added without playAttack(), the cast silently passes and the
+    //   animation is skipped without warning.
+    //   FIX: Promote playAttack/playHurt to abstract methods on BaseEntity so the compiler
+    //   enforces implementation on all subclasses. Planned for v0.4 refactor pass.
     const entity = source as Character | Enemy
     if ('playAttack' in entity) {
       entity.playAttack(target.x, target.y)
@@ -104,6 +110,7 @@ export class EffectManager {
     DamageNumber.show(this.scene, target.x, target.y, amount, type)
 
     // Target hurt animation
+    // TECH-DEBT(P0-3): Same type assertion pattern as onAttack above — see that comment for details.
     const entity = target as Character | Enemy
     if ('playHurt' in entity) {
       entity.playHurt()
