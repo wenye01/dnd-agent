@@ -1,3 +1,4 @@
+import React from 'react'
 import type { EquipmentSlot } from '../../types'
 
 const SLOT_LABELS: Record<string, string> = {
@@ -31,7 +32,7 @@ function getEquippedName(equipment: EquipmentSlot[], slotName: string): string |
   return 'Equipped'
 }
 
-export function EquipmentSlots({ equipment }: EquipmentSlotsProps) {
+export const EquipmentSlots = React.memo(function EquipmentSlots({ equipment }: EquipmentSlotsProps) {
   if (import.meta.env.DEV) {
     const unknownSlots = equipment
       .map((e) => e.slot)
@@ -80,6 +81,6 @@ export function EquipmentSlots({ equipment }: EquipmentSlotsProps) {
       </div>
     </div>
   )
-}
+})
 
 export default EquipmentSlots

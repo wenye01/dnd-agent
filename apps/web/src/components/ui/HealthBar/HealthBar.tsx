@@ -1,3 +1,4 @@
+import React from 'react'
 import { cn } from '../../../lib/utils'
 
 export interface HealthBarProps {
@@ -10,7 +11,7 @@ export interface HealthBarProps {
   label?: string
 }
 
-export function HealthBar({
+export const HealthBar = React.memo(function HealthBar({
   current,
   max,
   temporary = 0,
@@ -26,18 +27,20 @@ export function HealthBar({
   const basePercentage = max > 0 ? Math.min(100, (clampedCurrent / max) * 100) : 0
   const tempPercentage = max > 0 ? Math.min(100 - basePercentage, (temporary / max) * 100) : 0
 
+  // HP bar style gradients by severity thresholds
+  const HP_GRADIENTS = {
+    high: 'linear-gradient(90deg, #15803D, #22C55E, #4ADE80)',     // >60%
+    medium: 'linear-gradient(90deg, #92400E, #D97706, #FBBF24)',   // 35-60%
+    low: 'linear-gradient(90deg, #991B1B, #DC3545, #EF4444)',      // 15-35%
+    critical: 'linear-gradient(90deg, #7F1D1D, #991B1B, #B91C1C)', // <15%
+  } as const
+
   // Determine color based on HP percentage - spec-compliant colors
   const getBarStyle = () => {
-    if (basePercentage > 60) {
-      return { background: 'linear-gradient(90deg, #15803D, #22C55E, #4ADE80)' }
-    }
-    if (basePercentage > 35) {
-      return { background: 'linear-gradient(90deg, #92400E, #D97706, #FBBF24)' }
-    }
-    if (basePercentage > 15) {
-      return { background: 'linear-gradient(90deg, #991B1B, #DC3545, #EF4444)' }
-    }
-    return { background: 'linear-gradient(90deg, #7F1D1D, #991B1B, #B91C1C)' }
+    if (basePercentage > 60) return { background: HP_GRADIENTS.high }
+    if (basePercentage > 35) return { background: HP_GRADIENTS.medium }
+    if (basePercentage > 15) return { background: HP_GRADIENTS.low }
+    return { background: HP_GRADIENTS.critical }
   }
 
   // Size for bar height - spec: sm(8px), md(12px), lg(16px)
@@ -122,6 +125,6 @@ export function HealthBar({
       </div>
     </div>
   )
-}
+})
 
 export default HealthBar

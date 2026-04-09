@@ -2,7 +2,7 @@
  * Turn indicator: shows a pulsing golden ring around the currently active unit.
  */
 import Phaser from 'phaser'
-import { COLORS, ANIMATIONS } from '../../constants'
+import { COLORS, ANIMATIONS, DEPTH, TURN_RING_LINE_WIDTH, TURN_RING_RADIUS, TURN_PULSE_MIN_ALPHA, TURN_PULSE_SCALE } from '../../constants'
 
 export class TurnIndicator {
   private scene: Phaser.Scene
@@ -18,16 +18,16 @@ export class TurnIndicator {
     this.clear()
 
     this.ring = this.scene.add.graphics()
-    this.ring.setDepth(20)
-    this.ring.lineStyle(3, COLORS.TURN_RING, COLORS.TURN_RING_ALPHA)
-    this.ring.strokeCircle(0, 0, 30)
+    this.ring.setDepth(DEPTH.TURN_INDICATOR)
+    this.ring.lineStyle(TURN_RING_LINE_WIDTH, COLORS.TURN_RING, COLORS.TURN_RING_ALPHA)
+    this.ring.strokeCircle(0, 0, TURN_RING_RADIUS)
     this.ring.setPosition(worldX, worldY)
 
     this.pulseTween = this.scene.tweens.add({
       targets: this.ring,
-      alpha: 0.3,
-      scaleX: 1.15,
-      scaleY: 1.15,
+      alpha: TURN_PULSE_MIN_ALPHA,
+      scaleX: TURN_PULSE_SCALE,
+      scaleY: TURN_PULSE_SCALE,
       duration: ANIMATIONS.TURN_RING_PULSE,
       ease: 'Sine.easeInOut',
       yoyo: true,

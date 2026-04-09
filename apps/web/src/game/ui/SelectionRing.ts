@@ -2,7 +2,7 @@
  * Selection ring with pulsing animation, drawn via Graphics API.
  */
 import Phaser from 'phaser'
-import { TILE_SIZE, COLORS, ANIMATIONS } from '../constants'
+import { COLORS, ANIMATIONS, TARGET_RING_LINE_WIDTH, TARGET_RING_RADIUS, TARGET_PULSE_MIN_ALPHA } from '../constants'
 
 export class SelectionRing extends Phaser.GameObjects.Graphics {
   private pulseTween: Phaser.Tweens.Tween | null = null
@@ -27,15 +27,15 @@ export class SelectionRing extends Phaser.GameObjects.Graphics {
 
   private drawRing(): void {
     this.clear()
-    this.lineStyle(2.5, COLORS.SELECTION_RING, 1)
-    this.strokeCircle(0, 0, TILE_SIZE / 2 - 2)
+    this.lineStyle(TARGET_RING_LINE_WIDTH, COLORS.SELECTION_RING, 1)
+    this.strokeCircle(0, 0, TARGET_RING_RADIUS)
   }
 
   private startPulse(): void {
     this.stopPulse()
     this.pulseTween = this.scene.tweens.add({
       targets: this,
-      alpha: 0.25,
+      alpha: TARGET_PULSE_MIN_ALPHA + 0.05, // slightly above target pulse minimum for selection
       duration: ANIMATIONS.SELECTION_PULSE,
       ease: 'Sine.easeInOut',
       yoyo: true,

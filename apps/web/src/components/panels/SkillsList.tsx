@@ -1,3 +1,4 @@
+import React from 'react'
 import type { AbilityScores, SkillProficiencies } from '../../types'
 import { getModifier, formatModifier } from '../../utils/modifiers'
 
@@ -38,7 +39,7 @@ interface SkillsListProps {
   proficiencyBonus: number
 }
 
-export function SkillsList({ skills, abilityScores, proficiencyBonus }: SkillsListProps) {
+export const SkillsList = React.memo(function SkillsList({ skills, abilityScores, proficiencyBonus }: SkillsListProps) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
@@ -88,6 +89,6 @@ export function SkillsList({ skills, abilityScores, proficiencyBonus }: SkillsLi
       </div>
     </div>
   )
-}
+})
 
 export default SkillsList

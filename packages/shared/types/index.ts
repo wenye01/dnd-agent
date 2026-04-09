@@ -1,63 +1,167 @@
-// 共享类型定义
-// 用于前后端之间的类型同步
+// Shared type definitions
+// Mirror of apps/web/src/types/ — the canonical Single Source of Truth.
+// NOTE: The web app does NOT import from this package. These types are kept
+// here for documentation and potential future server-side (Node) consumers.
+// For the active definitions, always refer to apps/web/src/types/.
 
-// 客户端消息类型
+// ---------------------------------------------------------------------------
+// Client / Server message types (mirrors apps/web/src/types/message.ts)
+// ---------------------------------------------------------------------------
+
+// Client message types
 export type ClientMessageType =
   | 'user_input'
-  | 'combat_action'
   | 'map_action'
-  | 'management';
+  | 'combat_action'
+  | 'management'
+  | 'ping'
 
-// 服务端消息类型
+// Server message types
 export type ServerMessageType =
-  | 'state_update'
   | 'narration'
-  | 'combat_event'
+  | 'state_update'
   | 'dice_result'
-  | 'error';
+  | 'combat_event'
+  | 'error'
+  | 'pong'
 
-// 客户端消息
+// Client message base
 export interface ClientMessage {
-  type: ClientMessageType;
-  payload: unknown;
-  requestId?: string;
+  type: ClientMessageType
+  payload: unknown
+  requestId?: string
 }
 
-// 服务端消息
+// Server message base
 export interface ServerMessage {
-  type: ServerMessageType;
-  payload: unknown;
-  requestId?: string;
-  timestamp: number;
+  type: ServerMessageType
+  payload: unknown
+  requestId?: string
+  timestamp: number
 }
 
-// 角色数据
-export interface Character {
-  id: string;
-  name: string;
-  race: string;
-  class: string;
-  level: number;
-  hp: number;
-  maxHp: number;
-  ac: number;
-  stats: Stats;
+// Narration payload
+export interface NarrationPayload {
+  text: string
+  isStreaming: boolean
 }
 
-// 属性
-export interface Stats {
-  strength: number;
-  dexterity: number;
-  constitution: number;
-  intelligence: number;
-  wisdom: number;
-  charisma: number;
+// Dice result payload
+export interface DiceResultPayload {
+  formula: string
+  dice: number[]
+  modifier: number
+  total: number
+  isCrit?: boolean
+  isFumble?: boolean
 }
 
-// 掷骰结果
-export interface DiceResult {
-  rollType: string;
-  formula: string;
-  result: number[];
-  total: number;
+// Error payload
+export interface ErrorPayload {
+  code: string
+  message: string
+  details?: unknown
 }
+
+// User input payload
+export interface UserInputPayload {
+  text: string
+  characterId?: string
+}
+
+// Map action payload
+export interface MapActionPayload {
+  action: 'move' | 'interact' | 'examine'
+  targetId?: string
+  position?: { x: number; y: number }
+}
+
+// Combat action payload
+export interface CombatActionPayload {
+  action: 'attack' | 'spell' | 'item' | 'move' | 'dodge' | 'disengage'
+  targetId?: string
+  itemId?: string
+  spellId?: string
+  position?: { x: number; y: number }
+}
+
+// Management action payload
+export interface ManagementPayload {
+  action: 'save' | 'load' | 'new_game' | 'settings'
+  data?: unknown
+}
+
+// ---------------------------------------------------------------------------
+// Game types (mirrors apps/web/src/types/game.ts)
+// ---------------------------------------------------------------------------
+
+export type GamePhase = 'exploring' | 'combat' | 'dialog' | 'resting'
+
+export type Ability = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma'
+
+export interface AbilityScores {
+  strength: number
+  dexterity: number
+  constitution: number
+  intelligence: number
+  wisdom: number
+  charisma: number
+}
+
+export type DamageType =
+  | 'acid'
+  | 'bludgeoning'
+  | 'cold'
+  | 'fire'
+  | 'force'
+  | 'lightning'
+  | 'necrotic'
+  | 'piercing'
+  | 'poison'
+  | 'psychic'
+  | 'radiant'
+  | 'slashing'
+  | 'thunder'
+
+export type Condition =
+  | 'blinded'
+  | 'charmed'
+  | 'deafened'
+  | 'frightened'
+  | 'grappled'
+  | 'incapacitated'
+  | 'invisible'
+  | 'paralyzed'
+  | 'petrified'
+  | 'poisoned'
+  | 'prone'
+  | 'restrained'
+  | 'stunned'
+  | 'unconscious'
+  | 'exhaustion'
+
+export interface ActiveEffect {
+  id: string
+  name: string
+  targetId: string
+  duration: number
+  conditions?: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Combat event types (mirrors apps/web/src/config/constants.ts)
+// ---------------------------------------------------------------------------
+
+export type CombatEventType =
+  | 'combat_start' | 'combat_end'
+  | 'initiative_rolled'
+  | 'turn_start' | 'turn_end'
+  | 'round_start' | 'round_end'
+  | 'attack' | 'damage' | 'heal' | 'death' | 'unconscious'
+  | 'condition_applied' | 'condition_removed'
+  | 'opportunity_attack'
+  | 'move' | 'spell' | 'item' | 'dodge' | 'disengage'
+
+// Legacy alias — the web app uses DiceResultPayload instead.
+// Kept for backward compatibility with any external consumer.
+export type DiceResult = DiceResultPayload

@@ -13,6 +13,8 @@ import {
   isPartyData,
   isCombatData,
 } from '../services/typeGuards'
+import type { CombatEventPayload, CombatEventType } from '../services/typeGuards'
+import type { CombatLogEntry } from '../stores/combatStore'
 import type { ServerMessage, ClientMessage } from '../types'
 import { eventBus, GameEvents } from '../events'
 
@@ -136,136 +138,164 @@ export function useGameMessages() {
     addSystemMessage(`Error: ${message}`)
   }, [addSystemMessage])
 
+  /**
+   * Pure function: generate human-readable text and log type for a combat event.
+   * No side effects -- only computes values from the payload.
+   */
+  function formatCombatEventMessage(
+    payload: CombatEventPayload,
+  ): { text: string; logType: CombatLogEntry['type'] } {
+    const { eventType, characterId, round } = payload
+
+    switch (eventType) {
+      case 'combat_start':
+        return { text: 'Combat has started!', logType: 'system' }
+      case 'combat_end':
+        return { text: 'Combat has ended.', logType: 'system' }
+      case 'round_start':
+        return { text: `Round ${round ?? 1} begins.`, logType: 'system' }
+      case 'round_end':
+        return { text: `Round ${round ?? 1} ends.`, logType: 'system' }
+      case 'turn_start':
+        return { text: `Turn starts for ${characterId ?? 'unknown'}.`, logType: 'turn' }
+      case 'turn_end':
+        return { text: `Turn ends for ${characterId ?? 'unknown'}.`, logType: 'turn' }
+      case 'attack': {
+        const hitStatus = payload.isHit === false ? ' (MISS)' : payload.isCrit ? ' (CRIT!)' : ''
+        return {
+          text: `${characterId ?? 'Unknown'} attacks ${payload.target ?? 'target'}${hitStatus}`,
+          logType: 'damage',
+        }
+      }
+      case 'damage': {
+        const amount = payload.damage ?? payload.amount ?? 0
+        let text = `${payload.target ?? characterId ?? 'Unknown'} takes ${amount} damage`
+        if (payload.damageType) text += ` (${payload.damageType})`
+        return { text, logType: 'damage' }
+      }
+      case 'heal':
+        return { text: `${characterId ?? 'Unknown'} heals ${payload.amount ?? 0} HP`, logType: 'heal' }
+      case 'death':
+        return { text: `${characterId ?? 'Unknown'} has fallen!`, logType: 'damage' }
+      case 'unconscious':
+        return { text: `${characterId ?? 'Unknown'} has been knocked unconscious!`, logType: 'damage' }
+      case 'opportunity_attack':
+        return {
+          text: `${characterId ?? 'Unknown'} makes an opportunity attack on ${payload.target ?? 'target'}!`,
+          logType: 'damage',
+        }
+      case 'condition_applied':
+        return { text: `${characterId ?? 'Unknown'} gains condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
+      case 'condition_removed':
+        return { text: `${characterId ?? 'Unknown'} loses condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
+      case 'initiative_rolled':
+        return { text: `Initiative rolled for round ${round ?? 1}.`, logType: 'system' }
+      case 'move':
+        return { text: `${characterId ?? 'Unknown'} moves.`, logType: 'info' }
+      case 'spell':
+        return {
+          text: `${characterId ?? 'Unknown'} casts a spell${payload.target ? ` targeting ${payload.target}` : ''}.`,
+          logType: 'info',
+        }
+      case 'item':
+        return { text: 'Use item action.', logType: 'info' }
+      case 'dodge':
+        return { text: `${characterId ?? 'Unknown'} dodges.`, logType: 'info' }
+      case 'disengage':
+        return { text: `${characterId ?? 'Unknown'} disengages.`, logType: 'info' }
+      default:
+        return { text: `Combat event: ${eventType}`, logType: 'info' }
+    }
+  }
+
+  /**
+   * Sync combat event to Zustand stores (chatStore + combatStore).
+   * Handles HP mutations, combat state, current unit, and log entries.
+   */
+  function syncCombatEventToStores(
+    payload: CombatEventPayload,
+    text: string,
+    logType: CombatLogEntry['type'],
+  ): void {
+    const combatStore = useCombatStore.getState()
+    const { eventType, characterId } = payload
+
+    // Event-specific store mutations
+    switch (eventType) {
+      case 'combat_end':
+        combatStore.setCombat(null)
+        break
+      case 'turn_start':
+        combatStore.setCurrentUnit(characterId ?? null)
+        break
+      case 'damage': {
+        const amount = payload.damage ?? payload.amount ?? 0
+        if (payload.target) {
+          combatStore.applyDamage(payload.target, amount)
+        }
+        break
+      }
+      case 'heal': {
+        const healAmount = payload.amount ?? 0
+        if (characterId) {
+          combatStore.applyHeal(characterId, healAmount)
+        }
+        break
+      }
+    }
+
+    // Always write to both stores
+    addSystemMessage(text)
+    combatStore.addLogEntry(text, logType)
+  }
+
+  /**
+   * Emit eventBus effects for combat events.
+   * Phaser scenes and other consumers listen on these events.
+   */
+  function emitCombatEventEffects(payload: CombatEventPayload): void {
+    const { eventType, characterId } = payload
+
+    const eventMap: Partial<Record<CombatEventType, [string, unknown]>> = {
+      combat_start: [GameEvents.COMBAT_START, payload],
+      combat_end: [GameEvents.COMBAT_END, payload],
+      turn_start: [GameEvents.COMBAT_TURN_START, { unitId: characterId }],
+      turn_end: [GameEvents.COMBAT_TURN_END, { unitId: characterId }],
+      death: [GameEvents.EFFECT_DEATH, payload],
+      unconscious: [GameEvents.EFFECT_DEATH, payload],
+      spell: [GameEvents.EFFECT_SPELL, payload],
+      condition_applied: [GameEvents.EFFECT_STATUS, payload],
+      condition_removed: [GameEvents.EFFECT_STATUS, payload],
+    }
+
+    // Emit mapped event if present
+    const mapped = eventMap[eventType]
+    if (mapped) {
+      eventBus.emit(mapped[0], mapped[1])
+    }
+
+    // Some events need additional emissions beyond the primary mapping
+    if (eventType === 'attack' || eventType === 'opportunity_attack') {
+      eventBus.emit(GameEvents.EFFECT_ATTACK, payload)
+    }
+    if (eventType === 'damage') {
+      eventBus.emit(GameEvents.EFFECT_DAMAGE, payload)
+    }
+    if (eventType === 'heal') {
+      eventBus.emit(GameEvents.EFFECT_HEAL, payload)
+    }
+  }
+
+  /** Thin coordinator: validate -> format -> sync stores -> emit events. */
   const handleCombatEvent = useCallback((payload: unknown) => {
     if (!isCombatEventPayload(payload)) {
       console.error('Invalid combat event payload:', payload)
       return
     }
 
-    const { eventType, characterId, round } = payload
-    const combatStore = useCombatStore.getState()
-
-    // Generate human-readable combat event messages
-    let eventText = ''
-    let logType: 'info' | 'damage' | 'heal' | 'status' | 'turn' | 'system' = 'info'
-
-    switch (eventType) {
-      case 'combat_start':
-        eventText = 'Combat has started!'
-        logType = 'system'
-        eventBus.emit(GameEvents.COMBAT_START, payload)
-        break
-      case 'combat_end':
-        eventText = 'Combat has ended.'
-        logType = 'system'
-        eventBus.emit(GameEvents.COMBAT_END, payload)
-        combatStore.setCombat(null)
-        break
-      case 'round_start':
-        eventText = `Round ${round ?? 1} begins.`
-        logType = 'system'
-        break
-      case 'round_end':
-        eventText = `Round ${round ?? 1} ends.`
-        logType = 'system'
-        break
-      case 'turn_start':
-        eventText = `Turn starts for ${characterId ?? 'unknown'}.`
-        logType = 'turn'
-        combatStore.setCurrentUnit(characterId ?? null)
-        eventBus.emit(GameEvents.COMBAT_TURN_START, { unitId: characterId })
-        break
-      case 'turn_end':
-        eventText = `Turn ends for ${characterId ?? 'unknown'}.`
-        logType = 'turn'
-        eventBus.emit(GameEvents.COMBAT_TURN_END, { unitId: characterId })
-        break
-      case 'attack': {
-        const hitStatus = payload.isHit === false ? ' (MISS)' : payload.isCrit ? ' (CRIT!)' : ''
-        eventText = `${characterId ?? 'Unknown'} attacks ${payload.target ?? 'target'}${hitStatus}`
-        logType = 'damage'
-        eventBus.emit(GameEvents.EFFECT_ATTACK, payload)
-        break
-      }
-      case 'damage': {
-        const amount = payload.damage ?? payload.amount ?? 0
-        eventText = `${payload.target ?? characterId ?? 'Unknown'} takes ${amount} damage`
-        if (payload.damageType) eventText += ` (${payload.damageType})`
-        logType = 'damage'
-        // Update combatant HP using functional update to avoid race conditions
-        if (payload.target) {
-          combatStore.applyDamage(payload.target, amount)
-        }
-        eventBus.emit(GameEvents.EFFECT_DAMAGE, payload)
-        break
-      }
-      case 'heal': {
-        const healAmount = payload.amount ?? 0
-        eventText = `${characterId ?? 'Unknown'} heals ${healAmount} HP`
-        logType = 'heal'
-        if (characterId) {
-          combatStore.applyHeal(characterId, healAmount)
-        }
-        eventBus.emit(GameEvents.EFFECT_HEAL, payload)
-        break
-      }
-      case 'death':
-        eventText = `${characterId ?? 'Unknown'} has fallen!`
-        logType = 'damage'
-        eventBus.emit(GameEvents.EFFECT_DEATH, payload)
-        break
-      case 'unconscious':
-        eventText = `${characterId ?? 'Unknown'} has been knocked unconscious!`
-        logType = 'damage'
-        eventBus.emit(GameEvents.EFFECT_DEATH, payload)
-        break
-      case 'opportunity_attack':
-        eventText = `${characterId ?? 'Unknown'} makes an opportunity attack on ${payload.target ?? 'target'}!`
-        logType = 'damage'
-        eventBus.emit(GameEvents.EFFECT_ATTACK, payload)
-        break
-      case 'condition_applied':
-        eventText = `${characterId ?? 'Unknown'} gains condition: ${payload.condition ?? 'unknown'}`
-        logType = 'status'
-        eventBus.emit(GameEvents.EFFECT_STATUS, payload)
-        break
-      case 'condition_removed':
-        eventText = `${characterId ?? 'Unknown'} loses condition: ${payload.condition ?? 'unknown'}`
-        logType = 'status'
-        eventBus.emit(GameEvents.EFFECT_STATUS, payload)
-        break
-      case 'initiative_rolled':
-        eventText = `Initiative rolled for round ${round ?? 1}.`
-        logType = 'system'
-        break
-      case 'move':
-        eventText = `${characterId ?? 'Unknown'} moves.`
-        logType = 'info'
-        break
-      case 'spell':
-        eventText = `${characterId ?? 'Unknown'} casts a spell${payload.target ? ` targeting ${payload.target}` : ''}.`
-        logType = 'info'
-        eventBus.emit(GameEvents.EFFECT_SPELL, payload)
-        break
-      case 'item':
-        eventText = 'Use item action.'
-        logType = 'info'
-        break
-      case 'dodge':
-        eventText = `${characterId ?? 'Unknown'} dodges.`
-        logType = 'info'
-        break
-      case 'disengage':
-        eventText = `${characterId ?? 'Unknown'} disengages.`
-        logType = 'info'
-        break
-      default:
-        eventText = `Combat event: ${eventType}`
-        logType = 'info'
-    }
-
-    addSystemMessage(eventText)
-    combatStore.addLogEntry(eventText, logType)
+    const { text, logType } = formatCombatEventMessage(payload)
+    syncCombatEventToStores(payload, text, logType)
+    emitCombatEventEffects(payload)
   }, [addSystemMessage])
 
   // Forward combat actions from eventBus to WebSocket

@@ -2,7 +2,7 @@
  * Spell effect: particle-based casting animation, color varies by school/type.
  */
 import Phaser from 'phaser'
-import { ANIMATIONS } from '../constants'
+import { ANIMATIONS, DEPTH, SPELL_PARTICLE_COUNT, SPELL_PARTICLE_RADIUS, SPELL_BURST_RADIUS, SPELL_BURST_SCALE, SPELL_BOLT_RADIUS, SPELL_IMPACT_RADIUS, SPELL_IMPACT_SCALE, SPELL_IMPACT_DURATION } from '../constants'
 
 /** Spell school to color mapping. */
 const SCHOOL_COLORS: Record<string, number> = {
@@ -30,17 +30,15 @@ export class SpellEffect {
     targetY?: number,
   ): void {
     const color = SCHOOL_COLORS[school ?? 'default'] ?? SCHOOL_COLORS.default
-    const particleCount = 12
 
     // Casting particles converging to caster
-    for (let i = 0; i < particleCount; i++) {
-      const angle = (i / particleCount) * Math.PI * 2
-      const radius = 40
-      const startX = worldX + Math.cos(angle) * radius
-      const startY = worldY + Math.sin(angle) * radius
+    for (let i = 0; i < SPELL_PARTICLE_COUNT; i++) {
+      const angle = (i / SPELL_PARTICLE_COUNT) * Math.PI * 2
+      const startX = worldX + Math.cos(angle) * SPELL_PARTICLE_RADIUS
+      const startY = worldY + Math.sin(angle) * SPELL_PARTICLE_RADIUS
 
       const particle = scene.add.circle(startX, startY, 2.5, color, 0.8)
-      particle.setDepth(500)
+      particle.setDepth(DEPTH.EFFECTS)
 
       scene.tweens.add({
         targets: particle,
@@ -57,13 +55,13 @@ export class SpellEffect {
     }
 
     // Central burst glow
-    const burst = scene.add.circle(worldX, worldY, 8, color, 0.6)
-    burst.setDepth(501)
+    const burst = scene.add.circle(worldX, worldY, SPELL_BURST_RADIUS, color, 0.6)
+    burst.setDepth(DEPTH.EFFECTS_OVERLAY)
 
     scene.tweens.add({
       targets: burst,
-      scaleX: 3,
-      scaleY: 3,
+      scaleX: SPELL_BURST_SCALE,
+      scaleY: SPELL_BURST_SCALE,
       alpha: 0,
       duration: ANIMATIONS.SPELL_DURATION * 0.5,
       delay: ANIMATIONS.SPELL_DURATION * 0.4,
@@ -73,26 +71,26 @@ export class SpellEffect {
 
     // If there's a target, send a bolt
     if (targetX !== undefined && targetY !== undefined) {
-      const bolt = scene.add.circle(worldX, worldY, 5, color, 0.9)
-      bolt.setDepth(501)
+      const bolt = scene.add.circle(worldX, worldY, SPELL_BOLT_RADIUS, color, 0.9)
+      bolt.setDepth(DEPTH.EFFECTS_OVERLAY)
 
       scene.tweens.add({
         targets: bolt,
         x: targetX,
         y: targetY,
-        duration: 200,
+        duration: SPELL_IMPACT_DURATION,
         delay: ANIMATIONS.SPELL_DURATION * 0.5,
         ease: 'Quad.easeIn',
         onComplete: () => {
           // Impact
-          const impact = scene.add.circle(targetX, targetY, 12, color, 0.7)
-          impact.setDepth(501)
+          const impact = scene.add.circle(targetX, targetY, SPELL_IMPACT_RADIUS, color, 0.7)
+          impact.setDepth(DEPTH.EFFECTS_OVERLAY)
           scene.tweens.add({
             targets: impact,
-            scaleX: 2,
-            scaleY: 2,
+            scaleX: SPELL_IMPACT_SCALE,
+            scaleY: SPELL_IMPACT_SCALE,
             alpha: 0,
-            duration: 200,
+            duration: SPELL_IMPACT_DURATION,
             onComplete: () => impact.destroy(),
           })
           bolt.destroy()

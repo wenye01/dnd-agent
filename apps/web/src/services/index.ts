@@ -14,5 +14,5 @@ export {
 } from './typeGuards'
 export type { CombatEventType, UserInputPayload } from './typeGuards'
 
-export { characterApi } from './api'
-export type { ApiResponse, ServerCharacter, CreateCharacterRequest, ListCharactersResponse } from './api'
+export { characterApi, ApiHttpError } from './api'
+export type { ApiResponse, ServerCharacter, CreateCharacterRequest, ListCharactersResponse, ApiRequestOptions } from './api'

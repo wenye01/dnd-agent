@@ -4,13 +4,11 @@
  */
 import Phaser from 'phaser'
 import { BaseEntity } from './BaseEntity'
-import { TILE_SIZE, COLORS } from '../constants'
+import { COLORS, ENTITY_RADIUS, ENTITY_BORDER_WIDTH, ENTITY_BORDER_ALPHA } from '../constants'
 import type { Combatant } from '../../types'
 
 export class Character extends BaseEntity {
-  public combatant: Combatant
   private bodyGraphic: Phaser.GameObjects.Graphics
-  private initialLetter: Phaser.GameObjects.Text
 
   constructor(
     scene: Phaser.Scene,
@@ -24,26 +22,13 @@ export class Character extends BaseEntity {
     // Draw character body (blue circle)
     this.bodyGraphic = scene.add.graphics()
     this.bodyGraphic.fillStyle(COLORS.PLAYER, 1)
-    this.bodyGraphic.fillCircle(0, 0, TILE_SIZE / 2 - 6)
-    this.bodyGraphic.lineStyle(2, 0xffffff, 0.4)
-    this.bodyGraphic.strokeCircle(0, 0, TILE_SIZE / 2 - 6)
+    this.bodyGraphic.fillCircle(0, 0, ENTITY_RADIUS)
+    this.bodyGraphic.lineStyle(ENTITY_BORDER_WIDTH, 0xffffff, ENTITY_BORDER_ALPHA)
+    this.bodyGraphic.strokeCircle(0, 0, ENTITY_RADIUS)
     this.add(this.bodyGraphic)
 
     // Initial letter of name
-    const letter = combatant.name.charAt(0).toUpperCase()
-    this.initialLetter = scene.add.text(0, 0, letter, {
-      fontSize: '18px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-    })
-    this.initialLetter.setOrigin(0.5)
-    this.add(this.initialLetter)
-  }
-
-  /** Update combatant data (HP, conditions, etc.). */
-  updateCombatant(combatant: Combatant): void {
-    this.combatant = combatant
+    this.add(this.createInitialLetter())
   }
 
   /** Play hurt flash animation. */
@@ -51,32 +36,12 @@ export class Character extends BaseEntity {
     super.playHurtEffect(() => this.redrawNormal())
   }
 
-  /** Play attack lunge toward a target position. */
-  playAttack(targetX: number, targetY: number): Promise<void> {
-    const origX = this.x
-    const origY = this.y
-    const lungeX = origX + (targetX - origX) * 0.5
-    const lungeY = origY + (targetY - origY) * 0.5
-
-    return new Promise((resolve) => {
-      this.scene.tweens.add({
-        targets: this,
-        x: lungeX,
-        y: lungeY,
-        duration: 120,
-        ease: 'Quad.easeIn',
-        yoyo: true,
-        onComplete: () => resolve(),
-      })
-    })
-  }
-
   private redrawNormal(): void {
     this.bodyGraphic.clear()
     this.bodyGraphic.fillStyle(COLORS.PLAYER, 1)
-    this.bodyGraphic.fillCircle(0, 0, TILE_SIZE / 2 - 6)
-    this.bodyGraphic.lineStyle(2, 0xffffff, 0.4)
-    this.bodyGraphic.strokeCircle(0, 0, TILE_SIZE / 2 - 6)
+    this.bodyGraphic.fillCircle(0, 0, ENTITY_RADIUS)
+    this.bodyGraphic.lineStyle(ENTITY_BORDER_WIDTH, 0xffffff, ENTITY_BORDER_ALPHA)
+    this.bodyGraphic.strokeCircle(0, 0, ENTITY_RADIUS)
     this.setAlpha(1)
   }
 }

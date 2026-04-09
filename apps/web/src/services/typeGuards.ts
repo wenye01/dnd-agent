@@ -3,23 +3,22 @@ import type {
   DiceResultPayload,
   ErrorPayload,
 } from '../types'
+import {
+  COMBAT_EVENT_TYPES,
+  STATE_UPDATE_TYPES,
+} from '../config/constants'
+import type { CombatEventType, StateUpdateType } from '../config/constants'
+
+// Re-export CombatEventType so existing consumers can import it from here
+// without changing their import paths. The canonical definition lives in
+// config/constants.ts.
+export type { CombatEventType }
 
 // State update payload type (from backend spec)
 export interface StateUpdatePayload {
-  stateType: 'game' | 'party' | 'combat' | 'map' | 'notification'
+  stateType: StateUpdateType
   data: unknown
 }
-
-// Combat event types (matches backend combat.CombatEventType)
-export type CombatEventType =
-  | 'combat_start' | 'combat_end'
-  | 'initiative_rolled'
-  | 'turn_start' | 'turn_end'
-  | 'round_start' | 'round_end'
-  | 'attack' | 'damage' | 'heal' | 'death' | 'unconscious'
-  | 'condition_applied' | 'condition_removed'
-  | 'opportunity_attack'
-  | 'move' | 'spell' | 'item' | 'dodge' | 'disengage'
 
 // Combat event payload type (from backend spec)
 export interface CombatEventPayload {
@@ -127,11 +126,10 @@ export function isStateUpdatePayload(payload: unknown): payload is StateUpdatePa
   }
 
   const { stateType } = payload as { stateType: unknown }
-  const VALID_STATE_TYPES = ['game', 'party', 'combat', 'map', 'notification'] as const
 
   return (
     typeof stateType === 'string' &&
-    VALID_STATE_TYPES.includes(stateType as typeof VALID_STATE_TYPES[number])
+    (STATE_UPDATE_TYPES as readonly string[]).includes(stateType)
   )
 }
 
@@ -203,20 +201,10 @@ export function isCombatEventPayload(payload: unknown): payload is CombatEventPa
   }
 
   const { eventType } = payload as { eventType: unknown }
-  const validEventTypes: string[] = [
-    'combat_start', 'combat_end',
-    'initiative_rolled',
-    'turn_start', 'turn_end',
-    'round_start', 'round_end',
-    'attack', 'damage', 'heal', 'death', 'unconscious',
-    'condition_applied', 'condition_removed',
-    'opportunity_attack',
-    'move', 'spell', 'item', 'dodge', 'disengage',
-  ]
 
   return (
     typeof eventType === 'string' &&
-    validEventTypes.includes(eventType)
+    (COMBAT_EVENT_TYPES as readonly string[]).includes(eventType)
   )
 }
 

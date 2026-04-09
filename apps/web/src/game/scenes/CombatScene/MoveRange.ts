@@ -2,7 +2,7 @@
  * Move range display: BFS-calculated reachable cells shown as green overlay.
  */
 import Phaser from 'phaser'
-import { TILE_SIZE, COLORS } from '../../constants'
+import { TILE_SIZE, COLORS, DEPTH } from '../../constants'
 import type { GridPosition } from '../../utils/CoordinateUtils'
 
 export class MoveRange {
@@ -11,7 +11,7 @@ export class MoveRange {
 
   constructor(scene: Phaser.Scene) {
     this.graphics = scene.add.graphics()
-    this.graphics.setDepth(10)
+    this.graphics.setDepth(DEPTH.MOVE_RANGE)
   }
 
   /** Display the given set of reachable cells. */

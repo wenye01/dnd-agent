@@ -3,7 +3,7 @@
  * Red for damage, green for heal, gray for miss, gold for crit.
  */
 import Phaser from 'phaser'
-import { COLORS, ANIMATIONS } from '../constants'
+import { COLORS, ANIMATIONS, DEPTH, DAMAGE_Y_OFFSET, DAMAGE_FLOAT_DISTANCE, DAMAGE_CRIT_INITIAL_SCALE, DAMAGE_CRIT_MAX_SCALE, DAMAGE_FONT_SIZES } from '../constants'
 
 export class DamageNumber {
   /**
@@ -37,9 +37,9 @@ export class DamageNumber {
         color = COLORS.DAMAGE_COLOR
     }
 
-    const fontSize = type === 'crit' ? '28px' : type === 'miss' ? '18px' : '22px'
+    const fontSize = DAMAGE_FONT_SIZES[type] ?? DAMAGE_FONT_SIZES.damage
 
-    const textObj = scene.add.text(worldX, worldY - 20, text, {
+    const textObj = scene.add.text(worldX, worldY + DAMAGE_Y_OFFSET, text, {
       fontSize,
       color,
       fontFamily: 'monospace',
@@ -48,15 +48,15 @@ export class DamageNumber {
       strokeThickness: 3,
     })
     textObj.setOrigin(0.5)
-    textObj.setDepth(1000)
+    textObj.setDepth(DEPTH.DAMAGE_NUMBER)
 
     // Crit: extra scale punch
     if (type === 'crit') {
-      textObj.setScale(0.5)
+      textObj.setScale(DAMAGE_CRIT_INITIAL_SCALE)
       scene.tweens.add({
         targets: textObj,
-        scaleX: 1.4,
-        scaleY: 1.4,
+        scaleX: DAMAGE_CRIT_MAX_SCALE,
+        scaleY: DAMAGE_CRIT_MAX_SCALE,
         duration: 150,
         ease: 'Back.easeOut',
         onComplete: () => {
@@ -73,7 +73,7 @@ export class DamageNumber {
     // Float up and fade
     scene.tweens.add({
       targets: textObj,
-      y: textObj.y - 40,
+      y: textObj.y + (-DAMAGE_FLOAT_DISTANCE),
       alpha: 0,
       duration: ANIMATIONS.DAMAGE_FLOAT,
       delay: type === 'crit' ? 200 : 0,

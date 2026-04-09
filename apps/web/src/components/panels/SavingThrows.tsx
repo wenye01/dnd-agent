@@ -1,3 +1,4 @@
+import React from 'react'
 import type { Ability, AbilityScores } from '../../types'
 import { getModifier, formatModifier } from '../../utils/modifiers'
 
@@ -16,7 +17,7 @@ interface SavingThrowsProps {
   proficiencyBonus: number
 }
 
-export function SavingThrows({ savingThrows, abilityScores, proficiencyBonus }: SavingThrowsProps) {
+export const SavingThrows = React.memo(function SavingThrows({ savingThrows, abilityScores, proficiencyBonus }: SavingThrowsProps) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
@@ -65,6 +66,6 @@ export function SavingThrows({ savingThrows, abilityScores, proficiencyBonus }: 
       </div>
     </div>
   )
-}
+})
 
 export default SavingThrows

@@ -52,31 +52,3 @@ export interface ErrorPayload {
   message: string
   details?: unknown
 }
-
-// 用户输入载荷
-export interface UserInputPayload {
-  text: string
-  characterId?: string
-}
-
-// 地图动作载荷
-export interface MapActionPayload {
-  action: 'move' | 'interact' | 'examine'
-  targetId?: string
-  position?: { x: number; y: number }
-}
-
-// 战斗动作载荷
-export interface CombatActionPayload {
-  action: 'attack' | 'spell' | 'item' | 'move' | 'dodge' | 'disengage'
-  targetId?: string
-  itemId?: string
-  spellId?: string
-  position?: { x: number; y: number }
-}
-
-// 管理动作载荷
-export interface ManagementPayload {
-  action: 'save' | 'load' | 'new_game' | 'settings'
-  data?: unknown
-}

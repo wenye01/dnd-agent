@@ -2,7 +2,7 @@
  * Status condition icon drawn as a colored circle with text abbreviation.
  */
 import Phaser from 'phaser'
-import { STATUS_ICON_SIZE, CONDITION_COLORS } from '../constants'
+import { STATUS_ICON_SIZE, CONDITION_COLORS, TEXT_STYLES } from '../constants'
 
 /** Condition -> abbreviation text. */
 const CONDITION_ABBREV: Record<string, string> = {
@@ -44,13 +44,7 @@ export class StatusIcon extends Phaser.GameObjects.Container {
     this.add(this.bg)
 
     // Abbreviation text
-    this.label = scene.add.text(0, 0, abbrev, {
-      fontSize: '6px',
-      color: '#ffffff',
-      fontFamily: 'monospace',
-      stroke: '#000000',
-      strokeThickness: 1,
-    })
+    this.label = scene.add.text(0, 0, abbrev, TEXT_STYLES.STATUS_ICON)
     this.label.setOrigin(0.5)
     this.add(this.label)
 

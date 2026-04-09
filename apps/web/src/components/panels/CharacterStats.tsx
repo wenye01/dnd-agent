@@ -6,7 +6,7 @@ interface AbilityScoreProps {
   value: number
 }
 
-export function AbilityScore({ name, value }: AbilityScoreProps) {
+export const AbilityScore = React.memo(function AbilityScore({ name, value }: AbilityScoreProps) {
   const modifier = getModifier(value)
   const modifierStr = formatModifier(modifier)
 
@@ -17,14 +17,16 @@ export function AbilityScore({ name, value }: AbilityScoreProps) {
       <span className="text-[10px] text-gold font-mono font-medium">{modifierStr}</span>
     </div>
   )
-}
+})
 
-export function StatChip({ icon: Icon, label, value, color = 'text-parchment' }: {
+interface StatChipProps {
   icon: React.ElementType
   label: string
   value: string | number
   color?: string
-}) {
+}
+
+export const StatChip = React.memo(function StatChip({ icon: Icon, label, value, color = 'text-parchment' }: StatChipProps) {
   return (
     <div className="flex items-center gap-1.5 px-2 py-1 bg-cave/50 rounded border border-gold/12">
       <Icon className="w-3 h-3 text-gold/50" />
@@ -32,4 +34,4 @@ export function StatChip({ icon: Icon, label, value, color = 'text-parchment' }:
       <span className={`text-xs font-mono font-bold ${color}`}>{value}</span>
     </div>
   )
-}
+})

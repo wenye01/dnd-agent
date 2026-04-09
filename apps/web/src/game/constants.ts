@@ -98,6 +98,101 @@ export const STATUS_ICON_SIZE = 10
 export const STATUS_ICON_OFFSET_Y = -22
 export const STATUS_ICON_SPACING = 12
 
+// Depth / z-index layers (higher = rendered on top)
+export const DEPTH = {
+  GRID: 0,
+  CELL_HOVER: 5,
+  MOVE_RANGE: 10,
+  ATTACK_RANGE: 10,
+  TARGET_RING: 15,
+  TURN_INDICATOR: 20,
+  EFFECTS: 500,
+  EFFECTS_OVERLAY: 501,
+  DAMAGE_NUMBER: 1000,
+} as const
+
+// Entity rendering
+export const ENTITY_RADIUS = TILE_SIZE / 2 - 6  // visual radius for character/enemy shapes
+export const ENTITY_BORDER_WIDTH = 2
+export const ENTITY_BORDER_ALPHA = 0.4
+
+// Turn indicator
+export const TURN_RING_LINE_WIDTH = 3
+export const TURN_RING_RADIUS = 30
+export const TURN_PULSE_MIN_ALPHA = 0.3
+export const TURN_PULSE_SCALE = 1.15
+
+// Target / selection ring
+export const TARGET_RING_LINE_WIDTH = 2.5
+export const TARGET_RING_RADIUS = TILE_SIZE / 2 - 2
+export const TARGET_PULSE_MIN_ALPHA = 0.2
+
+// Hover highlight (CombatInputHandler)
+export const HOVER_LINE_WIDTH = 2
+export const HOVER_COLOR = 0xffffff
+export const HOVER_ALPHA = 0.3
+
+// Attack effect
+export const MELEE_SWING_RADIUS = 30
+export const MELEE_SWING_ARC = 0.8       // radians half-spread
+export const MELEE_SWING_STEPS = 6
+export const MELEE_SWING_DELAY = 20      // ms per step
+export const PROJECTILE_DOT_RADIUS = 4
+export const HIT_FLASH_RADIUS = 16
+export const HIT_FLASH_SCALE = 2
+
+// Damage number
+export const DAMAGE_Y_OFFSET = -20
+export const DAMAGE_FLOAT_DISTANCE = 40
+export const DAMAGE_CRIT_INITIAL_SCALE = 0.5
+export const DAMAGE_CRIT_MAX_SCALE = 1.4
+export const DAMAGE_FONT_SIZES = {
+  crit: '28px',
+  damage: '22px',
+  miss: '18px',
+  heal: '22px',
+} as const
+
+// Healing effect
+export const HEALING_PARTICLE_COUNT = 8
+export const HEALING_PARTICLE_RADIUS = 10
+export const HEALING_PARTICLE_SIZE = 3
+export const HEALING_RISE_DISTANCE = 30
+export const HEALING_DRIFT_RANGE = 20
+export const HEALING_GLOW_RADIUS = 20
+
+// Spell effect
+export const SPELL_PARTICLE_COUNT = 12
+export const SPELL_PARTICLE_RADIUS = 40
+export const SPELL_BURST_RADIUS = 8
+export const SPELL_BURST_SCALE = 3
+export const SPELL_BOLT_RADIUS = 5
+export const SPELL_IMPACT_RADIUS = 12
+export const SPELL_IMPACT_SCALE = 2
+export const SPELL_IMPACT_DURATION = 200
+
+// Status effect
+export const STATUS_GAINED_RADIUS = 10
+export const STATUS_GAINED_SCALE = 2.5
+export const STATUS_REMOVED_RADIUS = 20
+export const STATUS_REMOVED_SCALE = 0.3
+
+// HP bar thresholds (fractions for color transitions)
+export const HP_THRESHOLD_HIGH = 0.6
+export const HP_THRESHOLD_LOW = 0.3
+
+// Enemy CR label offsets
+export const CR_LABEL_X_OFFSET = -8
+export const CR_LABEL_Y_OFFSET = -10
+export const CR_FONT_SIZE = '7px'
+
+// Text styles (shared by Phaser Text objects)
+export const TEXT_STYLES = {
+  INITIAL_LETTER: { fontSize: '18px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold' as const },
+  NAME_LABEL: { fontSize: '10px', fontFamily: 'monospace', stroke: '#000000', strokeThickness: 2 },
+  STATUS_ICON: { fontSize: '6px', color: '#ffffff', fontFamily: 'monospace', stroke: '#000000', strokeThickness: 1 },
+} as const
+
 // Condition color mapping (shared by StatusIcon and StatusEffect)
 export const CONDITION_COLORS: Record<string, number> = {
   blinded: 0x333333,

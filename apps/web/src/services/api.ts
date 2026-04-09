@@ -1,3 +1,5 @@
+import { API_DEFAULT_TIMEOUT_MS } from '../config/constants'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 export interface ApiResponse<T> {
@@ -60,15 +62,39 @@ export interface ListCharactersResponse {
   count: number
 }
 
+/**
+ * Error thrown when an HTTP request returns a non-OK status code (outside 200-299).
+ * For 401/403 the caller can inspect `status` to trigger session cleanup / re-auth.
+ */
+export class ApiHttpError extends Error {
+  readonly status: number
+  readonly code: string
+
+  constructor(status: number, code: string, message: string) {
+    super(message)
+    this.name = 'ApiHttpError'
+    this.status = status
+    this.code = code
+  }
+}
+
+/** Options for apiRequest, extending standard RequestInit. */
+export interface ApiRequestOptions extends RequestInit {
+  /** Request timeout in milliseconds. Defaults to API_DEFAULT_TIMEOUT_MS (15 s). */
+  timeoutMs?: number
+}
+
 async function apiRequest<T>(
   path: string,
-  options: RequestInit = {}
+  options: ApiRequestOptions = {}
 ): Promise<ApiResponse<T>> {
+  const { timeoutMs = API_DEFAULT_TIMEOUT_MS, ...fetchOptions } = options
+
   const url = `${API_BASE_URL}${path}`
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers as Record<string, string>,
+    ...fetchOptions.headers as Record<string, string>,
   }
 
   const sessionId = getSessionId()
@@ -76,10 +102,52 @@ async function apiRequest<T>(
     headers['X-Session-ID'] = sessionId
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  })
+  // AbortController for request timeout
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      ...fetchOptions,
+      headers,
+      signal: controller.signal,
+    })
+  } catch (err) {
+    // Re-throw AbortError (timeout) distinctly so callers can handle it
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new DOMException(`Request timed out after ${timeoutMs}ms`, 'AbortError')
+    }
+    throw err
+  } finally {
+    clearTimeout(timeoutId)
+  }
+
+  // HTTP status validation
+  if (!response.ok) {
+    let message = `HTTP ${response.status}: ${response.statusText}`
+    let code = `HTTP_${response.status}`
+
+    // Try to extract a more descriptive error from the response body
+    try {
+      const body = await response.json()
+      if (typeof body?.error?.message === 'string') {
+        message = body.error.message
+      }
+      if (typeof body?.error?.code === 'string') {
+        code = body.error.code
+      }
+    } catch {
+      // Body is not JSON or empty -- stick with status-based message
+    }
+
+    // Log auth errors at warn level for visibility
+    if (response.status === 401 || response.status === 403) {
+      console.warn(`Auth error (${response.status}) on ${path}: ${message}`)
+    }
+
+    throw new ApiHttpError(response.status, code, message)
+  }
 
   const data: ApiResponse<T> = await response.json()
   return data

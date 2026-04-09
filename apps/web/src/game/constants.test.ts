@@ -12,6 +12,24 @@ import {
   DEFAULT_MELEE_RANGE,
   DEFAULT_RANGED_RANGE,
   DEFAULT_SPELL_RANGE,
+  DEPTH,
+  ENTITY_RADIUS,
+  ENTITY_BORDER_WIDTH,
+  TURN_RING_LINE_WIDTH,
+  TURN_RING_RADIUS,
+  TARGET_RING_LINE_WIDTH,
+  TARGET_RING_RADIUS,
+  MELEE_SWING_RADIUS,
+  MELEE_SWING_ARC,
+  MELEE_SWING_STEPS,
+  DAMAGE_FONT_SIZES,
+  DAMAGE_Y_OFFSET,
+  DAMAGE_FLOAT_DISTANCE,
+  SPELL_PARTICLE_COUNT,
+  HEALING_PARTICLE_COUNT,
+  HP_THRESHOLD_HIGH,
+  HP_THRESHOLD_LOW,
+  TEXT_STYLES,
 } from './constants'
 
 describe('Game Constants', () => {
@@ -114,6 +132,108 @@ describe('Game Constants', () => {
       expect(DEFAULT_MELEE_RANGE).toBe(1)
       expect(DEFAULT_RANGED_RANGE).toBeGreaterThan(DEFAULT_MELEE_RANGE)
       expect(DEFAULT_SPELL_RANGE).toBeGreaterThan(DEFAULT_MELEE_RANGE)
+    })
+  })
+
+  describe('DEPTH (z-index layers)', () => {
+    it('should have all required depth entries', () => {
+      const requiredKeys = [
+        'GRID', 'CELL_HOVER', 'MOVE_RANGE', 'ATTACK_RANGE',
+        'TARGET_RING', 'TURN_INDICATOR', 'EFFECTS', 'EFFECTS_OVERLAY',
+        'DAMAGE_NUMBER',
+      ]
+      for (const key of requiredKeys) {
+        expect(DEPTH).toHaveProperty(key)
+      }
+    })
+
+    it('should have monotonically increasing depth values for distinct layers', () => {
+      expect(DEPTH.GRID).toBeLessThan(DEPTH.CELL_HOVER)
+      expect(DEPTH.CELL_HOVER).toBeLessThan(DEPTH.MOVE_RANGE)
+      expect(DEPTH.MOVE_RANGE).toBeLessThanOrEqual(DEPTH.ATTACK_RANGE)
+      expect(DEPTH.TARGET_RING).toBeGreaterThan(DEPTH.ATTACK_RANGE)
+      expect(DEPTH.TURN_INDICATOR).toBeGreaterThan(DEPTH.TARGET_RING)
+      expect(DEPTH.EFFECTS).toBeGreaterThan(DEPTH.TURN_INDICATOR)
+      expect(DEPTH.EFFECTS_OVERLAY).toBeGreaterThan(DEPTH.EFFECTS)
+      expect(DEPTH.DAMAGE_NUMBER).toBeGreaterThan(DEPTH.EFFECTS_OVERLAY)
+    })
+  })
+
+  describe('entity rendering constants', () => {
+    it('should have entity radius smaller than half tile size', () => {
+      expect(ENTITY_RADIUS).toBeLessThan(TILE_SIZE / 2)
+      expect(ENTITY_RADIUS).toBeGreaterThan(0)
+    })
+
+    it('should have positive border width', () => {
+      expect(ENTITY_BORDER_WIDTH).toBeGreaterThan(0)
+    })
+  })
+
+  describe('turn/target indicator constants', () => {
+    it('should have positive ring dimensions', () => {
+      expect(TURN_RING_LINE_WIDTH).toBeGreaterThan(0)
+      expect(TURN_RING_RADIUS).toBeGreaterThan(0)
+      expect(TARGET_RING_LINE_WIDTH).toBeGreaterThan(0)
+      expect(TARGET_RING_RADIUS).toBeGreaterThan(0)
+    })
+  })
+
+  describe('attack effect constants', () => {
+    it('should have positive melee swing values', () => {
+      expect(MELEE_SWING_RADIUS).toBeGreaterThan(0)
+      expect(MELEE_SWING_ARC).toBeGreaterThan(0)
+      expect(MELEE_SWING_ARC).toBeLessThan(Math.PI)
+      expect(MELEE_SWING_STEPS).toBeGreaterThan(0)
+    })
+  })
+
+  describe('damage number constants', () => {
+    it('should have font sizes for all damage types', () => {
+      expect(DAMAGE_FONT_SIZES).toHaveProperty('crit')
+      expect(DAMAGE_FONT_SIZES).toHaveProperty('damage')
+      expect(DAMAGE_FONT_SIZES).toHaveProperty('miss')
+      expect(DAMAGE_FONT_SIZES).toHaveProperty('heal')
+    })
+
+    it('should have negative Y offset (floats upward)', () => {
+      expect(DAMAGE_Y_OFFSET).toBeLessThan(0)
+    })
+
+    it('should have positive float distance', () => {
+      expect(DAMAGE_FLOAT_DISTANCE).toBeGreaterThan(0)
+    })
+  })
+
+  describe('particle counts', () => {
+    it('should have positive particle counts for effects', () => {
+      expect(SPELL_PARTICLE_COUNT).toBeGreaterThan(0)
+      expect(HEALING_PARTICLE_COUNT).toBeGreaterThan(0)
+    })
+  })
+
+  describe('HP threshold constants', () => {
+    it('should have valid thresholds (high > low)', () => {
+      expect(HP_THRESHOLD_HIGH).toBeGreaterThan(HP_THRESHOLD_LOW)
+      expect(HP_THRESHOLD_HIGH).toBeGreaterThan(0)
+      expect(HP_THRESHOLD_HIGH).toBeLessThan(1)
+      expect(HP_THRESHOLD_LOW).toBeGreaterThan(0)
+      expect(HP_THRESHOLD_LOW).toBeLessThan(1)
+    })
+  })
+
+  describe('TEXT_STYLES', () => {
+    it('should have styles for all text types', () => {
+      expect(TEXT_STYLES).toHaveProperty('INITIAL_LETTER')
+      expect(TEXT_STYLES).toHaveProperty('NAME_LABEL')
+      expect(TEXT_STYLES).toHaveProperty('STATUS_ICON')
+    })
+
+    it('should have fontFamily in all text styles', () => {
+      const styles = TEXT_STYLES as Record<string, Record<string, unknown>>
+      for (const key of Object.keys(styles)) {
+        expect(styles[key]).toHaveProperty('fontFamily')
+      }
     })
   })
 })

@@ -1,3 +1,4 @@
+import React from 'react'
 import type { SpellSlots } from '../../types'
 
 const SPELLCASTER_CLASSES = [
@@ -19,7 +20,7 @@ interface SpellSlotsBarProps {
   characterClass: string
 }
 
-export function SpellSlotsBar({ spellSlots, characterClass }: SpellSlotsBarProps) {
+export const SpellSlotsBar = React.memo(function SpellSlotsBar({ spellSlots, characterClass }: SpellSlotsBarProps) {
   const isCaster = SPELLCASTER_CLASSES.includes(characterClass.toLowerCase())
 
   // Do not render if the character is not a spellcaster or has no spell slots data
@@ -83,6 +84,6 @@ export function SpellSlotsBar({ spellSlots, characterClass }: SpellSlotsBarProps
       </div>
     </div>
   )
-}
+})
 
 export default SpellSlotsBar

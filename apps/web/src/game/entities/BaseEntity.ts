@@ -3,14 +3,16 @@
  * selection state, and animated movement.
  */
 import Phaser from 'phaser'
-import { TILE_SIZE } from '../constants'
+import { TILE_SIZE, ANIMATIONS, TEXT_STYLES } from '../constants'
 import { worldToGrid, gridToWorld, type GridPosition } from '../utils/CoordinateUtils'
+import type { Combatant } from '../../types'
 
 export type Direction = 'up' | 'down' | 'left' | 'right'
 
 export abstract class BaseEntity extends Phaser.GameObjects.Container {
   public readonly id: string
   public readonly entityName: string
+  public combatant: Combatant
   public gridPosition: GridPosition
   public direction: Direction = 'down'
   public isSelected = false
@@ -33,7 +35,7 @@ export abstract class BaseEntity extends Phaser.GameObjects.Container {
   }
 
   /** Animate movement to a grid cell. Returns a promise that resolves on completion. */
-  moveToCell(gridX: number, gridY: number, duration = 250): Promise<void> {
+  moveToCell(gridX: number, gridY: number, duration: number = ANIMATIONS.MOVE_DURATION): Promise<void> {
     const target = gridToWorld(gridX, gridY)
 
     // Update direction based on movement
@@ -57,7 +59,7 @@ export abstract class BaseEntity extends Phaser.GameObjects.Container {
   }
 
   /** Animate along a path of grid positions. */
-  async moveAlongPath(path: GridPosition[], durationPerStep = 200): Promise<void> {
+  async moveAlongPath(path: GridPosition[], durationPerStep = 200): Promise<void> { // 200ms per step (slightly faster than MOVE_DURATION)
     for (const step of path) {
       await this.moveToCell(step.x, step.y, durationPerStep)
     }
@@ -84,7 +86,37 @@ export abstract class BaseEntity extends Phaser.GameObjects.Container {
   abstract playHurt(): void
 
   /** Play attack lunge toward a target position. */
-  abstract playAttack(targetX: number, targetY: number): Promise<void>
+  playAttack(targetX: number, targetY: number): Promise<void> {
+    const origX = this.x
+    const origY = this.y
+    const lungeX = origX + (targetX - origX) * 0.5 // halfway lunge toward target
+    const lungeY = origY + (targetY - origY) * 0.5
+
+    return new Promise((resolve) => {
+      this.scene.tweens.add({
+        targets: this,
+        x: lungeX,
+        y: lungeY,
+        duration: ANIMATIONS.ATTACK_LUNGE,
+        ease: 'Quad.easeIn',
+        yoyo: true,
+        onComplete: () => resolve(),
+      })
+    })
+  }
+
+  /** Update combatant data (HP, conditions, etc.). */
+  updateCombatant(combatant: Combatant): void {
+    this.combatant = combatant
+  }
+
+  /** Create the initial-letter text object from the combatant's name. */
+  protected createInitialLetter(): Phaser.GameObjects.Text {
+    const letter = this.combatant.name.charAt(0).toUpperCase()
+    const text = this.scene.add.text(0, 0, letter, TEXT_STYLES.INITIAL_LETTER)
+    text.setOrigin(0.5)
+    return text
+  }
 
   /** Internal hurt flash animation. The redrawFn callback redraws the entity in its hurt color. */
   protected playHurtEffect(redrawFn: () => void): void {
@@ -94,7 +126,7 @@ export abstract class BaseEntity extends Phaser.GameObjects.Container {
     this.hurtTween = this.scene.tweens.add({
       targets: this,
       alpha: 0.5,
-      duration: 80,
+      duration: 80, // quick flash
       yoyo: true,
       repeat: 2,
       onComplete: () => {
@@ -112,7 +144,7 @@ export abstract class BaseEntity extends Phaser.GameObjects.Container {
         scaleX: 0,
         scaleY: 0,
         alpha: 0,
-        duration: 500,
+        duration: ANIMATIONS.DEATH_SHRINK,
         ease: 'Power2',
         onComplete: () => {
           this.destroy()

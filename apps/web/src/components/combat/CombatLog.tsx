@@ -1,8 +1,11 @@
 /**
  * CombatLog: scrollable list of combat event text entries.
  */
-import { useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useCombatStore, type CombatLogEntry } from '../../stores/combatStore'
+
+/** Maximum height for the scrollable combat log area. */
+const COMBAT_LOG_MAX_HEIGHT = '120px'
 
 export function CombatLog() {
   const logEntries = useCombatStore((s) => s.logEntries)
@@ -25,7 +28,7 @@ export function CombatLog() {
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5"
-        style={{ maxHeight: '120px' }}
+        style={{ maxHeight: COMBAT_LOG_MAX_HEIGHT }}
       >
         {logEntries.map((entry) => (
           <LogEntry key={entry.id} entry={entry} />
@@ -44,7 +47,7 @@ const TYPE_COLORS: Record<CombatLogEntry['type'], string> = {
   system: 'text-arcane/70',
 }
 
-function LogEntry({ entry }: { entry: CombatLogEntry }) {
+const LogEntry = React.memo(function LogEntry({ entry }: { entry: CombatLogEntry }) {
   const colorClass = TYPE_COLORS[entry.type] ?? 'text-stone-text/60'
 
   return (
@@ -52,4 +55,4 @@ function LogEntry({ entry }: { entry: CombatLogEntry }) {
       {entry.text}
     </div>
   )
-}
+})

@@ -2,6 +2,7 @@
  * ActionSelector: panel showing available combat actions.
  * Highlights used resources (action, bonus action, reaction, movement).
  */
+import React, { useCallback } from 'react'
 import { useCombatStore } from '../../stores/combatStore'
 import type { Combatant } from '../../types'
 import type { TargetMode } from '../../stores/combatStore'
@@ -23,20 +24,18 @@ const ACTIONS: ActionButton[] = [
   { key: 'disengage', label: 'Disengage', action: 'disengage', icon: 'R' },
 ]
 
-export function ActionSelector() {
+export const ActionSelector = React.memo(function ActionSelector() {
   const combat = useCombatStore((s) => s.combat)
   const currentUnitId = useCombatStore((s) => s.currentUnitId)
   const setTargetMode = useCombatStore((s) => s.setTargetMode)
   const setValidTargets = useCombatStore((s) => s.setValidTargets)
 
-  if (!combat || !currentUnitId) return null
+  const currentCombatant = (combat && currentUnitId)
+    ? (combat.participants.find((p) => p.id === currentUnitId) as Combatant | undefined)
+    : undefined
 
-  const currentCombatant = combat.participants.find(
-    (p) => p.id === currentUnitId,
-  ) as Combatant | undefined
-  if (!currentCombatant) return null
-
-  const handleAction = (action: ActionButton) => {
+  const handleAction = useCallback((action: ActionButton) => {
+    if (!combat || !currentCombatant) return
     if (action.requiresTarget) {
       // Enter target selection mode
       const enemies = combat.participants.filter(
@@ -53,7 +52,9 @@ export function ActionSelector() {
       // Direct action
       useCombatStore.getState().requestAction(action.action)
     }
-  }
+  }, [combat, currentCombatant, setTargetMode, setValidTargets])
+
+  if (!combat || !currentUnitId || !currentCombatant) return null
 
   return (
     <div className="flex flex-col gap-1">
@@ -112,9 +113,9 @@ export function ActionSelector() {
       </div>
     </div>
   )
-}
+})
 
-function ResourceDot({ label, used }: { label: string; used: boolean }) {
+const ResourceDot = React.memo(function ResourceDot({ label, used }: { label: string; used: boolean }) {
   return (
     <div className="flex items-center gap-1">
       <div
@@ -130,4 +131,4 @@ function ResourceDot({ label, used }: { label: string; used: boolean }) {
       <span className="text-[8px] font-mono text-stone-text/40">{label}</span>
     </div>
   )
-}
+})

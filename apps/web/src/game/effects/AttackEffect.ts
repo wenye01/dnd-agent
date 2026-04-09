@@ -2,7 +2,7 @@
  * Attack effect: melee weapon swing arc + ranged projectile trail + hit flash.
  */
 import Phaser from 'phaser'
-import { ANIMATIONS } from '../constants'
+import { ANIMATIONS, DEPTH, MELEE_SWING_RADIUS, MELEE_SWING_ARC, MELEE_SWING_STEPS, MELEE_SWING_DELAY, PROJECTILE_DOT_RADIUS, HIT_FLASH_RADIUS, HIT_FLASH_SCALE } from '../constants'
 
 export class AttackEffect {
   /**
@@ -16,33 +16,31 @@ export class AttackEffect {
     toY: number,
   ): void {
     const graphics = scene.add.graphics()
-    graphics.setDepth(500)
+    graphics.setDepth(DEPTH.EFFECTS)
 
     const angle = Math.atan2(toY - fromY, toX - fromX)
-    const radius = 30
-    const startAngle = angle - 0.8
-    const endAngle = angle + 0.8
+    const startAngle = angle - MELEE_SWING_ARC
+    const endAngle = angle + MELEE_SWING_ARC
 
     let progress = 0
-    const arcSteps = 6
 
     scene.time.addEvent({
-      delay: 20,
-      repeat: arcSteps,
+      delay: MELEE_SWING_DELAY,
+      repeat: MELEE_SWING_STEPS,
       callback: () => {
         graphics.clear()
         progress++
-        const currentAngle = startAngle + (endAngle - startAngle) * (progress / arcSteps)
+        const currentAngle = startAngle + (endAngle - startAngle) * (progress / MELEE_SWING_STEPS)
 
         // Slash line
-        const slashX = fromX + Math.cos(currentAngle) * radius
-        const slashY = fromY + Math.sin(currentAngle) * radius
+        const slashX = fromX + Math.cos(currentAngle) * MELEE_SWING_RADIUS
+        const slashY = fromY + Math.sin(currentAngle) * MELEE_SWING_RADIUS
 
         graphics.lineStyle(3, 0xffffff, 0.8 - progress * 0.1)
         graphics.lineBetween(fromX, fromY, slashX, slashY)
 
         // Impact flash at end
-        if (progress === arcSteps) {
+        if (progress === MELEE_SWING_STEPS) {
           scene.tweens.add({
             targets: graphics,
             alpha: 0,
@@ -66,11 +64,11 @@ export class AttackEffect {
     color = 0xffff88,
   ): void {
     const graphics = scene.add.graphics()
-    graphics.setDepth(500)
+    graphics.setDepth(DEPTH.EFFECTS)
 
     // Small projectile circle
-    const dot = scene.add.circle(fromX, fromY, 4, color)
-    dot.setDepth(500)
+    const dot = scene.add.circle(fromX, fromY, PROJECTILE_DOT_RADIUS, color)
+    dot.setDepth(DEPTH.EFFECTS)
 
     const dx = toX - fromX
     const dy = toY - fromY
@@ -106,13 +104,13 @@ export class AttackEffect {
     x: number,
     y: number,
   ): void {
-    const flash = scene.add.circle(x, y, 16, 0xffffff, 0.8)
-    flash.setDepth(500)
+    const flash = scene.add.circle(x, y, HIT_FLASH_RADIUS, 0xffffff, 0.8)
+    flash.setDepth(DEPTH.EFFECTS)
 
     scene.tweens.add({
       targets: flash,
-      scaleX: 2,
-      scaleY: 2,
+      scaleX: HIT_FLASH_SCALE,
+      scaleY: HIT_FLASH_SCALE,
       alpha: 0,
       duration: 150,
       onComplete: () => flash.destroy(),

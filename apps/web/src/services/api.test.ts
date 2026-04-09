@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { ApiResponse, ServerCharacter, CreateCharacterRequest } from './api'
+import { ApiHttpError } from './api'
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -18,12 +19,23 @@ const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
 
 // Import after mocks are set up
-import { characterApi } from './api'
+import { characterApi, sessionApi } from './api'
 
 function mockFetchResponse<T>(data: ApiResponse<T>, status = 200) {
   mockFetch.mockResolvedValueOnce({
     json: () => Promise.resolve(data),
+    ok: status >= 200 && status < 300,
     status,
+    statusText: status === 200 ? 'OK' : status === 201 ? 'Created' : 'Error',
+  })
+}
+
+function mockFetchHttpError(status: number, body?: { error?: { code?: string; message?: string } }) {
+  mockFetch.mockResolvedValueOnce({
+    json: () => Promise.resolve(body ?? {}),
+    ok: false,
+    status,
+    statusText: status === 401 ? 'Unauthorized' : status === 403 ? 'Forbidden' : status === 404 ? 'Not Found' : 'Error',
   })
 }
 
@@ -434,6 +446,135 @@ describe('api.ts - REST API Client', () => {
 
       const url = mockFetch.mock.calls[0][0] as string
       expect(url).toContain('/characters/xyz')
+    })
+  })
+
+  // ---------------------------------------------------------------
+  // New: timeout & HTTP status check tests
+  // ---------------------------------------------------------------
+
+  describe('request timeout', () => {
+    it('should throw AbortError on timeout', async () => {
+      vi.useFakeTimers()
+
+      // Simulate a fetch that never resolves, but rejects when the abort signal fires
+      mockFetch.mockImplementationOnce(
+        (_url: string, opts: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            if (opts.signal) {
+              opts.signal.addEventListener('abort', () => {
+                reject(new DOMException('The operation was aborted.', 'AbortError'))
+              })
+            }
+          }),
+      )
+
+      const promise = characterApi.get('char-timeout')
+
+      // Fast-forward past the default 15s timeout
+      vi.advanceTimersByTime(16_000)
+
+      await expect(promise).rejects.toThrow()
+
+      // Verify signal was passed
+      const fetchCall = mockFetch.mock.calls[0]
+      expect(fetchCall[1].signal).toBeDefined()
+
+      vi.useRealTimers()
+    })
+
+    it('should pass AbortSignal to fetch', async () => {
+      mockFetchResponse({ status: 'success', data: createMockCharacter() })
+      await characterApi.get('char-1')
+
+      const fetchCall = mockFetch.mock.calls[0]
+      expect(fetchCall[1].signal).toBeInstanceOf(AbortSignal)
+    })
+  })
+
+  describe('HTTP status validation', () => {
+    it('should throw ApiHttpError for 404 responses', async () => {
+      mockFetchHttpError(404)
+
+      try {
+        await characterApi.get('nonexistent')
+        expect.unreachable('Should have thrown')
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiHttpError)
+        const httpErr = err as ApiHttpError
+        expect(httpErr.status).toBe(404)
+        expect(httpErr.code).toBe('HTTP_404')
+      }
+    })
+
+    it('should extract error message from response body', async () => {
+      mockFetchHttpError(400, {
+        error: { code: 'VALIDATION_ERROR', message: 'Name is required' },
+      })
+
+      try {
+        await characterApi.create(createValidRequest())
+      } catch (err) {
+        const httpErr = err as ApiHttpError
+        expect(httpErr.status).toBe(400)
+        expect(httpErr.message).toBe('Name is required')
+        expect(httpErr.code).toBe('VALIDATION_ERROR')
+      }
+    })
+
+    it('should warn on 401 auth errors', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      mockFetchHttpError(401, {
+        error: { code: 'UNAUTHORIZED', message: 'Invalid session' },
+      })
+
+      try {
+        await sessionApi.get('sess-bad')
+      } catch {
+        // expected
+      }
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Auth error (401)'),
+      )
+      warnSpy.mockRestore()
+    })
+
+    it('should warn on 403 forbidden errors', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      mockFetchHttpError(403, {
+        error: { code: 'FORBIDDEN', message: 'Access denied' },
+      })
+
+      try {
+        await characterApi.delete('char-1')
+      } catch {
+        // expected
+      }
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Auth error (403)'),
+      )
+      warnSpy.mockRestore()
+    })
+
+    it('should use status text when body is not valid JSON', async () => {
+      mockFetch.mockResolvedValueOnce({
+        json: () => Promise.reject(new SyntaxError('Unexpected token')),
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      })
+
+      try {
+        await characterApi.list()
+      } catch (err) {
+        const httpErr = err as ApiHttpError
+        expect(httpErr.status).toBe(500)
+        expect(httpErr.message).toContain('500')
+      }
     })
   })
 })

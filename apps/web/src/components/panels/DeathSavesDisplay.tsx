@@ -1,3 +1,4 @@
+import React from 'react'
 import type { DeathSaves } from '../../types'
 
 interface DeathSavesDisplayProps {
@@ -5,7 +6,7 @@ interface DeathSavesDisplayProps {
   currentHitPoints: number
 }
 
-export function DeathSavesDisplay({ deathSaves, currentHitPoints }: DeathSavesDisplayProps) {
+export const DeathSavesDisplay = React.memo(function DeathSavesDisplay({ deathSaves, currentHitPoints }: DeathSavesDisplayProps) {
   // Only show when HP is 0 (or below, though it should be clamped to 0)
   if (currentHitPoints > 0) return null
 
@@ -83,6 +84,6 @@ export function DeathSavesDisplay({ deathSaves, currentHitPoints }: DeathSavesDi
       </div>
     </div>
   )
-}
+})
 
 export default DeathSavesDisplay

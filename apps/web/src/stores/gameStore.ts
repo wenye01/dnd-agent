@@ -1,3 +1,18 @@
+/**
+ * @fileoverview Persisted game state store (dual-storage architecture).
+ *
+ * This store is the **persisted** half of the combat state architecture:
+ * - `gameStore.gameState.combat` -- serialized to localStorage via zustand/persist,
+ *   survives page reloads and is the long-term source of truth for game session data.
+ * - `combatStore.combat`        -- ephemeral Zustand store for real-time combat updates
+ *   (UI interactions, combat log, targeting, etc.). Cleared on page unload.
+ *
+ * The two stores must be kept in sync. Backend `state_update` messages with
+ * `stateType: 'combat'` should update both stores so that the persisted snapshot
+ * remains consistent with the ephemeral combat state.
+ *
+ * @see combatStore.ts -- the real-time combat companion store
+ */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { GameState, Character, CombatState } from '../types'
@@ -29,6 +44,30 @@ export const useGameStore = create<GameStore>()(
 
       setGameState: (state) => set({ gameState: state, error: null }),
 
+      /**
+       * Shallow-merge partial updates into the current gameState.
+       *
+       * @warning This method uses a single-level spread (`{ ...state, ...updates }`),
+       *          which means **nested objects are replaced entirely, NOT deep-merged**.
+       *          For example, if you pass `{ metadata: { updatedAt: 3000 } }`, the
+       *          entire `metadata` object is replaced and any fields not included
+       *          (createdAt, playTime, scenarioId) are lost.
+       *
+       *          To avoid data loss, always pass the complete nested object when
+       *          updating fields like `metadata`, `combat`, or `party`:
+       *          ```
+       *          // SAFE: full replacement
+       *          updateGameState({ combat: { ...currentCombat, round: 2 } })
+       *
+       *          // UNSAFE: partial nested object (other metadata fields are lost)
+       *          updateGameState({ metadata: { updatedAt: 3000 } })
+       *          ```
+       *
+       *          For combat updates specifically, prefer `updateCombat()` which
+       *          handles the full-replacement semantics explicitly.
+       *
+       * @see gameStore.test.ts -- "should use shallow merge (replaces nested objects entirely)"
+       */
       updateGameState: (updates) =>
         set((state) => ({
           gameState: state.gameState ? { ...state.gameState, ...updates } : null,

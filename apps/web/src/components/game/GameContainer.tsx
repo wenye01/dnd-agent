@@ -7,6 +7,9 @@ import { gameManager } from '../../game/GameManager'
 import { CombatScene } from '../../game/scenes/CombatScene'
 import { useGameStore } from '../../stores/gameStore'
 
+/** Minimum canvas height to ensure the Phaser game is usable. */
+const MIN_CANVAS_HEIGHT = '400px'
+
 interface GameContainerProps {
   className?: string
 }
@@ -74,7 +77,7 @@ export function GameContainer({ className }: GameContainerProps) {
       ref={containerRef}
       id="game-container"
       className={`w-full h-full ${className ?? ''}`}
-      style={{ minHeight: '400px' }}
+      style={{ minHeight: MIN_CANVAS_HEIGHT }}
     />
   )
 }

@@ -1,7 +1,20 @@
 /**
- * Combat Zustand store.
- * Independent from gameStore to manage combat-specific state and actions.
- * Bridges WebSocket requests with Phaser scene events.
+ * @fileoverview Ephemeral combat store (dual-storage architecture).
+ *
+ * This store is the **real-time** half of the combat state architecture:
+ * - `combatStore.combat`        -- ephemeral Zustand store for live combat data:
+ *   participant tracking, HP changes, targeting, combat log, and combat actions.
+ *   NOT persisted; cleared on page unload or when `reset()` is called.
+ * - `gameStore.gameState.combat` -- persisted via zustand/persist to localStorage,
+ *   serves as the long-term snapshot that survives page reloads.
+ *
+ * Synchronization contract:
+ * Backend `state_update` messages with `stateType: 'combat'` should update BOTH
+ * stores so that the persisted snapshot stays consistent with the ephemeral state.
+ * Combat event handlers (damage, heal, etc.) update this store optimistically;
+ * the persisted copy in gameStore is updated when the backend confirms the new state.
+ *
+ * @see gameStore.ts -- the persisted game state companion store
  */
 import { create } from 'zustand'
 import type { Combatant, CombatState } from '../types'

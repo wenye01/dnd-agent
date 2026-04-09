@@ -2,31 +2,29 @@
  * Healing effect: green glow particles rising from the target.
  */
 import Phaser from 'phaser'
-import { ANIMATIONS } from '../constants'
+import { ANIMATIONS, DEPTH, HEALING_PARTICLE_COUNT, HEALING_PARTICLE_RADIUS, HEALING_PARTICLE_SIZE, HEALING_RISE_DISTANCE, HEALING_DRIFT_RANGE, HEALING_GLOW_RADIUS } from '../constants'
 
 export class HealingEffect {
   /**
    * Play healing particle effect at a world position.
    */
   static play(scene: Phaser.Scene, worldX: number, worldY: number): void {
-    const particleCount = 8
     const particles: Phaser.GameObjects.Arc[] = []
 
-    for (let i = 0; i < particleCount; i++) {
-      const angle = (i / particleCount) * Math.PI * 2
-      const radius = 10
-      const x = worldX + Math.cos(angle) * radius
-      const y = worldY + Math.sin(angle) * radius
+    for (let i = 0; i < HEALING_PARTICLE_COUNT; i++) {
+      const angle = (i / HEALING_PARTICLE_COUNT) * Math.PI * 2
+      const x = worldX + Math.cos(angle) * HEALING_PARTICLE_RADIUS
+      const y = worldY + Math.sin(angle) * HEALING_PARTICLE_RADIUS
 
-      const particle = scene.add.circle(x, y, 3, 0x44ff44, 0.9)
-      particle.setDepth(500)
+      const particle = scene.add.circle(x, y, HEALING_PARTICLE_SIZE, 0x44ff44, 0.9)
+      particle.setDepth(DEPTH.EFFECTS)
       particles.push(particle)
 
       // Rise and fade
       scene.tweens.add({
         targets: particle,
-        y: y - 30 - Math.random() * 20,
-        x: x + (Math.random() - 0.5) * 20,
+        y: y - HEALING_RISE_DISTANCE - Math.random() * HEALING_DRIFT_RANGE,
+        x: x + (Math.random() - 0.5) * HEALING_DRIFT_RANGE,
         alpha: 0,
         scaleX: 0.3,
         scaleY: 0.3,
@@ -38,8 +36,8 @@ export class HealingEffect {
     }
 
     // Central green glow
-    const glow = scene.add.circle(worldX, worldY, 20, 0x44ff44, 0.3)
-    glow.setDepth(499)
+    const glow = scene.add.circle(worldX, worldY, HEALING_GLOW_RADIUS, 0x44ff44, 0.3)
+    glow.setDepth(DEPTH.EFFECTS - 1)
 
     scene.tweens.add({
       targets: glow,

@@ -1,9 +1,10 @@
 /**
  * TurnIndicator: top bar showing current unit name, team color, round number.
  */
+import React from 'react'
 import { useCombatStore } from '../../stores/combatStore'
 
-export function TurnIndicator() {
+export const TurnIndicator = React.memo(function TurnIndicator() {
   const combat = useCombatStore((s) => s.combat)
   const currentUnitId = useCombatStore((s) => s.currentUnitId)
 
@@ -46,4 +47,4 @@ export function TurnIndicator() {
       </div>
     </div>
   )
-}
+})

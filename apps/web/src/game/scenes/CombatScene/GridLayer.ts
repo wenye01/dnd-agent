@@ -2,7 +2,7 @@
  * Grid layer: draws grid lines and marks non-walkable areas.
  */
 import Phaser from 'phaser'
-import { TILE_SIZE, GRID_WIDTH, GRID_HEIGHT, COLORS } from '../../constants'
+import { TILE_SIZE, GRID_WIDTH, GRID_HEIGHT, COLORS, DEPTH } from '../../constants'
 
 export class GridLayer {
   private graphics: Phaser.GameObjects.Graphics
@@ -10,9 +10,9 @@ export class GridLayer {
 
   constructor(scene: Phaser.Scene) {
     this.graphics = scene.add.graphics()
-    this.graphics.setDepth(0)
+    this.graphics.setDepth(DEPTH.GRID)
     this.obstacleGraphics = scene.add.graphics()
-    this.obstacleGraphics.setDepth(0)
+    this.obstacleGraphics.setDepth(DEPTH.GRID)
 
     this.drawGrid()
   }

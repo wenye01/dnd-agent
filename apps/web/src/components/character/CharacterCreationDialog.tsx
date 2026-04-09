@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 import { characterApi, type CreateCharacterRequest, type ServerCharacter } from '../../services/api'
 import { useGameStore } from '../../stores/gameStore'
 import { Sword, Shield, Wand2, User } from 'lucide-react'
-import type { Character, Ability, Condition, DeathSaves, EquipmentSlot, SpellSlots } from '../../types'
+import type { Character, Ability, Condition, DeathSaves, SpellSlots } from '../../types'
 import { getModifier, formatModifier } from '../../utils/modifiers'
 
 interface CharacterCreationDialogProps {

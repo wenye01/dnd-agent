@@ -1,9 +1,79 @@
 /**
  * InitiativeTracker: sorted list of combatants with active turn marker.
  */
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useCombatStore } from '../../stores/combatStore'
 import type { Combatant } from '../../types'
+
+// HP color thresholds (percentages) for mini HP bar
+const HP_PCT_HIGH = 60
+const HP_PCT_LOW = 30
+
+const HP_COLORS = {
+  high: '#44ff44',
+  mid: '#ffff00',
+  low: '#ff4444',
+} as const
+
+interface InitiativeEntryProps {
+  initiative: number
+  combatant: Combatant
+  isActive: boolean
+}
+
+const InitiativeEntry = React.memo(function InitiativeEntry({
+  initiative,
+  combatant,
+  isActive,
+}: InitiativeEntryProps) {
+  const isPlayer = combatant.type === 'player'
+  const hpPct = combatant.maxHp > 0 ? (combatant.currentHp / combatant.maxHp) * 100 : 0
+  const isDead = combatant.currentHp <= 0
+
+  return (
+    <div
+      className={`flex items-center gap-2 px-2 py-1 text-[10px] transition-colors ${
+        isActive
+          ? 'bg-gold/10 border-l-2 border-gold'
+          : isDead
+            ? 'opacity-40'
+            : 'border-l-2 border-transparent'
+      }`}
+    >
+      {/* Team color dot */}
+      <div
+        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+          isPlayer ? 'bg-blue-400' : 'bg-red-400'
+        }`}
+      />
+      {/* Name */}
+      <span
+        className={`flex-1 truncate ${
+          isActive
+            ? 'text-gold font-semibold'
+            : isDead
+              ? 'text-stone-text/30 line-through'
+              : 'text-stone-text/70'
+        }`}
+      >
+        {combatant.name}
+      </span>
+      {/* Initiative score */}
+      <span className="text-stone-text/40 font-mono">{initiative}</span>
+      {/* Mini HP bar */}
+      <div className="w-8 h-1 bg-stone-text/10 rounded-full overflow-hidden flex-shrink-0">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${hpPct}%`,
+            backgroundColor:
+              hpPct > HP_PCT_HIGH ? HP_COLORS.high : hpPct > HP_PCT_LOW ? HP_COLORS.mid : HP_COLORS.low,
+          }}
+        />
+      </div>
+    </div>
+  )
+})
 
 export function InitiativeTracker() {
   const combat = useCombatStore((s) => s.combat)
@@ -28,58 +98,14 @@ export function InitiativeTracker() {
       <div className="text-[10px] font-display text-gold/60 uppercase tracking-wider px-2 py-1 border-b border-gold/10">
         Initiative
       </div>
-      {sorted.map((entry) => {
-        const isActive = entry.characterId === currentUnitId
-        const combatant = entry.combatant as Combatant
-        const isPlayer = combatant.type === 'player'
-        const hpPct = combatant.maxHp > 0 ? (combatant.currentHp / combatant.maxHp) * 100 : 0
-        const isDead = combatant.currentHp <= 0
-
-        return (
-          <div
-            key={entry.characterId}
-            className={`flex items-center gap-2 px-2 py-1 text-[10px] transition-colors ${
-              isActive
-                ? 'bg-gold/10 border-l-2 border-gold'
-                : isDead
-                  ? 'opacity-40'
-                  : 'border-l-2 border-transparent'
-            }`}
-          >
-            {/* Team color dot */}
-            <div
-              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                isPlayer ? 'bg-blue-400' : 'bg-red-400'
-              }`}
-            />
-            {/* Name */}
-            <span
-              className={`flex-1 truncate ${
-                isActive
-                  ? 'text-gold font-semibold'
-                  : isDead
-                    ? 'text-stone-text/30 line-through'
-                    : 'text-stone-text/70'
-              }`}
-            >
-              {combatant.name}
-            </span>
-            {/* Initiative score */}
-            <span className="text-stone-text/40 font-mono">{entry.initiative}</span>
-            {/* Mini HP bar */}
-            <div className="w-8 h-1 bg-stone-text/10 rounded-full overflow-hidden flex-shrink-0">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${hpPct}%`,
-                  backgroundColor:
-                    hpPct > 60 ? '#44ff44' : hpPct > 30 ? '#ffff00' : '#ff4444',
-                }}
-              />
-            </div>
-          </div>
-        )
-      })}
+      {sorted.map((entry) => (
+        <InitiativeEntry
+          key={entry.characterId}
+          initiative={entry.initiative}
+          combatant={entry.combatant as Combatant}
+          isActive={entry.characterId === currentUnitId}
+        />
+      ))}
     </div>
   )
 }

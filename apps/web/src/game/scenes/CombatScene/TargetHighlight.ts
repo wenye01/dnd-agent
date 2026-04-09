@@ -3,7 +3,7 @@
  * rings on valid target entities.
  */
 import Phaser from 'phaser'
-import { TILE_SIZE, COLORS, ANIMATIONS } from '../../constants'
+import { TILE_SIZE, COLORS, ANIMATIONS, DEPTH, TARGET_RING_LINE_WIDTH, TARGET_RING_RADIUS, TARGET_PULSE_MIN_ALPHA } from '../../constants'
 import type { GridPosition } from '../../utils/CoordinateUtils'
 import { gridToWorld } from '../../utils/CoordinateUtils'
 
@@ -16,7 +16,7 @@ export class TargetHighlight {
   constructor(scene: Phaser.Scene) {
     this.scene = scene
     this.rangeGraphics = scene.add.graphics()
-    this.rangeGraphics.setDepth(10)
+    this.rangeGraphics.setDepth(DEPTH.ATTACK_RANGE)
   }
 
   /** Show attack range overlay and pulsing rings on target positions. */
@@ -39,15 +39,15 @@ export class TargetHighlight {
     for (const pos of targetPositions) {
       const worldPos = gridToWorld(pos.x, pos.y)
       const ring = this.scene.add.graphics()
-      ring.setDepth(15)
-      ring.lineStyle(2.5, COLORS.TARGET_HIGHLIGHT, COLORS.TARGET_HIGHLIGHT_ALPHA)
-      ring.strokeCircle(0, 0, TILE_SIZE / 2 - 2)
+      ring.setDepth(DEPTH.TARGET_RING)
+      ring.lineStyle(TARGET_RING_LINE_WIDTH, COLORS.TARGET_HIGHLIGHT, COLORS.TARGET_HIGHLIGHT_ALPHA)
+      ring.strokeCircle(0, 0, TARGET_RING_RADIUS)
       ring.setPosition(worldPos.x, worldPos.y)
 
       // Pulse animation
       this.scene.tweens.add({
         targets: ring,
-        alpha: 0.2,
+        alpha: TARGET_PULSE_MIN_ALPHA,
         duration: ANIMATIONS.SELECTION_PULSE,
         ease: 'Sine.easeInOut',
         yoyo: true,
