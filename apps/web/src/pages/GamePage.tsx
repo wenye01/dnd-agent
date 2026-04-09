@@ -198,7 +198,7 @@ function GamePage() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-[300px] h-[300px] rounded-full relative" style={{ border: '2px solid rgba(155, 109, 255, 0.4)', boxShadow: '0 0 60px rgba(155, 109, 255, 0.18), 0 0 120px rgba(155, 109, 255, 0.06), inset 0 0 30px rgba(155, 109, 255, 0.06)', animation: 'slow-spin 40s linear infinite reverse' }}>
                 {/* Rune glyphs around middle ring */}
-                {['&#9733;', '&#10038;', '&#10023;', '&#10047;', '&#9733;', '&#10038;', '&#10023;', '&#10047;'].map((glyph, i) => (
+                {['★', '✶', '✧', '❁', '★', '✶', '✧', '❁'].map((glyph, i) => (
                   <div key={i} className="absolute animate-rune-pulse" style={{
                     top: '50%', left: '50%',
                     fontSize: '12px',
@@ -206,7 +206,7 @@ function GamePage() {
                     textShadow: i % 2 === 0 ? '0 0 12px rgba(155, 109, 255, 0.6), 0 0 24px rgba(155, 109, 255, 0.25)' : '0 0 12px rgba(212, 168, 67, 0.5), 0 0 24px rgba(212, 168, 67, 0.2)',
                     transform: `rotate(${i * 45}deg) translateY(-140px) rotate(-${i * 45}deg)`,
                     animationDelay: `${i * 0.4}s`,
-                  }} dangerouslySetInnerHTML={{ __html: glyph }} />
+                  }}>{glyph}</div>
                 ))}
                 {/* Inner connecting arcs - 4 crescent shapes */}
                 {[0, 90, 180, 270].map((deg, i) => (

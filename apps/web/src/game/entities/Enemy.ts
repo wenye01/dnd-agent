@@ -54,7 +54,7 @@ export class Enemy extends BaseEntity {
 
   /** Play hurt flash. */
   playHurt(): void {
-    super.playHurt(() => {
+    super.playHurtEffect(() => {
       this.bodyGraphic.clear()
       this.drawBody(COLORS.ENEMY)
       this.setAlpha(1)

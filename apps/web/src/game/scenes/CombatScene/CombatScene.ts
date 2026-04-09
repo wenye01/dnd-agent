@@ -20,7 +20,7 @@ import { isValidCell, buildObstacleGrid } from '../../utils/GridUtils'
 import { eventBus, GameEvents } from '../../../events'
 import { useCombatStore } from '../../../stores/combatStore'
 import type { CombatState } from '../../../types'
-import type { CombatEventPayload } from '../../../services/websocket'
+import type { CombatEventPayload } from '../../../services/typeGuards'
 
 export class CombatScene extends BaseScene {
   // Subsystems

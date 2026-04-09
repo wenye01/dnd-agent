@@ -48,7 +48,7 @@ export class Character extends BaseEntity {
 
   /** Play hurt flash animation. */
   playHurt(): void {
-    super.playHurt(() => this.redrawNormal())
+    super.playHurtEffect(() => this.redrawNormal())
   }
 
   /** Play attack lunge toward a target position. */

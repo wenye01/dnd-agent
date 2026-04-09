@@ -8,7 +8,7 @@ describe('COMBAT_EVENT_TYPES', () => {
       'combat_start', 'combat_end',
       'initiative_rolled',
       'turn_start', 'turn_end',
-      'round_end',
+      'round_start', 'round_end',
       'attack', 'damage', 'heal', 'death', 'unconscious',
       'condition_applied', 'condition_removed',
       'opportunity_attack',
@@ -20,8 +20,8 @@ describe('COMBAT_EVENT_TYPES', () => {
     }
   })
 
-  it('should have exactly 19 event types', () => {
-    expect(COMBAT_EVENT_TYPES).toHaveLength(19)
+  it('should have exactly 20 event types', () => {
+    expect(COMBAT_EVENT_TYPES).toHaveLength(20)
   })
 
   it('should be a readonly array (as const)', () => {

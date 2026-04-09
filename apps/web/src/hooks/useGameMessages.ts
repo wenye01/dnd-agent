@@ -9,52 +9,12 @@ import {
   isDiceResultPayload,
   isErrorPayload,
   isCombatEventPayload,
-} from '../services/websocket'
+  isGameStateData,
+  isPartyData,
+  isCombatData,
+} from '../services/typeGuards'
 import type { ServerMessage, ClientMessage } from '../types'
-import type { GameState, Character, CombatState } from '../types'
 import { eventBus, GameEvents } from '../events'
-
-// Helper type guards for state update data
-// These are more permissive than the full types since the server may send partial updates
-// They're defined outside the component to avoid ESLint "accessed before declared" errors
-function isGameStateData(data: unknown): data is Partial<GameState> {
-  if (typeof data !== 'object' || data === null) {
-    return false
-  }
-  const obj = data as Record<string, unknown>
-  // A valid game state should at least have sessionId
-  return 'sessionId' in obj && typeof obj.sessionId === 'string'
-}
-
-function isPartyData(data: unknown): data is Character[] {
-  return Array.isArray(data) && data.every((item) =>
-    typeof item === 'object' &&
-    item !== null &&
-    'id' in item &&
-    'name' in item &&
-    'race' in item &&
-    'class' in item &&
-    'level' in item &&
-    typeof item.id === 'string' &&
-    typeof item.name === 'string'
-  )
-}
-
-function isCombatData(data: unknown): data is CombatState {
-  if (typeof data !== 'object' || data === null) {
-    return false
-  }
-  const obj = data as Record<string, unknown>
-  // participants can be string[] (old) or Combatant[] (new)
-  if (!Array.isArray(obj.participants)) return false
-  return (
-    typeof obj.round === 'number' &&
-    typeof obj.turnIndex === 'number' &&
-    Array.isArray(obj.initiatives) &&
-    Array.isArray(obj.activeEffects) &&
-    ('status' in obj && typeof obj.status === 'string')
-  )
-}
 
 export function useGameMessages() {
   const { subscribe, send } = useWebSocket()

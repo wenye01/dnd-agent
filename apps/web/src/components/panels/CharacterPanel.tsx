@@ -319,13 +319,13 @@ export default function CharacterPanel() {
           </div>
           {/* Rune sigils row */}
           <div className="flex items-center justify-center gap-3 mt-1">
-            {['&#9733;', '&#10038;', '&#10023;', '&#10047;', '&#9733;'].map((glyph, i) => (
+            {['★', '✶', '✧', '❁', '★'].map((glyph, i) => (
               <span key={i} className="animate-rune-pulse" style={{
                 fontSize: '8px',
                 color: i % 2 === 0 ? 'rgba(212, 168, 67, 0.35)' : 'rgba(155, 109, 255, 0.3)',
                 textShadow: i % 2 === 0 ? '0 0 6px rgba(212,168,67,0.2)' : '0 0 6px rgba(155,109,255,0.2)',
                 animationDelay: `${i * 0.5}s`,
-              }} dangerouslySetInnerHTML={{ __html: glyph }} />
+              }}>{glyph}</span>
             ))}
           </div>
         </div>

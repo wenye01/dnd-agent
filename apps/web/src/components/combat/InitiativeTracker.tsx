@@ -1,6 +1,7 @@
 /**
  * InitiativeTracker: sorted list of combatants with active turn marker.
  */
+import { useMemo } from 'react'
 import { useCombatStore } from '../../stores/combatStore'
 import type { Combatant } from '../../types'
 
@@ -8,16 +9,19 @@ export function InitiativeTracker() {
   const combat = useCombatStore((s) => s.combat)
   const currentUnitId = useCombatStore((s) => s.currentUnitId)
 
-  if (!combat) return null
-
   // Sort by initiative descending
-  const sorted = [...combat.initiatives]
-    .sort((a, b) => b.initiative - a.initiative)
-    .map((entry) => {
-      const combatant = combat.participants.find((p) => p.id === entry.characterId)
-      return { ...entry, combatant }
-    })
-    .filter((entry) => entry.combatant)
+  const sorted = useMemo(() => {
+    if (!combat) return []
+    return [...combat.initiatives]
+      .sort((a, b) => b.initiative - a.initiative)
+      .map((entry) => {
+        const combatant = combat.participants.find((p) => p.id === entry.characterId)
+        return { ...entry, combatant }
+      })
+      .filter((entry) => entry.combatant)
+  }, [combat])
+
+  if (!combat) return null
 
   return (
     <div className="flex flex-col gap-0.5">

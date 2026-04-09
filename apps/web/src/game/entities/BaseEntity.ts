@@ -80,8 +80,14 @@ export abstract class BaseEntity extends Phaser.GameObjects.Container {
     return worldToGrid(this.x, this.y)
   }
 
-  /** Play hurt flash animation. The redrawFn callback redraws the entity in its hurt color. */
-  playHurt(redrawFn: () => void): void {
+  /** Play hurt animation (subclass-specific visual). */
+  abstract playHurt(): void
+
+  /** Play attack lunge toward a target position. */
+  abstract playAttack(targetX: number, targetY: number): Promise<void>
+
+  /** Internal hurt flash animation. The redrawFn callback redraws the entity in its hurt color. */
+  protected playHurtEffect(redrawFn: () => void): void {
     if (this.hurtTween) this.hurtTween.stop()
     redrawFn()
 

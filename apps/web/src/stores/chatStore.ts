@@ -22,49 +22,26 @@ interface ChatStore {
   clearMessages: () => void
 }
 
+const addMessage = (type: ChatMessage['type'], content: string) => (state: { messages: ChatMessage[] }) => ({
+  messages: [
+    ...state.messages,
+    {
+      id: crypto.randomUUID(),
+      type,
+      content,
+      timestamp: Date.now(),
+    },
+  ],
+})
+
 export const useChatStore = create<ChatStore>((set, get) => ({
   messages: [],
   streamingText: '',
   isStreaming: false,
 
-  addUserMessage: (content) =>
-    set((state) => ({
-      messages: [
-        ...state.messages,
-        {
-          id: crypto.randomUUID(),
-          type: 'user',
-          content,
-          timestamp: Date.now(),
-        },
-      ],
-    })),
-
-  addDMMessage: (content) =>
-    set((state) => ({
-      messages: [
-        ...state.messages,
-        {
-          id: crypto.randomUUID(),
-          type: 'dm',
-          content,
-          timestamp: Date.now(),
-        },
-      ],
-    })),
-
-  addSystemMessage: (content) =>
-    set((state) => ({
-      messages: [
-        ...state.messages,
-        {
-          id: crypto.randomUUID(),
-          type: 'system',
-          content,
-          timestamp: Date.now(),
-        },
-      ],
-    })),
+  addUserMessage: (content) => set(addMessage('user', content)),
+  addDMMessage: (content) => set(addMessage('dm', content)),
+  addSystemMessage: (content) => set(addMessage('system', content)),
 
   appendStreamText: (text) =>
     set((state) => ({

@@ -339,7 +339,7 @@ export const GameEvents = {
 | 文件 | 导出 |
 |------|------|
 | `utils/modifiers.ts` | `getModifier(score)` → D&D 修正值, `formatModifier(mod)` → "+3"/"-2" |
-| `lib/utils.ts` | `cn()` (clsx+twMerge), `generateStableId(prefix)` (crypto.randomUUID fallback) |
+| `lib/utils.ts` | `cn()` (clsx+twMerge) |
 | `config/constants.ts` | WS URL/重连/心跳/队列配置, `WS_MESSAGE_TYPES`, `STATE_UPDATE_TYPES`, `COMBAT_EVENT_TYPES`(20种) |
 
 ---
@@ -440,7 +440,7 @@ cleanup(): void {
 | `types/message.ts` | WebSocket 消息类型 + Payload |
 | `types/state.ts` | Combatant, CombatState, GameState 等 |
 | `utils/modifiers.ts` | D&D 修正值计算 |
-| `lib/utils.ts` | cn(), generateStableId() |
+| `lib/utils.ts` | cn() |
 | `game/GameManager.ts` | Phaser 单例管理器 |
 | `game/config.ts` | Phaser 配置（12×9格, 64px） |
 | `game/constants.ts` | 颜色/动画/战斗/UI 常量 |

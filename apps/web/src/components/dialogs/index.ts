@@ -1,2 +1,0 @@
-// Dialog Components
-export {}

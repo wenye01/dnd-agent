@@ -22,19 +22,23 @@ export const WS_MESSAGE_TYPES = {
   SERVER: ['narration', 'state_update', 'dice_result', 'combat_event', 'error', 'pong'] as const,
 } as const
 
-export type ClientMessageType = typeof WS_MESSAGE_TYPES.CLIENT[number]
-export type ServerMessageType = typeof WS_MESSAGE_TYPES.SERVER[number]
 
 // State update types
 export const STATE_UPDATE_TYPES = ['game', 'party', 'combat', 'map'] as const
 
 // Combat event types (matches backend combat.EventType constants)
-export const COMBAT_EVENT_TYPES = [
+// Source of truth: CombatEventType in services/typeGuards.ts
+// This array must contain every value in CombatEventType for runtime use.
+import type { CombatEventType } from '../services/typeGuards'
+
+// Verify at compile time that every element satisfies CombatEventType
+export const COMBAT_EVENT_TYPES: readonly CombatEventType[] = [
   'combat_start',
   'combat_end',
   'initiative_rolled',
   'turn_start',
   'turn_end',
+  'round_start',
   'round_end',
   'attack',
   'damage',

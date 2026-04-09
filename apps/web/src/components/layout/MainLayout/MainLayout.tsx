@@ -44,13 +44,13 @@ export function MainLayout({
           {header}
           {/* Rune dots along header bottom border */}
           <div className="absolute bottom-0 left-0 right-0 flex justify-between px-16 pointer-events-none" style={{ transform: 'translateY(50%)' }}>
-            {['&#10038;', '&#10023;', '&#9733;', '&#10047;', '&#9733;', '&#10023;', '&#10038;'].map((glyph, i) => (
+            {['✶', '✧', '★', '❁', '★', '✧', '✶'].map((glyph, i) => (
               <span key={i} className="animate-rune-pulse" style={{
                 fontSize: '7px',
                 color: i % 2 === 0 ? 'rgba(212, 168, 67, 0.7)' : 'rgba(155, 109, 255, 0.65)',
                 textShadow: i % 2 === 0 ? '0 0 8px rgba(212,168,67,0.5), 0 0 16px rgba(212,168,67,0.2)' : '0 0 8px rgba(155,109,255,0.4), 0 0 16px rgba(155,109,255,0.15)',
                 animationDelay: `${i * 0.6}s`,
-              }} dangerouslySetInnerHTML={{ __html: glyph }} />
+              }}>{glyph}</span>
             ))}
           </div>
         </header>
