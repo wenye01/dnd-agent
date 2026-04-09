@@ -349,9 +349,9 @@ func TestGetModifier(t *testing.T) {
 		score    int
 		expected int
 	}{
-		{1, -4},
+		{1, -5},
 		{2, -4},
-		{3, -3},
+		{3, -4},
 		{8, -1},
 		{10, 0},
 		{11, 0},

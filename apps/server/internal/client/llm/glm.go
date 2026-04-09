@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // GLMProvider implements Provider for GLM (智谱AI) API.
@@ -39,7 +41,22 @@ func NewGLMProvider(config *GLMConfig) *GLMProvider {
 		apiKey:  config.APIKey,
 		baseURL: strings.TrimSuffix(baseURL, "/"),
 		model:   config.Model,
-		client:  &http.Client{},
+		// HTTP client with timeouts to prevent goroutine leaks and resource exhaustion.
+		// Timeout (120s) is a safety net for the overall request lifecycle;
+		// StreamMessage passes context.Context for caller-controlled cancellation,
+		// so this mainly guards SendMessage and the initial connection phase.
+		client: &http.Client{
+			Timeout: 120 * time.Second,
+			Transport: &http.Transport{
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second, // connection establishment timeout
+					KeepAlive: 30 * time.Second,
+				}).DialContext,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ResponseHeaderTimeout: 30 * time.Second, // wait for first response byte
+				// IdleConnTimeout and MaxIdleConns use sensible Go defaults.
+			},
+		},
 	}
 }
 
@@ -239,6 +256,10 @@ func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan S
 		var inToolCall bool
 
 		scanner := bufio.NewScanner(resp.Body)
+		// Expand scanner buffer from default 64KB to handle large tool-call JSON
+		// payloads that can exceed 64KB (e.g. complex function arguments).
+		// Initial buffer 256KB, max 1MB — sufficient for any single SSE data line.
+		scanner.Buffer(make([]byte, 256*1024), 1*1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text()
 

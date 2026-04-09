@@ -56,14 +56,16 @@ var conditionEffects = map[types.Condition]ConditionModifiers{
 		DefenseDisadvantage: true, // Disadvantage to be attacked
 	},
 	types.ConditionParalyzed: {
-		Incapacitated:  true,
-		AutoFailSTRDEX: true,
-		AutoCritMelee:  true, // Auto-crit on melee attacks against
+		Incapacitated:    true,
+		AutoFailSTRDEX:   true,
+		AutoCritMelee:    true, // Auto-crit on melee attacks against
+		DefenseAdvantage: true, // Attacks against have advantage
 	},
 	types.ConditionPetrified: {
 		Incapacitated:    true,
 		AutoFailSTRDEX:   true,
 		DamageResistance: true, // Resistant to all damage
+		DefenseAdvantage: true, // Attacks against have advantage
 	},
 	types.ConditionPoisoned: {
 		AttackDisadvantage: true, // Disadvantage on attacks and checks

@@ -22,6 +22,15 @@ func getGlobalRand() *rand.Rand {
 	return globalRand
 }
 
+// DiceRoller defines the interface for dice rolling operations used by combat.
+// Extracting this interface allows CombatManager to accept mocks in tests
+// instead of depending on the concrete *dice.Service type.
+type DiceRoller interface {
+	Roll(formula string) (*Result, error)
+	AttackRoll(attackBonus, ac int, advantage, disadvantage bool) *CheckResult
+	AbilityCheck(modifier, dc int, advantage, disadvantage bool) *CheckResult
+}
+
 // Service provides dice rolling functionality.
 type Service struct {
 	rnd *rand.Rand

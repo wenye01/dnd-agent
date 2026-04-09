@@ -1,4 +1,13 @@
 // Package session manages LLM conversation sessions for the D&D game server.
+//
+// Concurrency model:
+//
+// All session data is protected by Manager.mu. Manager.mu guards both the
+// sessions map AND the content of each Session (e.g. Messages). We do not use
+// a per-session mutex because every Session belongs to exactly one Manager and
+// all access goes through Manager methods. This avoids lock-ordering bugs and
+// keeps the concurrency story simple: if you hold Manager.mu (or RLock), you
+// can safely read/write any session's Messages.
 package session
 
 import (
@@ -12,15 +21,17 @@ import (
 // Manager manages LLM conversation sessions.
 type Manager struct {
 	provider llm.Provider
+	// mu guards both the sessions map AND the contents of every Session stored
+	// in it (e.g. Messages slice). All public methods acquire this lock.
 	mu       sync.RWMutex
 	sessions map[string]*Session
 }
 
 // Session represents an active LLM conversation.
+// Callers must NOT access fields directly; use Manager methods instead.
 type Session struct {
 	ID       string
 	Messages []llm.Message
-	mu       sync.Mutex
 }
 
 // NewManager creates a new session manager.
@@ -31,30 +42,19 @@ func NewManager(provider llm.Provider) *Manager {
 	}
 }
 
-// CreateSession creates a new conversation session.
-func (m *Manager) CreateSession(sessionID string) *Session {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
+// getOrCreateSession returns an existing session or creates a new one.
+// Caller MUST hold Manager.mu (at least RLock for read-only intent, Lock for
+// writes). If the session needs to be created the caller must hold a full Lock.
+func (m *Manager) getOrCreateSession(sessionID string) *Session {
 	if sess, exists := m.sessions[sessionID]; exists {
 		return sess
 	}
-
 	sess := &Session{
 		ID:       sessionID,
 		Messages: []llm.Message{},
 	}
 	m.sessions[sessionID] = sess
 	return sess
-}
-
-// GetSession retrieves a session by ID.
-func (m *Manager) GetSession(sessionID string) (*Session, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	sess, exists := m.sessions[sessionID]
-	return sess, exists
 }
 
 // DeleteSession removes a session.
@@ -68,14 +68,19 @@ func (m *Manager) DeleteSession(sessionID string) {
 // The caller is responsible for adding the assistant message to the session
 // after processing the stream (for text responses or tool call responses).
 func (m *Manager) SendMessage(ctx context.Context, sessionID, userContent string, tools []llm.ToolDefinition) (<-chan llm.StreamChunk, error) {
-	sess := m.CreateSession(sessionID)
-
-	// Add user message
+	// Add user message and snapshot the conversation under a single write lock.
+	// The lock is released before starting the stream so we do not block other
+	// operations while waiting for the LLM provider.
+	m.mu.Lock()
+	sess := m.getOrCreateSession(sessionID)
 	sess.Messages = append(sess.Messages, llm.NewUserMessage(userContent))
+	msgsSnapshot := make([]llm.Message, len(sess.Messages))
+	copy(msgsSnapshot, sess.Messages)
+	m.mu.Unlock()
 
-	// Create request
+	// Create request from snapshot -- safe to use without holding the lock.
 	req := &llm.Request{
-		Messages:    sess.Messages,
+		Messages:    msgsSnapshot,
 		Tools:       tools,
 		Temperature: 0.8,
 	}
@@ -170,14 +175,20 @@ func (m *Manager) AddAssistantMessage(sessionID string, content string) error {
 // a new user message -- it just calls the LLM with whatever is in the session.
 // The caller is responsible for adding the assistant message to the session.
 func (m *Manager) ContinueMessage(ctx context.Context, sessionID string, tools []llm.ToolDefinition) (<-chan llm.StreamChunk, error) {
-	sess, exists := m.GetSession(sessionID)
+	// Snapshot messages under read lock so we don't block concurrent writes.
+	m.mu.RLock()
+	sess, exists := m.sessions[sessionID]
 	if !exists {
+		m.mu.RUnlock()
 		return nil, fmt.Errorf("session not found: %s", sessionID)
 	}
+	msgsSnapshot := make([]llm.Message, len(sess.Messages))
+	copy(msgsSnapshot, sess.Messages)
+	m.mu.RUnlock()
 
-	// Create request from existing session messages
+	// Create request from snapshot -- safe to use without holding the lock.
 	req := &llm.Request{
-		Messages:    sess.Messages,
+		Messages:    msgsSnapshot,
 		Tools:       tools,
 		Temperature: 0.8,
 	}
@@ -219,11 +230,13 @@ func (m *Manager) ContinueMessage(ctx context.Context, sessionID string, tools [
 }
 
 // SetSystemMessage sets or replaces the system message for a session.
+// The entire operation (get-or-create + modify) runs under a single write lock
+// to prevent TOCTOU races.
 func (m *Manager) SetSystemMessage(sessionID, content string) {
-	sess := m.CreateSession(sessionID)
-
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	sess := m.getOrCreateSession(sessionID)
 
 	// Remove existing system message if any
 	if len(sess.Messages) > 0 && sess.Messages[0].Role == llm.RoleSystem {
@@ -233,7 +246,9 @@ func (m *Manager) SetSystemMessage(sessionID, content string) {
 	}
 }
 
-// GetMessages returns all messages in a session (for debugging/logging).
+// GetMessages returns a defensive copy of all messages in a session.
+// Returns nil if the session does not exist.
+// The caller can safely read/modify the returned slice without holding any lock.
 func (m *Manager) GetMessages(sessionID string) []llm.Message {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -242,7 +257,10 @@ func (m *Manager) GetMessages(sessionID string) []llm.Message {
 	if !exists {
 		return nil
 	}
-	return sess.Messages
+	// Return a copy so the caller cannot mutate internal state.
+	result := make([]llm.Message, len(sess.Messages))
+	copy(result, sess.Messages)
+	return result
 }
 
 // ClearMessages clears all messages in a session except the system message.
@@ -254,9 +272,6 @@ func (m *Manager) ClearMessages(sessionID string) {
 	if !exists {
 		return
 	}
-
-	sess.mu.Lock()
-	defer sess.mu.Unlock()
 
 	// Keep system message
 	if len(sess.Messages) > 0 && sess.Messages[0].Role == llm.RoleSystem {

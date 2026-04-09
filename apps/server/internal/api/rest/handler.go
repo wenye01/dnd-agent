@@ -89,3 +89,17 @@ func (h *Handler) notFound(c *gin.Context, message string) {
 func (h *Handler) internalError(c *gin.Context, message string) {
 	h.errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", message)
 }
+
+// getSessionID extracts the session ID from query parameter or header.
+// Returns the session ID and true on success, empty string and false if missing.
+func (h *Handler) getSessionID(c *gin.Context) (string, bool) {
+	sessionID := c.Query("sessionId")
+	if sessionID == "" {
+		sessionID = c.GetHeader("X-Session-ID")
+	}
+	if sessionID == "" {
+		h.badRequest(c, "sessionId query parameter or X-Session-ID header required")
+		return "", false
+	}
+	return sessionID, true
+}

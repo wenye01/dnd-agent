@@ -119,14 +119,21 @@ func SkillCheck(abilityMod, proficiencyBonus int, isProficient bool, dc int, adv
 }
 
 // GetModifier returns the ability modifier for a given ability score.
-// In D&D 5e, modifier = (score - 10) / 2, rounded down.
+// In D&D 5e, modifier = (score - 10) / 2, rounded down (floor division).
 func GetModifier(score int) int {
-	return (score - 10) / 2
+	diff := score - 10
+	mod := diff / 2
+	// Go integer division truncates toward zero, but D&D 5e requires floor division
+	// e.g., (1-10)/2 = -4 in Go but should be -5
+	if diff < 0 && diff%2 != 0 {
+		mod--
+	}
+	return mod
 }
 
-// rollD20 rolls a single d20.
+// rollD20 rolls a single d20 using the thread-safe shared random source.
 func rollD20() int {
-	return rand.Intn(20) + 1
+	return getGlobalRand().Intn(20) + 1
 }
 
 // NewRand creates a new random source. This should be called once at startup.

@@ -44,20 +44,20 @@ type CombatResult struct {
 // Combat state is stored in GameState.Combat and updated via StateManager.
 type CombatManager struct {
 	stateManager *state.Manager
-	diceService  *dice.Service
+	diceService  dice.DiceRoller
 	mu           sync.RWMutex
 }
 
 // NewCombatManager creates a new combat manager.
-func NewCombatManager(stateManager *state.Manager, diceService *dice.Service) *CombatManager {
+func NewCombatManager(stateManager *state.Manager, diceService dice.DiceRoller) *CombatManager {
 	return &CombatManager{
 		stateManager: stateManager,
 		diceService:  diceService,
 	}
 }
 
-// GetDiceService returns the dice service for use by sub-managers.
-func (cm *CombatManager) GetDiceService() *dice.Service {
+// GetDiceService returns the dice roller for use by sub-managers.
+func (cm *CombatManager) GetDiceService() dice.DiceRoller {
 	return cm.diceService
 }
 

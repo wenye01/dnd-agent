@@ -11,9 +11,7 @@ import (
 )
 
 // Broadcaster defines the interface for broadcasting messages to WebSocket clients.
-// The Hub implements this interface to send state updates to connected clients.
 type Broadcaster interface {
-	// SendToSession sends a message to all WebSocket clients in a session.
 	SendToSession(sessionID string, message *models.ServerMessage)
 }
 
@@ -21,7 +19,6 @@ type Broadcaster interface {
 type CharacterStateManager interface {
 	StateManager
 	GetGameState(sessionID string) *state.GameState
-	// UpdateGameState atomically updates a game session state under a write lock.
 	UpdateGameState(sessionID string, updateFn func(*state.GameState)) error
 }
 
@@ -46,8 +43,7 @@ func RegisterCharacterRoutes(api *gin.RouterGroup, sm CharacterStateManager, b B
 }
 
 // broadcastPartyUpdate sends a state_update message with the current party to all
-// WebSocket clients in the session. This is called after party-changing operations
-// (character create, delete) so the frontend stays in sync.
+// WebSocket clients in the session.
 func broadcastPartyUpdate(b Broadcaster, sm CharacterStateManager, sessionID string) {
 	if b == nil {
 		return
@@ -89,13 +85,8 @@ func (h *Handler) createCharacter(sm CharacterStateManager, b Broadcaster) gin.H
 			return
 		}
 
-		sessionID := c.Query("sessionId")
-		if sessionID == "" {
-			sessionID = c.GetHeader("X-Session-ID")
-		}
-
-		if sessionID == "" {
-			h.badRequest(c, "sessionId query parameter or X-Session-ID header required")
+		sessionID, ok := h.getSessionID(c)
+		if !ok {
 			return
 		}
 
@@ -107,7 +98,6 @@ func (h *Handler) createCharacter(sm CharacterStateManager, b Broadcaster) gin.H
 			return
 		}
 
-		// Broadcast party update to WebSocket clients
 		broadcastPartyUpdate(b, sm, sessionID)
 
 		c.JSON(http.StatusCreated, Response{
@@ -121,13 +111,8 @@ func (h *Handler) createCharacter(sm CharacterStateManager, b Broadcaster) gin.H
 func (h *Handler) getCharacter(sm CharacterStateManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		charID := c.Param("id")
-		sessionID := c.Query("sessionId")
-		if sessionID == "" {
-			sessionID = c.GetHeader("X-Session-ID")
-		}
-
-		if sessionID == "" {
-			h.badRequest(c, "sessionId query parameter or X-Session-ID header required")
+		sessionID, ok := h.getSessionID(c)
+		if !ok {
 			return
 		}
 
@@ -151,13 +136,8 @@ func (h *Handler) getCharacter(sm CharacterStateManager) gin.HandlerFunc {
 // listCharacters handles GET /api/characters
 func (h *Handler) listCharacters(sm CharacterStateManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		sessionID := c.Query("sessionId")
-		if sessionID == "" {
-			sessionID = c.GetHeader("X-Session-ID")
-		}
-
-		if sessionID == "" {
-			h.badRequest(c, "sessionId query parameter or X-Session-ID header required")
+		sessionID, ok := h.getSessionID(c)
+		if !ok {
 			return
 		}
 
@@ -178,13 +158,8 @@ func (h *Handler) listCharacters(sm CharacterStateManager) gin.HandlerFunc {
 func (h *Handler) deleteCharacter(sm CharacterStateManager, b Broadcaster) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		charID := c.Param("id")
-		sessionID := c.Query("sessionId")
-		if sessionID == "" {
-			sessionID = c.GetHeader("X-Session-ID")
-		}
-
-		if sessionID == "" {
-			h.badRequest(c, "sessionId query parameter or X-Session-ID header required")
+		sessionID, ok := h.getSessionID(c)
+		if !ok {
 			return
 		}
 
@@ -207,7 +182,6 @@ func (h *Handler) deleteCharacter(sm CharacterStateManager, b Broadcaster) gin.H
 			return
 		}
 
-		// Broadcast party update to WebSocket clients
 		broadcastPartyUpdate(b, sm, sessionID)
 
 		h.success(c, gin.H{

@@ -81,7 +81,12 @@ func (c *Client) ReadPump() {
 		c.closed = true
 		close(c.send)
 		c.mu.Unlock()
-		c.hub.unregister <- c
+		// Use non-blocking send to avoid goroutine leak if Hub.Run() has
+		// already stopped and is no longer draining the unregister channel.
+		select {
+		case c.hub.unregister <- c:
+		default:
+		}
 		c.conn.Close()
 	}()
 

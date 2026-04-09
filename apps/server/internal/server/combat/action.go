@@ -47,10 +47,9 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("target %s not found", targetID)}
 	}
 
-	// Check if incapacitated
-	if hasCondition(attacker, "incapacitated") || hasCondition(attacker, "stunned") ||
-		hasCondition(attacker, "paralyzed") || hasCondition(attacker, "unconscious") ||
-		hasCondition(attacker, "petrified") {
+	// Check if incapacitated (unified condition system)
+	attackerMods := GetConditionModifiers(attacker)
+	if attackerMods.Incapacitated {
 		return nil, &CombatError{Code: ErrActionExhausted, Message: "attacker is incapacitated and cannot attack"}
 	}
 
@@ -64,8 +63,20 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 		return nil, &CombatError{Code: ErrActionExhausted, Message: "action already used this turn"}
 	}
 
-	// Apply condition modifiers to advantage/disadvantage
-	advantage, disadvantage = applyConditionAttackModifiers(attacker, target, advantage, disadvantage)
+	// Apply condition modifiers to advantage/disadvantage (unified condition system)
+	targetMods := GetConditionModifiers(target)
+	if attackerMods.AttackAdvantage {
+		advantage = true
+	}
+	if attackerMods.AttackDisadvantage {
+		disadvantage = true
+	}
+	if targetMods.DefenseAdvantage {
+		advantage = true
+	}
+	if targetMods.DefenseDisadvantage {
+		disadvantage = true
+	}
 
 	// Check for Help action effect (advantage against target)
 	if hasActiveEffect(gs.Combat, "advantage_against", targetID) {
@@ -329,8 +340,8 @@ func (cm *CombatManager) OpportunityAttack(sessionID, attackerID, targetID strin
 		return nil, &CombatError{Code: ErrActionExhausted, Message: "reaction already used this turn"}
 	}
 
-	// Check if target is disengaging
-	if hasCondition(target, "disengaging") {
+	// Check if target is disengaging (internal action marker, not a PHB condition)
+	if hasInternalCondition(target, "disengaging") {
 		return map[string]interface{}{
 			"message":   fmt.Sprintf("%s is disengaging, no opportunity attack triggered.", target.Name),
 			"triggered": false,
@@ -456,54 +467,15 @@ func (cm *CombatManager) rollCriticalDamage(damageDice string, damageBonus int) 
 	return total, allDice, nil
 }
 
-// hasCondition checks if a combatant has a specific condition.
-func hasCondition(c *state.Combatant, condition string) bool {
+// hasInternalCondition checks for internal action markers (dodging, disengaging,
+// hidden, ready) that are not PHB conditions and thus not in the types.Condition enum.
+func hasInternalCondition(c *state.Combatant, marker string) bool {
 	for _, cond := range c.Conditions {
-		if string(cond.Condition) == condition {
+		if string(cond.Condition) == marker {
 			return true
 		}
 	}
 	return false
-}
-
-// applyConditionAttackModifiers adjusts advantage/disadvantage based on conditions.
-func applyConditionAttackModifiers(attacker, target *state.Combatant, advantage, disadvantage bool) (bool, bool) {
-	// Attacker conditions that give disadvantage on attacks
-	if hasCondition(attacker, "blinded") || hasCondition(attacker, "frightened") ||
-		hasCondition(attacker, "poisoned") || hasCondition(attacker, "prone") ||
-		hasCondition(attacker, "restrained") {
-		disadvantage = true
-	}
-
-	// Attacker conditions that give advantage on attacks
-	if hasCondition(attacker, "invisible") {
-		advantage = true
-	}
-
-	// Target conditions that give advantage to attacks against them
-	// NOTE: prone grants advantage only on melee attacks within 5 feet; ranged
-	// attacks against a prone target actually have disadvantage. Since the
-	// current API does not carry an attack-range parameter, we cannot enforce
-	// this correctly here. When an attack range field is added, split prone
-	// out into separate melee (advantage) and ranged (disadvantage) branches.
-	if hasCondition(target, "blinded") || hasCondition(target, "paralyzed") ||
-		hasCondition(target, "petrified") ||
-		hasCondition(target, "restrained") || hasCondition(target, "stunned") ||
-		hasCondition(target, "unconscious") {
-		advantage = true
-	}
-
-	// Target conditions that give disadvantage to attacks against them
-	if hasCondition(target, "invisible") {
-		disadvantage = true
-	}
-
-	// Dodging gives disadvantage to attacks against
-	if hasCondition(target, "dodging") {
-		disadvantage = true
-	}
-
-	return advantage, disadvantage
 }
 
 // boolToString converts a bool to one of two string options.

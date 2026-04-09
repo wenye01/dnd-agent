@@ -32,7 +32,7 @@ func NewHub(stateManager *state.Manager, sessionMgr *session.Manager, toolRegist
 	return &Hub{
 		clients:      make(map[*Client]bool),
 		register:     make(chan *Client),
-		unregister:   make(chan *Client),
+		unregister:   make(chan *Client, 64),
 		broadcast:    make(chan []byte, 256),
 		stateManager: stateManager,
 		sessionMgr:   sessionMgr,
@@ -102,8 +102,20 @@ func (h *Hub) broadcastMessage(message []byte) {
 		select {
 		case client.send <- message:
 		default:
-			// Client buffer full, close connection
-			h.unregisterClient(client)
+			// Client buffer full, schedule async unregister.
+			// We cannot call unregisterClient here because it acquires a write
+			// lock, and we currently hold a read lock. Go's RWMutex does not
+			// support lock upgrade, so we send the client to the unregister
+			// channel and let Hub.Run() handle it safely.
+			select {
+			case h.unregister <- client:
+			default:
+				// unregister channel full — drop silently to avoid blocking
+				// the broadcast loop. The periodic cleanup will catch it.
+				h.logger.Warn().
+					Str("session_id", client.SessionID).
+					Msg("unregister channel full during broadcast, client will be cleaned up later")
+			}
 		}
 	}
 }
@@ -124,7 +136,15 @@ func (h *Hub) SendToSession(sessionID string, message *models.ServerMessage) {
 			select {
 			case client.send <- data:
 			default:
-				h.unregisterClient(client)
+				// Client buffer full, schedule async unregister.
+				// Cannot call unregisterClient under RLock — see broadcastMessage.
+				select {
+				case h.unregister <- client:
+				default:
+					h.logger.Warn().
+						Str("session_id", client.SessionID).
+						Msg("unregister channel full in SendToSession, client will be cleaned up later")
+				}
 			}
 		}
 	}
@@ -144,6 +164,13 @@ func (h *Hub) SendError(client *Client, errMsg string) {
 }
 
 // cleanupStaleClients removes clients that haven't sent a ping recently.
+//
+// Design note: we do NOT close client.send here. The channel is closed by
+// ReadPump's defer (client.go) which guards against double-close via the
+// client.closed flag. Instead we close the underlying WebSocket connection,
+// which causes ReadPump to exit and perform its own cleanup (close channel,
+// send to unregister channel). We only delete the map entry here to prevent
+// the stale client from receiving further broadcasts.
 func (h *Hub) cleanupStaleClients() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -154,7 +181,10 @@ func (h *Hub) cleanupStaleClients() {
 			h.logger.Info().
 				Str("session_id", client.SessionID).
 				Msg("removing stale client")
-			close(client.send)
+			// Close the underlying connection; ReadPump will detect the error,
+			// close the send channel, and send to the unregister channel.
+			// Errors from closing an already-closed connection are safe to ignore.
+			_ = client.conn.Close()
 			delete(h.clients, client)
 		}
 	}

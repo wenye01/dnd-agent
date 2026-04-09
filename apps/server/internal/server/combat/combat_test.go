@@ -1382,7 +1382,27 @@ func TestApplyConditionAttackModifiers(t *testing.T) {
 				})
 			}
 
-			adv, disadv := applyConditionAttackModifiers(attacker, target, tt.inputAdvantage, tt.inputDisadvantage)
+			// Use unified condition system via GetConditionModifiers
+			attackerMods := GetConditionModifiers(attacker)
+			targetMods := GetConditionModifiers(target)
+			adv := tt.inputAdvantage
+			disadv := tt.inputDisadvantage
+			if attackerMods.AttackAdvantage {
+				adv = true
+			}
+			if attackerMods.AttackDisadvantage {
+				disadv = true
+			}
+			if targetMods.DefenseAdvantage {
+				adv = true
+			}
+			if targetMods.DefenseDisadvantage {
+				disadv = true
+			}
+			// Internal markers (dodging, etc.) not in PHB condition system
+			if hasInternalCondition(target, "dodging") {
+				disadv = true
+			}
 
 			if adv != tt.wantAdvantage {
 				t.Errorf("advantage = %v, want %v", adv, tt.wantAdvantage)
@@ -1398,38 +1418,38 @@ func TestApplyConditionAttackModifiers(t *testing.T) {
 // 6. Turn/Initiative Helper Function Tests
 // ===========================================================================
 
-func TestHasCondition(t *testing.T) {
-	t.Run("returns true when condition exists", func(t *testing.T) {
+func TestHasInternalCondition(t *testing.T) {
+	t.Run("returns true when internal marker exists", func(t *testing.T) {
 		c := newPlayerCombatant("p1", "Hero", 20, 20)
 		c.Conditions = []*state.ConditionEntry{
-			{Condition: "blinded", Duration: 0, Remaining: 0},
-			{Condition: "poisoned", Duration: 3, Remaining: 2},
+			{Condition: "dodging", Duration: 0, Remaining: 0},
+			{Condition: "disengaging", Duration: 1, Remaining: 1},
 		}
 
-		if !hasCondition(c, "blinded") {
-			t.Error("hasCondition should return true for 'blinded'")
+		if !hasInternalCondition(c, "dodging") {
+			t.Error("hasInternalCondition should return true for 'dodging'")
 		}
-		if !hasCondition(c, "poisoned") {
-			t.Error("hasCondition should return true for 'poisoned'")
+		if !hasInternalCondition(c, "disengaging") {
+			t.Error("hasInternalCondition should return true for 'disengaging'")
 		}
 	})
 
-	t.Run("returns false when condition does not exist", func(t *testing.T) {
+	t.Run("returns false when marker does not exist", func(t *testing.T) {
 		c := newPlayerCombatant("p1", "Hero", 20, 20)
 		c.Conditions = []*state.ConditionEntry{
-			{Condition: "blinded", Duration: 0, Remaining: 0},
+			{Condition: "dodging", Duration: 0, Remaining: 0},
 		}
 
-		if hasCondition(c, "prone") {
-			t.Error("hasCondition should return false for 'prone'")
+		if hasInternalCondition(c, "hidden") {
+			t.Error("hasInternalCondition should return false for 'hidden'")
 		}
 	})
 
 	t.Run("returns false when no conditions", func(t *testing.T) {
 		c := newPlayerCombatant("p1", "Hero", 20, 20)
 
-		if hasCondition(c, "blinded") {
-			t.Error("hasCondition should return false with no conditions")
+		if hasInternalCondition(c, "dodging") {
+			t.Error("hasInternalCondition should return false with no conditions")
 		}
 	})
 }
