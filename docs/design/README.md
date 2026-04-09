@@ -1,8 +1,17 @@
 # D&D Agent 设计文档索引
 
-> **版本**: v1.0
-> **最后更新**: 2026-03-25
+> **版本**: v1.1
+> **最后更新**: 2026-04-09
 > **用途**: Agent 开发指南，涵盖架构、模块设计、接口定义、开发计划
+
+## Code Wiki（代码速查索引）
+
+| 文档 | 位置 | 说明 |
+|------|------|------|
+| [后端 Code Wiki](../../apps/server/CODE_WIKI.md) | `apps/server/CODE_WIKI.md` | Go 后端渐进式代码索引：23个MCP工具、15种战斗事件、15种条件、全部.go文件速查 |
+| [前端 Code Wiki](../../apps/web/CODE_WIKI.md) | `apps/web/CODE_WIKI.md` | React+Phaser 前端渐进式代码索引：4个Store、组件树、Phaser引擎、EventBus、全部.ts文件速查 |
+
+> **推荐**: 需要查找具体代码时优先阅读 Code Wiki，需要理解设计决策时阅读下方设计文档。
 
 ---
 
@@ -177,6 +186,7 @@ v0.1 ──▶ v0.2 ──▶ v0.3 ──▶ v0.4 ──▶ v0.5 ──▶ v1.0
 
 | 版本 | 日期 | 更新内容 |
 |------|------|----------|
+| v1.1 | 2026-04-09 | 新增 Code Wiki 入口；修正 tech stack 版本号(React19/Phaser3.90/Zustand5/Tailwind4/Vite8/Zerolog)；对齐实际文件结构(23个MCP工具/15种战斗事件/8个combat文件/EventBus模式) |
 | v1.0 | 2026-03-25 | 初始版本，建立完整索引 |
 
 ---

@@ -25,7 +25,7 @@
 | WebSocket | Gorilla WebSocket | Go 语言最成熟的 WebSocket 库 |
 | 状态存储 | 内存 + JSONL | 内存存储性能最优；JSONL 便于追加和查看 |
 | 配置管理 | Viper | 多格式配置、环境变量、热重载 |
-| 日志 | Zap | 高性能结构化日志 |
+| 日志 | Zerolog | 高性能结构化日志 |
 | 序列化 | JSON | 标准库足够用，可读性好 |
 
 ### 1.3 模块划分
