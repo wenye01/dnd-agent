@@ -353,13 +353,39 @@ export function isErrorPayload(payload: unknown): payload is ErrorPayload {
   )
 }
 
+// Combat event types (matches backend combat.CombatEventType)
+export type CombatEventType =
+  | 'combat_start' | 'combat_end'
+  | 'initiative_rolled'
+  | 'turn_start' | 'turn_end'
+  | 'round_start' | 'round_end'
+  | 'attack' | 'damage' | 'heal' | 'death' | 'unconscious'
+  | 'condition_applied' | 'condition_removed'
+  | 'opportunity_attack'
+  | 'move' | 'spell' | 'item' | 'dodge' | 'disengage'
+
 // Combat event payload type (from backend spec)
 export interface CombatEventPayload {
-  eventType: 'turn_start' | 'turn_end' | 'round_start' | 'round_end' | 'combat_start' | 'combat_end' | 'attack' | 'spell' | 'item' | 'move' | 'dodge' | 'disengage'
+  eventType: CombatEventType
   characterId?: string
   round?: number
   data?: unknown
   target?: string
+  // Attack event data
+  damage?: number
+  damageType?: string
+  isCrit?: boolean
+  isHit?: boolean
+  // Heal event data
+  amount?: number
+  // Condition event data
+  condition?: string
+  // Move event data
+  position?: { x: number; y: number }
+  from?: { x: number; y: number }
+  to?: { x: number; y: number }
+  // Initiative
+  initiatives?: Array<{ characterId: string; initiative: number }>
 }
 
 export function isCombatEventPayload(payload: unknown): payload is CombatEventPayload {
@@ -372,7 +398,16 @@ export function isCombatEventPayload(payload: unknown): payload is CombatEventPa
   }
 
   const { eventType } = payload as { eventType: unknown }
-  const validEventTypes = ['turn_start', 'turn_end', 'round_start', 'round_end', 'combat_start', 'combat_end', 'attack', 'spell', 'item', 'move', 'dodge', 'disengage']
+  const validEventTypes: string[] = [
+    'combat_start', 'combat_end',
+    'initiative_rolled',
+    'turn_start', 'turn_end',
+    'round_start', 'round_end',
+    'attack', 'damage', 'heal', 'death', 'unconscious',
+    'condition_applied', 'condition_removed',
+    'opportunity_attack',
+    'move', 'spell', 'item', 'dodge', 'disengage',
+  ]
 
   return (
     typeof eventType === 'string' &&

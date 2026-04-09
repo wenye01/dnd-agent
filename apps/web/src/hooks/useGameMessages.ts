@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react'
 import { useWebSocket } from '../contexts/WebSocketContext'
 import { useGameStore } from '../stores/gameStore'
 import { useChatStore } from '../stores/chatStore'
+import { useCombatStore } from '../stores/combatStore'
 import {
   isNarrationPayload,
   isStateUpdatePayload,
@@ -9,8 +10,9 @@ import {
   isErrorPayload,
   isCombatEventPayload,
 } from '../services/websocket'
-import type { ServerMessage } from '../types'
+import type { ServerMessage, ClientMessage } from '../types'
 import type { GameState, Character, CombatState } from '../types'
+import { eventBus, GameEvents } from '../events'
 
 // Helper type guards for state update data
 // These are more permissive than the full types since the server may send partial updates
@@ -43,16 +45,19 @@ function isCombatData(data: unknown): data is CombatState {
     return false
   }
   const obj = data as Record<string, unknown>
+  // participants can be string[] (old) or Combatant[] (new)
+  if (!Array.isArray(obj.participants)) return false
   return (
     typeof obj.round === 'number' &&
     typeof obj.turnIndex === 'number' &&
     Array.isArray(obj.initiatives) &&
-    Array.isArray(obj.participants)
+    Array.isArray(obj.activeEffects) &&
+    ('status' in obj && typeof obj.status === 'string')
   )
 }
 
 export function useGameMessages() {
-  const { subscribe } = useWebSocket()
+  const { subscribe, send } = useWebSocket()
   const updateGameState = useGameStore((s) => s.updateGameState)
   const updateParty = useGameStore((s) => s.updateParty)
   const updateCombat = useGameStore((s) => s.updateCombat)
@@ -112,8 +117,11 @@ export function useGameMessages() {
       case 'combat':
         if (data === null) {
           updateCombat(null)
+          useCombatStore.getState().setCombat(null)
         } else if (isCombatData(data)) {
           updateCombat(data)
+          // Sync to combatStore
+          useCombatStore.getState().setCombat(data)
         } else {
           console.error('Invalid combat state data:', data)
         }
@@ -175,52 +183,162 @@ export function useGameMessages() {
     }
 
     const { eventType, characterId, round } = payload
+    const combatStore = useCombatStore.getState()
 
     // Generate human-readable combat event messages
     let eventText = ''
+    let logType: 'info' | 'damage' | 'heal' | 'status' | 'turn' | 'system' = 'info'
+
     switch (eventType) {
       case 'combat_start':
-        eventText = '⚔️ Combat has started!'
+        eventText = 'Combat has started!'
+        logType = 'system'
+        eventBus.emit(GameEvents.COMBAT_START, payload)
         break
       case 'combat_end':
-        eventText = '🏁 Combat has ended.'
+        eventText = 'Combat has ended.'
+        logType = 'system'
+        eventBus.emit(GameEvents.COMBAT_END, payload)
+        combatStore.setCombat(null)
         break
       case 'round_start':
-        eventText = `📋 Round ${round ?? 1} begins.`
+        eventText = `Round ${round ?? 1} begins.`
+        logType = 'system'
         break
       case 'round_end':
         eventText = `Round ${round ?? 1} ends.`
+        logType = 'system'
         break
       case 'turn_start':
         eventText = `Turn starts for ${characterId ?? 'unknown'}.`
+        logType = 'turn'
+        combatStore.setCurrentUnit(characterId ?? null)
+        eventBus.emit(GameEvents.COMBAT_TURN_START, { unitId: characterId })
         break
       case 'turn_end':
         eventText = `Turn ends for ${characterId ?? 'unknown'}.`
+        logType = 'turn'
+        eventBus.emit(GameEvents.COMBAT_TURN_END, { unitId: characterId })
         break
-      case 'attack':
-        eventText = `Attack action${payload.target ? ` targeting ${payload.target}` : ''}.`
+      case 'attack': {
+        const hitStatus = payload.isHit === false ? ' (MISS)' : payload.isCrit ? ' (CRIT!)' : ''
+        eventText = `${characterId ?? 'Unknown'} attacks ${payload.target ?? 'target'}${hitStatus}`
+        logType = 'damage'
+        eventBus.emit(GameEvents.EFFECT_ATTACK, payload)
+        break
+      }
+      case 'damage': {
+        const amount = payload.damage ?? payload.amount ?? 0
+        eventText = `${payload.target ?? characterId ?? 'Unknown'} takes ${amount} damage`
+        if (payload.damageType) eventText += ` (${payload.damageType})`
+        logType = 'damage'
+        // Update combatant HP using functional update to avoid race conditions
+        if (payload.target) {
+          combatStore.applyDamage(payload.target, amount)
+        }
+        eventBus.emit(GameEvents.EFFECT_DAMAGE, payload)
+        break
+      }
+      case 'heal': {
+        const healAmount = payload.amount ?? 0
+        eventText = `${characterId ?? 'Unknown'} heals ${healAmount} HP`
+        logType = 'heal'
+        if (characterId) {
+          combatStore.applyHeal(characterId, healAmount)
+        }
+        eventBus.emit(GameEvents.EFFECT_HEAL, payload)
+        break
+      }
+      case 'death':
+        eventText = `${characterId ?? 'Unknown'} has fallen!`
+        logType = 'damage'
+        eventBus.emit(GameEvents.EFFECT_DEATH, payload)
+        break
+      case 'unconscious':
+        eventText = `${characterId ?? 'Unknown'} has been knocked unconscious!`
+        logType = 'damage'
+        eventBus.emit(GameEvents.EFFECT_DEATH, payload)
+        break
+      case 'opportunity_attack':
+        eventText = `${characterId ?? 'Unknown'} makes an opportunity attack on ${payload.target ?? 'target'}!`
+        logType = 'damage'
+        eventBus.emit(GameEvents.EFFECT_ATTACK, payload)
+        break
+      case 'condition_applied':
+        eventText = `${characterId ?? 'Unknown'} gains condition: ${payload.condition ?? 'unknown'}`
+        logType = 'status'
+        eventBus.emit(GameEvents.EFFECT_STATUS, payload)
+        break
+      case 'condition_removed':
+        eventText = `${characterId ?? 'Unknown'} loses condition: ${payload.condition ?? 'unknown'}`
+        logType = 'status'
+        eventBus.emit(GameEvents.EFFECT_STATUS, payload)
+        break
+      case 'initiative_rolled':
+        eventText = `Initiative rolled for round ${round ?? 1}.`
+        logType = 'system'
+        break
+      case 'move':
+        eventText = `${characterId ?? 'Unknown'} moves.`
+        logType = 'info'
         break
       case 'spell':
-        eventText = `Cast spell${payload.target ? ` targeting ${payload.target}` : ''}.`
+        eventText = `${characterId ?? 'Unknown'} casts a spell${payload.target ? ` targeting ${payload.target}` : ''}.`
+        logType = 'info'
+        eventBus.emit(GameEvents.EFFECT_SPELL, payload)
         break
       case 'item':
         eventText = 'Use item action.'
-        break
-      case 'move':
-        eventText = 'Move action.'
+        logType = 'info'
         break
       case 'dodge':
-        eventText = 'Dodge action.'
+        eventText = `${characterId ?? 'Unknown'} dodges.`
+        logType = 'info'
         break
       case 'disengage':
-        eventText = 'Disengage action.'
+        eventText = `${characterId ?? 'Unknown'} disengages.`
+        logType = 'info'
         break
       default:
         eventText = `Combat event: ${eventType}`
+        logType = 'info'
     }
 
     addSystemMessage(eventText)
+    combatStore.addLogEntry(eventText, logType)
   }, [addSystemMessage])
+
+  // Forward combat actions from eventBus to WebSocket
+  const sendCombatAction = useCallback((payload: Record<string, unknown>) => {
+    const message: ClientMessage = {
+      type: 'combat_action',
+      payload,
+    }
+    send(message)
+  }, [send])
+
+  useEffect(() => {
+    const unsubMove = eventBus.on(GameEvents.COMBAT_MOVE_CONFIRM, (data) => {
+      const d = data as { unitId?: string; position?: { x: number; y: number } }
+      sendCombatAction({ action: 'move', unitId: d.unitId, position: d.position })
+    })
+
+    const unsubAttack = eventBus.on(GameEvents.COMBAT_TARGET_SELECT, (data) => {
+      const d = data as { sourceId?: string; targetId?: string }
+      sendCombatAction({ action: 'attack', sourceId: d.sourceId, targetId: d.targetId })
+    })
+
+    const unsubAction = eventBus.on(GameEvents.COMBAT_UNIT_SELECT, (data) => {
+      const d = data as Record<string, unknown>
+      sendCombatAction(d)
+    })
+
+    return () => {
+      unsubMove()
+      unsubAttack()
+      unsubAction()
+    }
+  }, [sendCombatAction])
 
   useEffect(() => {
     const unsubscribe = subscribe((message: ServerMessage) => {

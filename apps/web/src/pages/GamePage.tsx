@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { useGameMessages } from '../hooks/useGameMessages'
 import { useUIStore } from '../stores/uiStore'
 import { useGameStore } from '../stores/gameStore'
+import { useCombatStore } from '../stores/combatStore'
 import { ChatPanel } from '../components/chat'
 import { CharacterPanel, QuickActions } from '../components/panels'
 import { MainLayout } from '../components/layout'
 import { ConnectionStatus } from '../components/ui'
 import { Button } from '../components/ui'
 import { CharacterCreationDialog } from '../components/character/CharacterCreationDialog'
+import { GameContainer } from '../components/game/GameContainer'
+import { CombatHUD } from '../components/combat/CombatHUD'
 
 function GamePage() {
   // Set up message processing
@@ -30,6 +33,8 @@ function GamePage() {
   // UI state for panel toggles
   const { isPanelOpen, togglePanel } = useUIStore()
   const [showCharacterCreation, setShowCharacterCreation] = useState(false)
+  const isCombatActive = useCombatStore((s) => s.isCombatActive)
+  const phase = useGameStore((s) => s.gameState?.phase)
 
   if (isLoading) {
     return (
@@ -151,6 +156,12 @@ function GamePage() {
           </div>
         }
         mainContent={
+          phase === 'combat' && isCombatActive ? (
+            <div className="relative w-full h-full overflow-hidden bg-dungeon">
+              <GameContainer />
+              <CombatHUD />
+            </div>
+          ) : (
           <div className="flex items-center justify-center h-full relative overflow-hidden bg-dungeon">
             {/* Atmospheric background layers */}
             <div className="absolute inset-0 bg-vignette pointer-events-none" />
@@ -322,6 +333,7 @@ function GamePage() {
               </div>
             </div>
           </div>
+          )
         }
         rightPanel={<ChatPanel />}
         isLeftPanelOpen={isPanelOpen}
