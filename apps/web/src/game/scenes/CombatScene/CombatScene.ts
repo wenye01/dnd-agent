@@ -38,6 +38,9 @@ export class CombatScene extends BaseScene {
   private hoveredCell: GridPosition | null = null
   private cellHighlight!: Phaser.GameObjects.Graphics
 
+  // Guard to prevent double-destroy when COMBAT_END triggers cleanup() before shutdown()
+  private _cleaned = false
+
   constructor() {
     super({ key: 'combat' })
   }
@@ -385,7 +388,11 @@ export class CombatScene extends BaseScene {
 
   // ---------- Cleanup ----------
 
+  /** Clean up combat state (called on combat_end and shutdown). Guarded against double-destroy. */
   private cleanup(): void {
+    if (this._cleaned) return
+    this._cleaned = true
+
     for (const [, entity] of this.entities) {
       entity.destroy()
     }

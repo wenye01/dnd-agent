@@ -55,7 +55,12 @@ export interface Combatant {
   }
   // Reference to character ID
   characterId?: string
-  // Position on map
+  /**
+   * Grid position on the combat map.
+   * NOTE: Backend Combatant struct does NOT include position.
+   * This field is populated client-side from move events (CombatEventPayload.position).
+   * Falls back to findEmptyCell() when undefined (e.g. on combat start).
+   */
   position?: { x: number; y: number }
   // Level and CON modifier
   level?: number
