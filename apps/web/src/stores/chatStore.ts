@@ -22,8 +22,10 @@ interface ChatStore {
   clearMessages: () => void
 }
 
-const addMessage = (type: ChatMessage['type'], content: string) => (state: { messages: ChatMessage[] }) => ({
-  messages: [
+const MAX_MESSAGES = 100
+
+const addMessage = (type: ChatMessage['type'], content: string) => (state: { messages: ChatMessage[] }) => {
+  const updated = [
     ...state.messages,
     {
       id: crypto.randomUUID(),
@@ -31,8 +33,10 @@ const addMessage = (type: ChatMessage['type'], content: string) => (state: { mes
       content,
       timestamp: Date.now(),
     },
-  ],
-})
+  ]
+  // Keep at most MAX_MESSAGES to prevent unbounded growth
+  return { messages: updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated }
+}
 
 export const useChatStore = create<ChatStore>((set, get) => ({
   messages: [],
@@ -52,16 +56,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   finalizeStreamText: () => {
     const { streamingText, messages } = get()
     if (streamingText) {
+      const updated = [
+        ...messages,
+        {
+          id: crypto.randomUUID(),
+          type: 'dm' as const,
+          content: streamingText,
+          timestamp: Date.now(),
+        },
+      ]
       set({
-        messages: [
-          ...messages,
-          {
-            id: crypto.randomUUID(),
-            type: 'dm',
-            content: streamingText,
-            timestamp: Date.now(),
-          },
-        ],
+        messages: updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated,
         streamingText: '',
         isStreaming: false,
       })

@@ -5,6 +5,7 @@ import { characterApi, type CreateCharacterRequest, type ServerCharacter } from 
 import { useGameStore } from '../../stores/gameStore'
 import { Sword, Shield, Wand2, User } from 'lucide-react'
 import type { Character, Ability, Condition, DeathSaves, EquipmentSlot, SpellSlots } from '../../types'
+import { getModifier, formatModifier } from '../../utils/modifiers'
 
 interface CharacterCreationDialogProps {
   isOpen: boolean
@@ -181,10 +182,6 @@ const ABILITY_NAMES = [
 
 const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8]
 
-function getModifier(score: number): string {
-  const mod = Math.floor((score - 10) / 2)
-  return mod >= 0 ? `+${mod}` : mod.toString()
-}
 
 export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDialogProps) {
   const [name, setName] = useState('')
@@ -396,7 +393,7 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
                   className="w-full text-center px-1 py-2 border border-gold/10 rounded-md bg-metal/25 text-parchment font-mono font-bold text-lg focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/20 transition-all duration-200"
                 />
                 <span className="text-[11px] text-gold/60 font-mono mt-1 font-medium">
-                  {getModifier(scores[ability.key])}
+                  {formatModifier(getModifier(scores[ability.key]))}
                 </span>
               </div>
             ))}
