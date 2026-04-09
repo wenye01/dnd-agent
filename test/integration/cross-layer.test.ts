@@ -382,21 +382,12 @@ describe('Cross-Layer Integration Tests', () => {
       const char = await createTestCharacter(testSessionId, {
         name: 'HitDiceCheck',
         race: 'human',
-        class_: 'barbarian' as 'fighter', // Use fighter since barbarian may not exist
-      })
-
-      // Correct to use fighter
-      const fixedChar = await createTestCharacter(testSessionId, {
-        name: 'HitDiceCheck2',
-        race: 'human',
         class_: 'fighter',
       })
 
       try {
-        await deleteTestCharacter(testSessionId, char.id)
-
         const { data } = await apiRequest<CharacterResponse>(
-          `/characters/${fixedChar.id}?sessionId=${encodeURIComponent(testSessionId)}`,
+          `/characters/${char.id}?sessionId=${encodeURIComponent(testSessionId)}`,
         )
 
         expect(data).not.toBeNull()
@@ -410,7 +401,7 @@ describe('Cross-Layer Integration Tests', () => {
         expect(hd.current).toBeGreaterThan(0)
         expect(hd.size).toBeOneOf([4, 6, 8, 10, 12]) // Valid D&D hit die sizes
       } finally {
-        await deleteTestCharacter(testSessionId, fixedChar.id)
+        await deleteTestCharacter(testSessionId, char.id)
       }
     })
 

@@ -61,6 +61,17 @@ describe('Combat E2E Flow Integration Tests', () => {
 
   afterAll(async () => {
     if (testSessionId && serverAvailable) {
+      // Clean up all party members first
+      for (const member of partyMembers) {
+        try {
+          await apiRequest(
+            `/characters/${member.id}?sessionId=${encodeURIComponent(testSessionId)}`,
+            { method: 'DELETE' },
+          )
+        } catch {
+          // Best-effort cleanup
+        }
+      }
       try {
         await apiRequest(`/sessions/${testSessionId}`, { method: 'DELETE' })
       } catch {
