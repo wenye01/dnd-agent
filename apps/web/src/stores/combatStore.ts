@@ -114,23 +114,37 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       return { combat: { ...state.combat, participants } }
     }),
 
-  /** Safely apply damage using functional update to avoid race conditions. */
-  // BUG(P2-1): Does not handle temporaryHp per D&D 5e PHB rules.
-  //   The backend (combat/damage.go) correctly applies: tempHp absorbs first → remaining hits currentHp.
-  //   This frontend optimistic update skips tempHp and deducts directly from currentHp,
-  //   causing a brief UI mismatch until the backend state syncs back (overwriting this value).
-  //   FIX: Add temporaryHp absorption logic here matching the backend's ApplyDamageToCombatant order:
-  //     1. If tempHp >= damage → tempHp -= damage, damage = 0
-  //     2. Else → damage -= tempHp, tempHp = 0
-  //     3. currentHp = max(0, currentHp - remaining damage)
+  /** Safely apply damage using functional update, respecting temporaryHp. */
+  // Matches backend ApplyDamageToCombatant order:
+  //   1. If tempHp >= damage -> tempHp -= damage, damage = 0
+  //   2. Else -> damage -= tempHp, tempHp = 0
+  //   3. currentHp = max(0, currentHp - remaining damage)
   applyDamage: (targetId, amount) =>
     set((state) => {
       if (!state.combat) return state
-      const participants = state.combat.participants.map((p) =>
-        p.id === targetId
-          ? { ...p, currentHp: Math.max(0, p.currentHp - amount) }
-          : p,
-      )
+      const participants = state.combat.participants.map((p) => {
+        if (p.id !== targetId) return p
+
+        let remaining = amount
+        let tempHp = p.temporaryHp
+
+        // Step 1 & 2: absorb with temporary HP
+        if (tempHp > 0) {
+          if (tempHp >= remaining) {
+            tempHp -= remaining
+            remaining = 0
+          } else {
+            remaining -= tempHp
+            tempHp = 0
+          }
+        }
+
+        return {
+          ...p,
+          temporaryHp: tempHp,
+          currentHp: Math.max(0, p.currentHp - remaining),
+        }
+      })
       return { combat: { ...state.combat, participants } }
     }),
 

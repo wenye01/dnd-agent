@@ -387,4 +387,122 @@ describe('combatStore', () => {
       expect(state.logEntries).toEqual([])
     })
   })
+
+  describe('applyDamage', () => {
+    it('should reduce currentHp by damage amount', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().applyDamage('fighter-1', 5)
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.currentHp).toBe(25)
+    })
+
+    it('should not reduce currentHp below 0', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().applyDamage('fighter-1', 100)
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.currentHp).toBe(0)
+    })
+
+    it('should absorb damage with temporaryHp first', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', temporaryHp: 5, currentHp: 20 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      // 7 damage: 5 absorbed by temp, 2 hits currentHp
+      useCombatStore.getState().applyDamage('fighter-1', 7)
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.temporaryHp).toBe(0)
+      expect(fighter?.currentHp).toBe(18)
+    })
+
+    it('should fully absorb damage when tempHp >= damage', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', temporaryHp: 10, currentHp: 20 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().applyDamage('fighter-1', 5)
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.temporaryHp).toBe(5)
+      expect(fighter?.currentHp).toBe(20)
+    })
+
+    it('should not modify other combatants', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().applyDamage('fighter-1', 5)
+
+      const goblin = useCombatStore.getState().getCombatant('goblin-1')
+      expect(goblin?.currentHp).toBe(30)
+      expect(goblin?.temporaryHp).toBe(0)
+    })
+
+    it('should do nothing when combat is null', () => {
+      useCombatStore.getState().applyDamage('fighter-1', 5)
+      expect(useCombatStore.getState().combat).toBeNull()
+    })
+  })
+
+  describe('applyHeal', () => {
+    it('should increase currentHp by heal amount', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 10 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().applyHeal('fighter-1', 5)
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.currentHp).toBe(15)
+    })
+
+    it('should cap healing at maxHp', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().applyHeal('fighter-1', 100)
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.currentHp).toBe(30)
+    })
+
+    it('should not modify other combatants', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 10 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy', currentHp: 5 }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().applyHeal('fighter-1', 5)
+
+      const goblin = useCombatStore.getState().getCombatant('goblin-1')
+      expect(goblin?.currentHp).toBe(5)
+    })
+
+    it('should do nothing when combat is null', () => {
+      useCombatStore.getState().applyHeal('fighter-1', 5)
+      expect(useCombatStore.getState().combat).toBeNull()
+    })
+  })
 })

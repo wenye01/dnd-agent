@@ -49,13 +49,27 @@ export const useGameStore = create<GameStore>()(
       reset: () => set({ gameState: null, isLoading: false, error: null }),
 
       initSession: async () => {
-        // Always create a fresh session. The in-memory state manager
-        // loses all sessions on server restart, while the persistence
-        // layer retains them. Since character operations require the
-        // in-memory state, we must create a new session each time.
         const { gameState } = get()
+
+        // If we have a cached sessionId, validate it against the backend
+        // first. The in-memory state manager loses all sessions on server
+        // restart, so a cached ID may be stale (P0 bug fix).
         if (gameState?.sessionId) {
-          return
+          set({ isLoading: true, error: null })
+          try {
+            const validateRes = await sessionApi.get(gameState.sessionId)
+            if (validateRes.status === 'success') {
+              // Session is still valid on the backend — reuse it
+              set({ isLoading: false })
+              return
+            }
+            // Session not found or other error — fall through to recreate
+            // Clear stale state so the new session replaces it cleanly
+            set({ gameState: null })
+          } catch {
+            // Network error during validation — fall through to recreate
+            set({ gameState: null })
+          }
         }
 
         set({ isLoading: true, error: null })
