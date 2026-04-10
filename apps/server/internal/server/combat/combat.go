@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/dnd-game/server/internal/server/dice"
 	"github.com/dnd-game/server/internal/shared/state"
@@ -64,6 +63,20 @@ func (cm *CombatManager) GetDiceService() dice.DiceRoller {
 // GetStateManager returns the state manager.
 func (cm *CombatManager) GetStateManager() *state.Manager {
 	return cm.stateManager
+}
+
+// getActiveCombat retrieves the game state and verifies that an active combat exists.
+// This consolidates the repeated session-lookup + combat-active check pattern
+// used by most combat manager methods.
+func (cm *CombatManager) getActiveCombat(sessionID string) (*state.GameState, *state.CombatState, error) {
+	gs := cm.stateManager.GetSession(sessionID)
+	if gs == nil {
+		return nil, nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
+	}
+	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
+		return nil, nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	}
+	return gs, gs.Combat, nil
 }
 
 // StartCombat initializes a new combat encounter for the given session.
@@ -135,24 +148,21 @@ func (cm *CombatManager) EndCombat(sessionID string) (map[string]interface{}, er
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat to end"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
 	var result CombatResult
-	ended, victory := cm.checkCombatEnd(gs.Combat)
+	ended, victory := cm.checkCombatEnd(cs)
 	if ended {
 		result = victory
 	} else {
 		result = CombatResult{Victory: false, Reason: "combat ended manually"}
 	}
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
-		gs.Combat.Status = state.CombatEnded
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+		cs.Status = state.CombatEnded
 		gs.Phase = state.PhaseExploring
 	})
 	if err != nil {
@@ -365,9 +375,4 @@ func (cm *CombatManager) advanceToNextAliveCombatant(cs *state.CombatState) *sta
 		cs.TurnIndex++
 	}
 	return nil
-}
-
-// now returns current Unix timestamp.
-func now() int64 {
-	return time.Now().Unix()
 }

@@ -4,6 +4,7 @@ package rest
 import (
 	"net/http"
 
+	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
@@ -17,8 +18,8 @@ type Handler struct {
 
 // StateManager defines the interface for state management operations.
 type StateManager interface {
-	GetSession(sessionID string) interface{}
-	CreateSession(sessionID string) interface{}
+	GetSession(sessionID string) *state.GameState
+	CreateSession(sessionID string) *state.GameState
 	DeleteSession(sessionID string)
 	ListSessions() []string
 }
@@ -28,8 +29,8 @@ type Persistence interface {
 	CreateSession(sessionID string) error
 	DeleteSession(sessionID string) error
 	SessionExists(sessionID string) bool
-	SaveState(sessionID string, state interface{}) error
-	LoadState(sessionID string) (interface{}, error)
+	SaveState(sessionID string, gs *state.GameState) error
+	LoadState(sessionID string) (*state.GameState, error)
 	ListSessions() ([]string, error)
 }
 

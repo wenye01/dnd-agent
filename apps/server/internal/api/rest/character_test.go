@@ -32,11 +32,11 @@ func (m *mockCharacterStateManager) createTestSession(sessionID string) *state.G
 }
 
 // StateManager interface methods
-func (m *mockCharacterStateManager) GetSession(sessionID string) interface{} {
+func (m *mockCharacterStateManager) GetSession(sessionID string) *state.GameState {
 	return m.sessions[sessionID]
 }
 
-func (m *mockCharacterStateManager) CreateSession(sessionID string) interface{} {
+func (m *mockCharacterStateManager) CreateSession(sessionID string) *state.GameState {
 	gs := state.NewGameState(sessionID)
 	m.sessions[sessionID] = gs
 	return gs
@@ -71,13 +71,13 @@ func (m *mockCharacterStateManager) UpdateGameState(sessionID string, updateFn f
 // mockPersistence implements Persistence for testing.
 type mockPersistence struct {
 	sessions map[string]bool
-	states   map[string]interface{}
+	states   map[string]*state.GameState
 }
 
 func newMockPersistence() *mockPersistence {
 	return &mockPersistence{
 		sessions: make(map[string]bool),
-		states:   make(map[string]interface{}),
+		states:   make(map[string]*state.GameState),
 	}
 }
 
@@ -99,12 +99,12 @@ func (m *mockPersistence) SessionExists(sessionID string) bool {
 	return m.sessions[sessionID]
 }
 
-func (m *mockPersistence) SaveState(sessionID string, s interface{}) error {
-	m.states[sessionID] = s
+func (m *mockPersistence) SaveState(sessionID string, gs *state.GameState) error {
+	m.states[sessionID] = gs
 	return nil
 }
 
-func (m *mockPersistence) LoadState(sessionID string) (interface{}, error) {
+func (m *mockPersistence) LoadState(sessionID string) (*state.GameState, error) {
 	s, ok := m.states[sessionID]
 	if !ok {
 		return nil, nil

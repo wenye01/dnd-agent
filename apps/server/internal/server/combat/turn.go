@@ -12,15 +12,11 @@ func (cm *CombatManager) EndTurn(sessionID string) (map[string]interface{}, erro
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
-	cs := gs.Combat
 	currentCombatant := cm.getCurrentCombatant(cs)
 	if currentCombatant == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: "no current combatant"}
@@ -57,7 +53,7 @@ func (cm *CombatManager) EndTurn(sessionID string) (map[string]interface{}, erro
 		ended, result := cm.checkCombatEnd(cs)
 		if ended {
 			cs.Status = state.CombatEnded
-			err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+			err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 				gs.Combat = cs
 				gs.Phase = state.PhaseExploring
 			})
@@ -82,11 +78,8 @@ func (cm *CombatManager) EndTurn(sessionID string) (map[string]interface{}, erro
 	// Reset turn resources for the next combatant
 	cm.resetTurnResources(nextCombatant)
 
-	// Process start-of-turn effects
-	processStartOfTurnEffects(nextCombatant)
-
 	// Persist the state update
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		gs.Combat = cs
 	})
 	if err != nil {
@@ -104,11 +97,6 @@ func (cm *CombatManager) EndTurn(sessionID string) (map[string]interface{}, erro
 		"bonusAction":   string(nextCombatant.BonusAction),
 		"reaction":      string(nextCombatant.Reaction),
 	}, nil
-}
-
-// NextTurn is an alias for EndTurn that advances to the next combatant.
-func (cm *CombatManager) NextTurn(sessionID string) (map[string]interface{}, error) {
-	return cm.EndTurn(sessionID)
 }
 
 // processEndOfTurnEffects decrements condition durations and removes expired
@@ -130,24 +118,14 @@ func processEndOfTurnEffects(c *state.Combatant) {
 	c.Conditions = activeConditions
 }
 
-// processStartOfTurnEffects handles effects that trigger at the start of a turn.
-// For now this is a placeholder for future effects (e.g., ongoing damage, regeneration).
-func processStartOfTurnEffects(c *state.Combatant) {
-	// Reserved for: ongoing damage, regeneration, etc.
-	// Will be extended in future phases.
-}
-
 // UseAction marks a combatant's action as used for this turn.
 func (cm *CombatManager) UseAction(sessionID, combatantID, actionType string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return err
 	}
 
 	// Verify it's the combatant's turn
@@ -155,7 +133,7 @@ func (cm *CombatManager) UseAction(sessionID, combatantID, actionType string) er
 		return err
 	}
 
-	combatant := cm.getCombatantByID(gs.Combat, combatantID)
+	combatant := cm.getCombatantByID(cs, combatantID)
 	if combatant == nil {
 		return &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("combatant %s not found", combatantID)}
 	}

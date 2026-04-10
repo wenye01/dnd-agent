@@ -3,6 +3,8 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 )
 
 // Provider defines the interface for LLM providers.
@@ -103,4 +105,13 @@ func NewAssistantMessage(content string) Message {
 // NewToolMessage creates a new tool result message.
 func NewToolMessage(toolCallID, content string) Message {
 	return Message{Role: RoleTool, ToolCallID: toolCallID, Content: content}
+}
+
+// flushToolCall builds a ToolCall from accumulated streaming arguments.
+func flushToolCall(id, name string, buf *strings.Builder) *ToolCall {
+	var args map[string]interface{}
+	if buf != nil && buf.Len() > 0 {
+		_ = json.Unmarshal([]byte(buf.String()), &args)
+	}
+	return &ToolCall{ID: id, Name: name, Arguments: args}
 }

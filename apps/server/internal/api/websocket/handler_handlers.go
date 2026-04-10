@@ -66,7 +66,7 @@ func (h *Hub) handleMapAction(client *Client, msg models.ClientMessage) {
 		return
 	}
 
-	h.stateManager.UpdateSessionInterface(client.SessionID, func(gs interface{}) {
+	h.stateManager.UpdateSession(client.SessionID, func(gs *state.GameState) {
 		// Apply map action to state - placeholder for now
 	})
 

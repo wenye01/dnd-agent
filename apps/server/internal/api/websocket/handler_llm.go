@@ -14,11 +14,8 @@ import (
 // When the LLM returns a tool call, the tool is executed, the result is added
 // to the conversation, and the LLM is called again to continue narrating.
 func (h *Hub) processLLMResponse(client *Client, text, requestID string) {
-	ctx := getContext()
+	ctx := context.Background()
 	tools := h.toolRegistry.AsToolDefinitions()
-
-	// Save user message
-	h.saveMessage(client.SessionID, "user_input", text)
 
 	// Initial LLM call
 	stream, err := h.sessionMgr.SendMessage(ctx, client.SessionID, text, tools)
@@ -104,7 +101,6 @@ func (h *Hub) processStreamWithToolLoop(ctx context.Context, client *Client, str
 	})
 
 	h.sessionMgr.AddAssistantMessage(client.SessionID, narrationText)
-	h.saveMessage(client.SessionID, "narration", narrationText)
 }
 
 // executeAndSendToolResult executes a tool call, records the assistant's tool

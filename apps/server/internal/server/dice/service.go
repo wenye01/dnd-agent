@@ -8,18 +8,16 @@ import (
 	"time"
 )
 
-var (
-	// globalRand is the shared random source for dice rolls.
-	globalRand *rand.Rand
-	randOnce   sync.Once
-)
-
-// getGlobalRand returns the shared random source, initialized lazily.
-func getGlobalRand() *rand.Rand {
-	randOnce.Do(func() {
-		globalRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-	})
-	return globalRand
+// CheckResult represents the result of an ability check, saving throw, or attack roll.
+type CheckResult struct {
+	Success      bool `json:"success"`
+	Roll         int  `json:"roll"`         // Raw d20 roll
+	Modifier     int  `json:"modifier"`     // Modifier applied
+	Total        int  `json:"total"`        // Roll + modifier
+	DC           int  `json:"dc"`           // Difficulty class
+	Advantage    bool `json:"advantage"`    // Had advantage
+	Disadvantage bool `json:"disadvantage"` // Had disadvantage
+	Crit         bool `json:"crit"`         // Natural 20
 }
 
 // DiceRoller defines the interface for dice rolling operations used by combat.
@@ -63,31 +61,17 @@ func (s *Service) AbilityCheck(modifier, dc int, advantage, disadvantage bool) *
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	roll := s.rollD20()
+	roll := s.rollWithAdvantage(advantage, disadvantage)
 	result := &CheckResult{
+		Roll:         roll,
 		Modifier:     modifier,
 		DC:           dc,
+		Total:        roll + modifier,
 		Advantage:    advantage,
 		Disadvantage: disadvantage,
+		Crit:         roll == 20,
+		Success:      roll + modifier >= dc,
 	}
-
-	// Apply advantage/disadvantage
-	if advantage && !disadvantage {
-		r2 := s.rollD20()
-		if r2 > roll {
-			roll = r2
-		}
-	} else if disadvantage && !advantage {
-		r2 := s.rollD20()
-		if r2 < roll {
-			roll = r2
-		}
-	}
-
-	result.Roll = roll
-	result.Crit = roll == 20
-	result.Total = roll + modifier
-	result.Success = result.Total >= dc
 
 	return result
 }
@@ -99,30 +83,16 @@ func (s *Service) AttackRoll(attackBonus, ac int, advantage, disadvantage bool) 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	roll := s.rollD20()
+	roll := s.rollWithAdvantage(advantage, disadvantage)
 	result := &CheckResult{
+		Roll:         roll,
 		Modifier:     attackBonus,
 		DC:           ac,
+		Total:        roll + attackBonus,
 		Advantage:    advantage,
 		Disadvantage: disadvantage,
+		Crit:         roll == 20,
 	}
-
-	// Apply advantage/disadvantage
-	if advantage && !disadvantage {
-		r2 := s.rollD20()
-		if r2 > roll {
-			roll = r2
-		}
-	} else if disadvantage && !advantage {
-		r2 := s.rollD20()
-		if r2 < roll {
-			roll = r2
-		}
-	}
-
-	result.Roll = roll
-	result.Crit = roll == 20
-	result.Total = roll + attackBonus
 
 	// Natural 20 always hits; natural 1 always misses
 	if roll == 20 {
@@ -139,6 +109,24 @@ func (s *Service) AttackRoll(attackBonus, ac int, advantage, disadvantage bool) 
 // rollD20 rolls a single d20.
 func (s *Service) rollD20() int {
 	return s.rnd.Intn(20) + 1
+}
+
+// rollWithAdvantage rolls a d20 applying advantage or disadvantage rules.
+// If both advantage and disadvantage are set, they cancel out (normal roll).
+func (s *Service) rollWithAdvantage(advantage, disadvantage bool) int {
+	roll := s.rollD20()
+	if advantage && !disadvantage {
+		r2 := s.rollD20()
+		if r2 > roll {
+			roll = r2
+		}
+	} else if disadvantage && !advantage {
+		r2 := s.rollD20()
+		if r2 < roll {
+			roll = r2
+		}
+	}
+	return roll
 }
 
 // RollResult is a simplified result format for external use.

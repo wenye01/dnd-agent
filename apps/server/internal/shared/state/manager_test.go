@@ -182,42 +182,6 @@ func TestManager_UpdateSession(t *testing.T) {
 	})
 }
 
-func TestManager_UpdateSessionInterface(t *testing.T) {
-	t.Run("updates with interface function", func(t *testing.T) {
-		mgr := state.NewManager()
-		mgr.CreateSession("test-session")
-
-		err := mgr.UpdateSessionInterface("test-session", func(gameState interface{}) {
-			gs, ok := gameState.(*state.GameState)
-			if !ok {
-				t.Errorf("Expected *GameState")
-				return
-			}
-			gs.Phase = state.PhaseDialog
-		})
-
-		if err != nil {
-			t.Errorf("UpdateSessionInterface() error: %v", err)
-		}
-
-		gameState := mgr.GetSession("test-session")
-		if gameState.Phase != state.PhaseDialog {
-			t.Errorf("Expected phase 'dialog', got %s", gameState.Phase)
-		}
-	})
-
-	t.Run("returns error for non-existent session", func(t *testing.T) {
-		mgr := state.NewManager()
-		err := mgr.UpdateSessionInterface("non-existent", func(gameState interface{}) {
-			// This should not be called
-		})
-
-		if err != state.ErrSessionNotFound {
-			t.Errorf("Expected ErrSessionNotFound, got %v", err)
-		}
-	})
-}
-
 func TestManager_ListSessions(t *testing.T) {
 	t.Run("empty manager returns empty list", func(t *testing.T) {
 		mgr := state.NewManager()

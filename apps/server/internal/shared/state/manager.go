@@ -60,20 +60,6 @@ func (m *Manager) UpdateSession(sessionID string, updateFn func(*GameState)) err
 	return nil
 }
 
-// UpdateSessionInterface updates a session with a generic function signature.
-func (m *Manager) UpdateSessionInterface(sessionID string, updateFn func(interface{})) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	state, exists := m.sessions[sessionID]
-	if !exists {
-		return ErrSessionNotFound
-	}
-
-	updateFn(state)
-	return nil
-}
-
 // ListSessions returns a list of all session IDs.
 func (m *Manager) ListSessions() []string {
 	m.mu.RLock()

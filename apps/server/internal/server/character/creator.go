@@ -27,8 +27,6 @@ import (
 
 // Default values for character creation.
 const (
-	defaultBaseHP  = 8  // Default base HP when class hit dice lookup fails
-	defaultSpeed   = 30 // Default movement speed in feet
 	minHP          = 1  // Minimum HP for any character
 	defaultAbility = 10 // Default ability score
 )

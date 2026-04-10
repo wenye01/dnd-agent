@@ -409,14 +409,12 @@ func TestClientMessage_PayloadRaw(t *testing.T) {
 }
 
 func TestMessageJSONSerialization_TypedPayload(t *testing.T) {
-	t.Run("server message with DiceResult payload round-trips", func(t *testing.T) {
+	t.Run("server message with Position payload round-trips", func(t *testing.T) {
 		msg := &ServerMessage{
-			Type: MsgTypeDiceResult,
-			Payload: &DiceResult{
-				Formula:  "2d6+3",
-				Dice:     []int{4, 5},
-				Modifier: 3,
-				Total:    12,
+			Type: MsgTypeMapAction,
+			Payload: &Position{
+				X: 5,
+				Y: 10,
 			},
 			Timestamp: 1234567890,
 		}
@@ -431,43 +429,35 @@ func TestMessageJSONSerialization_TypedPayload(t *testing.T) {
 			t.Fatalf("Unmarshal failed: %v", err)
 		}
 
-		if decoded.Type != MsgTypeDiceResult {
-			t.Errorf("Type = %s, want %s", decoded.Type, MsgTypeDiceResult)
+		if decoded.Type != MsgTypeMapAction {
+			t.Errorf("Type = %s, want %s", decoded.Type, MsgTypeMapAction)
 		}
 
-		// Verify the payload serialized the DiceResult fields correctly
+		// Verify the payload serialized the Position fields correctly
 		payloadBytes, _ := json.Marshal(decoded.Payload)
-		var result DiceResult
+		var result Position
 		if err := json.Unmarshal(payloadBytes, &result); err != nil {
-			t.Fatalf("Payload unmarshal to DiceResult failed: %v", err)
+			t.Fatalf("Payload unmarshal to Position failed: %v", err)
 		}
 
-		if result.Formula != "2d6+3" {
-			t.Errorf("Formula = %s, want 2d6+3", result.Formula)
+		if result.X != 5 {
+			t.Errorf("X = %d, want 5", result.X)
 		}
-		if len(result.Dice) != 2 || result.Dice[0] != 4 || result.Dice[1] != 5 {
-			t.Errorf("Dice = %v, want [4 5]", result.Dice)
-		}
-		if result.Modifier != 3 {
-			t.Errorf("Modifier = %d, want 3", result.Modifier)
-		}
-		if result.Total != 12 {
-			t.Errorf("Total = %d, want 12", result.Total)
+		if result.Y != 10 {
+			t.Errorf("Y = %d, want 10", result.Y)
 		}
 	})
 
-	t.Run("server message with CheckResult payload round-trips", func(t *testing.T) {
+	t.Run("server message with map payload round-trips", func(t *testing.T) {
 		msg := &ServerMessage{
 			Type: MsgTypeCombatEvent,
-			Payload: &CheckResult{
-				Success:      true,
-				Roll:         18,
-				Modifier:     5,
-				Total:        23,
-				DC:           15,
-				Advantage:    true,
-				Disadvantage: false,
-				Crit:         false,
+			Payload: map[string]interface{}{
+				"success":   true,
+				"roll":      18,
+				"modifier":  5,
+				"total":     23,
+				"dc":        15,
+				"advantage": true,
 			},
 			RequestID: "req-combat-1",
 			Timestamp: 9999999,
@@ -491,22 +481,22 @@ func TestMessageJSONSerialization_TypedPayload(t *testing.T) {
 		}
 
 		payloadBytes, _ := json.Marshal(decoded.Payload)
-		var result CheckResult
+		var result map[string]interface{}
 		if err := json.Unmarshal(payloadBytes, &result); err != nil {
-			t.Fatalf("Payload unmarshal to CheckResult failed: %v", err)
+			t.Fatalf("Payload unmarshal failed: %v", err)
 		}
 
-		if !result.Success {
-			t.Error("Success should be true")
+		if result["success"] != true {
+			t.Error("success should be true")
 		}
-		if result.Roll != 18 {
-			t.Errorf("Roll = %d, want 18", result.Roll)
+		if result["roll"] != float64(18) {
+			t.Errorf("roll = %v, want 18", result["roll"])
 		}
-		if result.Total != 23 {
-			t.Errorf("Total = %d, want 23", result.Total)
+		if result["total"] != float64(23) {
+			t.Errorf("total = %v, want 23", result["total"])
 		}
-		if !result.Advantage {
-			t.Error("Advantage should be true")
+		if result["advantage"] != true {
+			t.Error("advantage should be true")
 		}
 	})
 

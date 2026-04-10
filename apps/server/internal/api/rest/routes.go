@@ -10,29 +10,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// RegisterRoutes registers all REST API routes.
-func RegisterRoutes(router *gin.Engine, sm StateManager, p Persistence, logger *zerolog.Logger) {
-	handler := NewHandler(sm, p, logger)
-
-	api := router.Group("/api")
-	{
-		// Health check
-		api.GET("/health", handler.handleHealth)
-
-		// Session management
-		sessions := api.Group("/sessions")
-		{
-			sessions.POST("", handler.createSession)
-			sessions.GET("/:id", handler.getSession)
-			sessions.DELETE("/:id", handler.deleteSession)
-			sessions.GET("", handler.listSessions)
-		}
-
-		// Configuration
-		api.GET("/config", handler.getConfig)
-	}
-}
-
 // RegisterRoutesWithCharacters registers all REST API routes including character management.
 // The CharacterStateManager parameter provides access to game state for character operations.
 // The Broadcaster parameter (optional, may be nil) enables WebSocket broadcast of state changes.
@@ -40,24 +17,27 @@ func RegisterRoutesWithCharacters(router *gin.Engine, sm CharacterStateManager, 
 	handler := NewHandler(sm, p, logger)
 
 	api := router.Group("/api")
+	registerCoreRoutes(api, handler)
+
+	// Character management
+	RegisterCharacterRoutes(api, sm, b, handler)
+
+	// Configuration
+	api.GET("/config", handler.getConfig)
+}
+
+// registerCoreRoutes registers the health check and session management routes.
+func registerCoreRoutes(api *gin.RouterGroup, handler *Handler) {
+	// Health check
+	api.GET("/health", handler.handleHealth)
+
+	// Session management
+	sessions := api.Group("/sessions")
 	{
-		// Health check
-		api.GET("/health", handler.handleHealth)
-
-		// Session management
-		sessions := api.Group("/sessions")
-		{
-			sessions.POST("", handler.createSession)
-			sessions.GET("/:id", handler.getSession)
-			sessions.DELETE("/:id", handler.deleteSession)
-			sessions.GET("", handler.listSessions)
-		}
-
-		// Character management
-		RegisterCharacterRoutes(api, sm, b, handler)
-
-		// Configuration
-		api.GET("/config", handler.getConfig)
+		sessions.POST("", handler.createSession)
+		sessions.GET("/:id", handler.getSession)
+		sessions.DELETE("/:id", handler.deleteSession)
+		sessions.GET("", handler.listSessions)
 	}
 }
 

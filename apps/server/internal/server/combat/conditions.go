@@ -192,15 +192,12 @@ func (cm *CombatManager) ApplyCondition(sessionID, targetID string, condition st
 		return nil, fmt.Errorf("invalid condition: %s", condition)
 	}
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
-	target := cm.getCombatantByID(gs.Combat, targetID)
+	target := cm.getCombatantByID(cs, targetID)
 	if target == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("target %s not found", targetID)}
 	}
@@ -219,7 +216,7 @@ func (cm *CombatManager) ApplyCondition(sessionID, targetID string, condition st
 				existing.Remaining = duration
 				existing.Source = source
 			}
-			err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {})
+			err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {})
 			if err != nil {
 				return nil, fmt.Errorf("apply condition: %w", err)
 			}
@@ -262,7 +259,7 @@ func (cm *CombatManager) ApplyCondition(sessionID, targetID string, condition st
 		}
 	}
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {})
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {})
 	if err != nil {
 		return nil, fmt.Errorf("apply condition: %w", err)
 	}
@@ -332,9 +329,9 @@ func (cm *CombatManager) applyExhaustion(sessionID string, target *state.Combata
 		})
 	}
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {})
-	if err != nil {
-		return nil, fmt.Errorf("apply exhaustion: %w", err)
+	err2 := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {})
+	if err2 != nil {
+		return nil, fmt.Errorf("apply exhaustion: %w", err2)
 	}
 
 	return map[string]interface{}{
@@ -356,15 +353,12 @@ func (cm *CombatManager) RemoveCondition(sessionID, targetID string, condition s
 		return nil, fmt.Errorf("invalid condition: %s", condition)
 	}
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
-	target := cm.getCombatantByID(gs.Combat, targetID)
+	target := cm.getCombatantByID(cs, targetID)
 	if target == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("target %s not found", targetID)}
 	}
@@ -380,7 +374,7 @@ func (cm *CombatManager) RemoveCondition(sessionID, targetID string, condition s
 	}
 	target.Conditions = newConditions
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {})
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {})
 	if err != nil {
 		return nil, fmt.Errorf("remove condition: %w", err)
 	}
@@ -409,15 +403,12 @@ func (cm *CombatManager) GetConditions(sessionID, targetID string) (map[string]i
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
-	target := cm.getCombatantByID(gs.Combat, targetID)
+	target := cm.getCombatantByID(cs, targetID)
 	if target == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("target %s not found", targetID)}
 	}

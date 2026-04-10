@@ -91,15 +91,12 @@ func (cm *CombatManager) ApplyDamage(sessionID, targetID string, damage int, dam
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
-	target := cm.getCombatantByID(gs.Combat, targetID)
+	target := cm.getCombatantByID(cs, targetID)
 	if target == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("target %s not found", targetID)}
 	}
@@ -112,7 +109,7 @@ func (cm *CombatManager) ApplyDamage(sessionID, targetID string, damage int, dam
 
 	result := ApplyDamageToCombatant(target, damage, dt)
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Modified in place
 	})
 	if err != nil {
@@ -151,22 +148,19 @@ func (cm *CombatManager) ApplyHealing(sessionID, targetID string, healing int) (
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
-	target := cm.getCombatantByID(gs.Combat, targetID)
+	target := cm.getCombatantByID(cs, targetID)
 	if target == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("target %s not found", targetID)}
 	}
 
 	result := applyHealingToCombatant(target, healing)
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Modified in place
 	})
 	if err != nil {
@@ -219,15 +213,12 @@ func (cm *CombatManager) AddTemporaryHP(sessionID, targetID string, tempHP int) 
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
-	target := cm.getCombatantByID(gs.Combat, targetID)
+	target := cm.getCombatantByID(cs, targetID)
 	if target == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("target %s not found", targetID)}
 	}
@@ -237,7 +228,7 @@ func (cm *CombatManager) AddTemporaryHP(sessionID, targetID string, tempHP int) 
 		target.TemporaryHP = tempHP
 	}
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Modified in place
 	})
 	if err != nil {

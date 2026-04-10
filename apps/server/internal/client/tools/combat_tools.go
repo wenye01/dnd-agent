@@ -125,17 +125,10 @@ func getStrVal(m map[string]interface{}, key string) string {
 	return ""
 }
 
-// getIntVal extracts an integer value from a map.
+// getIntVal extracts an integer value from a map, delegating to toInt.
 func getIntVal(m map[string]interface{}, key string, defaultVal int) int {
 	if v, ok := m[key]; ok {
-		switch n := v.(type) {
-		case float64:
-			return int(n)
-		case int:
-			return n
-		case float32:
-			return int(n)
-		}
+		return toInt(v, defaultVal)
 	}
 	return defaultVal
 }

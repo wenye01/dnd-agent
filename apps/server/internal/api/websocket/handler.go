@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -59,17 +58,17 @@ func (h *Hub) handleUserInput(client *Client, msg models.ClientMessage) {
 	go h.processLLMResponse(client, payload.Text, msg.RequestID)
 }
 
-// saveMessage saves a message to persistence.
-func (h *Hub) saveMessage(sessionID, msgType, content string) {
-	// Persistence save — placeholder for future implementation
-}
-
-// getContext returns a background context for LLM calls.
-func getContext() context.Context {
-	return context.Background()
-}
-
 // getCurrentTimestamp returns the current Unix timestamp.
 func getCurrentTimestamp() int64 {
 	return time.Now().Unix()
+}
+
+// newServerMessage constructs a ServerMessage with common fields pre-filled.
+func newServerMessage(msgType string, payload map[string]interface{}, requestID string) *models.ServerMessage {
+	return &models.ServerMessage{
+		Type:      msgType,
+		Payload:   payload,
+		RequestID: requestID,
+		Timestamp: getCurrentTimestamp(),
+	}
 }

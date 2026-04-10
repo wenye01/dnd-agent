@@ -2,21 +2,10 @@ package combat
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/dnd-game/server/internal/shared/types"
-)
-
-// ActionType represents the types of combat actions a combatant can take.
-type ActionType string
-
-const (
-	ActionAttack    ActionType = "attack"
-	ActionDodge     ActionType = "dodge"
-	ActionDisengage ActionType = "disengage"
-	ActionHelp      ActionType = "help"
-	ActionHide      ActionType = "hide"
-	ActionReady     ActionType = "ready"
 )
 
 // AttackAction performs an attack from one combatant against another.
@@ -25,12 +14,9 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Verify it's the attacker's turn
@@ -38,11 +24,11 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 		return nil, err
 	}
 
-	attacker := cm.getCombatantByID(gs.Combat, attackerID)
+	attacker := cm.getCombatantByID(cs, attackerID)
 	if attacker == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("attacker %s not found", attackerID)}
 	}
-	target := cm.getCombatantByID(gs.Combat, targetID)
+	target := cm.getCombatantByID(cs, targetID)
 	if target == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("target %s not found", targetID)}
 	}
@@ -79,7 +65,7 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 	}
 
 	// Check for Help action effect (advantage against target)
-	if hasActiveEffect(gs.Combat, "advantage_against", targetID) {
+	if hasActiveEffect(cs, "advantage_against", targetID) {
 		advantage = true
 	}
 
@@ -152,7 +138,7 @@ func (cm *CombatManager) AttackAction(sessionID, attackerID, targetID string, at
 	attacker.Action = state.ActionUsed
 
 	// Persist
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Modified in place
 	})
 	if err != nil {
@@ -193,12 +179,9 @@ func (cm *CombatManager) HelpAction(sessionID, helperID, targetID string) (map[s
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Verify it's the helper's turn
@@ -206,7 +189,7 @@ func (cm *CombatManager) HelpAction(sessionID, helperID, targetID string) (map[s
 		return nil, err
 	}
 
-	helper := cm.getCombatantByID(gs.Combat, helperID)
+	helper := cm.getCombatantByID(cs, helperID)
 	if helper == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("helper %s not found", helperID)}
 	}
@@ -218,15 +201,15 @@ func (cm *CombatManager) HelpAction(sessionID, helperID, targetID string) (map[s
 
 	// The help action grants advantage to the next attack against the target.
 	// We represent this as an active effect.
-	gs.Combat.ActiveEffects = append(gs.Combat.ActiveEffects, &state.ActiveEffect{
-		ID:         fmt.Sprintf("help_%s_%s_%d", helperID, targetID, now()),
+	cs.ActiveEffects = append(cs.ActiveEffects, &state.ActiveEffect{
+		ID:         fmt.Sprintf("help_%s_%s_%d", helperID, targetID, time.Now().Unix()),
 		Name:       "Help - Advantage",
 		TargetID:   targetID,
 		Duration:   1,
 		Conditions: []string{"advantage_against"},
 	})
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Modified in place
 	})
 	if err != nil {
@@ -247,12 +230,9 @@ func (cm *CombatManager) HideAction(sessionID, combatantID string, stealthModifi
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Verify it's the combatant's turn
@@ -260,7 +240,7 @@ func (cm *CombatManager) HideAction(sessionID, combatantID string, stealthModifi
 		return nil, err
 	}
 
-	combatant := cm.getCombatantByID(gs.Combat, combatantID)
+	combatant := cm.getCombatantByID(cs, combatantID)
 	if combatant == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("combatant %s not found", combatantID)}
 	}
@@ -282,7 +262,7 @@ func (cm *CombatManager) HideAction(sessionID, combatantID string, stealthModifi
 		})
 	}
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Modified in place
 	})
 	if err != nil {
@@ -318,19 +298,16 @@ func (cm *CombatManager) OpportunityAttack(sessionID, attackerID, targetID strin
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
-	attacker := cm.getCombatantByID(gs.Combat, attackerID)
+	attacker := cm.getCombatantByID(cs, attackerID)
 	if attacker == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("attacker %s not found", attackerID)}
 	}
-	target := cm.getCombatantByID(gs.Combat, targetID)
+	target := cm.getCombatantByID(cs, targetID)
 	if target == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("target %s not found", targetID)}
 	}
@@ -390,7 +367,7 @@ func (cm *CombatManager) OpportunityAttack(sessionID, attackerID, targetID strin
 		result["message"] = fmt.Sprintf("%s's opportunity attack misses %s.", attacker.Name, target.Name)
 	}
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Modified in place
 	})
 	if err != nil {
@@ -406,12 +383,9 @@ func (cm *CombatManager) performSimpleAction(sessionID, combatantID, actionName 
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	gs := cm.stateManager.GetSession(sessionID)
-	if gs == nil {
-		return nil, &CombatError{Code: ErrCombatNotFound, Message: "session not found"}
-	}
-	if gs.Combat == nil || gs.Combat.Status != state.CombatActive {
-		return nil, &CombatError{Code: ErrCombatNotActive, Message: "no active combat"}
+	_, cs, err := cm.getActiveCombat(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Verify it's the combatant's turn
@@ -419,7 +393,7 @@ func (cm *CombatManager) performSimpleAction(sessionID, combatantID, actionName 
 		return nil, err
 	}
 
-	combatant := cm.getCombatantByID(gs.Combat, combatantID)
+	combatant := cm.getCombatantByID(cs, combatantID)
 	if combatant == nil {
 		return nil, &CombatError{Code: ErrCombatantNotFound, Message: fmt.Sprintf("combatant %s not found", combatantID)}
 	}
@@ -432,7 +406,7 @@ func (cm *CombatManager) performSimpleAction(sessionID, combatantID, actionName 
 		modifyFn(combatant)
 	}
 
-	err := cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+	err = cm.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
 		// Modified in place
 	})
 	if err != nil {

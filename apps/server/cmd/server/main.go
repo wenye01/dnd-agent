@@ -188,7 +188,7 @@ func setupRouter(cfg *configs.Config, wsHub *websocket.Hub, sm *state.Manager, p
 
 	// Register REST API routes (including character management)
 	logger := &log.Logger
-	rest.RegisterRoutesWithCharacters(router, &stateAdapter{sm, pm, logger}, wsHub, &persistenceAdapter{pm}, logger)
+	rest.RegisterRoutesWithCharacters(router, &characterStateAdapter{sm}, wsHub, pm, logger)
 
 	// Register WebSocket route
 	router.GET("/ws", func(c *gin.Context) {
@@ -198,49 +198,17 @@ func setupRouter(cfg *configs.Config, wsHub *websocket.Hub, sm *state.Manager, p
 	return router
 }
 
-// stateAdapter adapts *state.Manager to rest.StateManager interface.
-type stateAdapter struct {
+// characterStateAdapter embeds *state.Manager and adds character-specific methods.
+type characterStateAdapter struct {
 	*state.Manager
-	persistence *persistence.Manager
-	logger      *zerolog.Logger
 }
 
-func (a *stateAdapter) CreateSession(sessionID string) interface{} {
-	gs := a.Manager.CreateSession(sessionID)
-	// Save the initial state to persistence
-	if err := a.persistence.SaveState(sessionID, gs); err != nil {
-		a.logger.Error().Err(err).Str("session_id", sessionID).Msg("failed to save initial state")
-	}
-	return gs
-}
-
-func (a *stateAdapter) GetSession(sessionID string) interface{} {
+func (a *characterStateAdapter) GetGameState(sessionID string) *state.GameState {
 	return a.Manager.GetSession(sessionID)
 }
 
-func (a *stateAdapter) GetGameState(sessionID string) *state.GameState {
-	return a.Manager.GetSession(sessionID)
-}
-
-func (a *stateAdapter) UpdateGameState(sessionID string, updateFn func(*state.GameState)) error {
+func (a *characterStateAdapter) UpdateGameState(sessionID string, updateFn func(*state.GameState)) error {
 	return a.Manager.UpdateSession(sessionID, updateFn)
-}
-
-// persistenceAdapter adapts *persistence.Manager to rest.Persistence interface.
-type persistenceAdapter struct {
-	*persistence.Manager
-}
-
-func (a *persistenceAdapter) SaveState(sessionID string, st interface{}) error {
-	gs, ok := st.(*state.GameState)
-	if !ok {
-		return &persistence.AdapterError{Message: "invalid state type"}
-	}
-	return a.Manager.SaveState(sessionID, gs)
-}
-
-func (a *persistenceAdapter) LoadState(sessionID string) (interface{}, error) {
-	return a.Manager.LoadState(sessionID)
 }
 
 // loggerMiddleware is a Gin middleware for request logging.

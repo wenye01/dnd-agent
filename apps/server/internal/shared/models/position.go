@@ -1,6 +1,8 @@
 // Package models provides the core data models for the D&D game.
 package models
 
+import "math"
+
 // Position represents a location on a 2D map grid.
 type Position struct {
 	X int `json:"x"`
@@ -29,16 +31,7 @@ func (p Position) Distance(other Position) int {
 func (p Position) EuclideanDistance(other Position) float64 {
 	dx := float64(p.X - other.X)
 	dy := float64(p.Y - other.Y)
-	return sqrt(dx*dx + dy*dy)
-}
-
-func sqrt(x float64) float64 {
-	// Simple approximation for square root
-	z := 1.0
-	for i := 0; i < 10; i++ {
-		z -= (z*z - x) / (2 * z)
-	}
-	return z
+	return math.Sqrt(dx*dx + dy*dy)
 }
 
 // Equals returns true if this position is equal to another.
