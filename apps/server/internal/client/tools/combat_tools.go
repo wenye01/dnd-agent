@@ -176,6 +176,9 @@ func registerStartCombat(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			combatantsRaw, ok := args["combatants"].([]interface{})
 			if !ok {
 				return nil, fmt.Errorf("combatants must be an array")
@@ -207,6 +210,9 @@ func registerEndCombat(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			return combatMgr.EndCombat(sessionID)
 		},
 	})
@@ -229,6 +235,9 @@ func registerGetCombatState(registry *Registry, combatMgr *combat.CombatManager)
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			return combatMgr.GetCombatState(sessionID)
 		},
 	})
@@ -251,6 +260,9 @@ func registerEndTurn(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			return combatMgr.EndTurn(sessionID)
 		},
 	})
@@ -278,6 +290,9 @@ func registerAttackAction(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			attackerID, _ := args["attacker_id"].(string)
 			targetID, _ := args["target_id"].(string)
 			attackBonus := intArg(args, "attack_bonus", 0)
@@ -308,6 +323,9 @@ func registerApplyDamage(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			targetID, _ := args["target_id"].(string)
 			damage := intArg(args, "damage", 0)
 			damageType, _ := args["damage_type"].(string)
@@ -332,6 +350,9 @@ func registerApplyHealing(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			targetID, _ := args["target_id"].(string)
 			healing := intArg(args, "healing", 0)
 			return combatMgr.ApplyHealing(sessionID, targetID, healing)
@@ -355,6 +376,9 @@ func registerAddTemporaryHP(registry *Registry, combatMgr *combat.CombatManager)
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			targetID, _ := args["target_id"].(string)
 			tempHP := intArg(args, "temporary_hp", 0)
 			return combatMgr.AddTemporaryHP(sessionID, targetID, tempHP)
@@ -378,6 +402,9 @@ func registerShortRest(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			combatantID, _ := args["combatant_id"].(string)
 			diceToSpend := intArg(args, "dice_to_spend", 1)
 			return combatMgr.ShortRest(sessionID, combatantID, diceToSpend)
@@ -400,6 +427,9 @@ func registerLongRest(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			combatantID, _ := args["combatant_id"].(string)
 			return combatMgr.LongRest(sessionID, combatantID)
 		},
@@ -421,6 +451,9 @@ func registerDeathSave(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			combatantID, _ := args["combatant_id"].(string)
 			return combatMgr.DeathSave(sessionID, combatantID)
 		},
@@ -443,6 +476,9 @@ func registerStabilize(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			combatantID, _ := args["combatant_id"].(string)
 			checkTotal := intArg(args, "medicine_check_total", 0)
 			return combatMgr.Stabilize(sessionID, combatantID, checkTotal)
@@ -469,6 +505,9 @@ func registerApplyCondition(registry *Registry, combatMgr *combat.CombatManager)
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			targetID, _ := args["target_id"].(string)
 			condition, _ := args["condition"].(string)
 			source, _ := args["source"].(string)
@@ -498,6 +537,9 @@ func registerRemoveCondition(registry *Registry, combatMgr *combat.CombatManager
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			targetID, _ := args["target_id"].(string)
 			condition, _ := args["condition"].(string)
 			return combatMgr.RemoveCondition(sessionID, targetID, condition)
@@ -520,6 +562,9 @@ func registerGetConditions(registry *Registry, combatMgr *combat.CombatManager) 
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			targetID, _ := args["target_id"].(string)
 			return combatMgr.GetConditions(sessionID, targetID)
 		},
@@ -541,6 +586,9 @@ func registerDodgeAction(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			combatantID, _ := args["combatant_id"].(string)
 			return combatMgr.DodgeAction(sessionID, combatantID)
 		},
@@ -562,6 +610,9 @@ func registerDisengageAction(registry *Registry, combatMgr *combat.CombatManager
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			combatantID, _ := args["combatant_id"].(string)
 			return combatMgr.DisengageAction(sessionID, combatantID)
 		},
@@ -584,6 +635,9 @@ func registerHelpAction(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			helperID, _ := args["helper_id"].(string)
 			targetID, _ := args["target_id"].(string)
 			return combatMgr.HelpAction(sessionID, helperID, targetID)
@@ -608,6 +662,9 @@ func registerHideAction(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			combatantID, _ := args["combatant_id"].(string)
 			stealthMod := intArg(args, "stealth_modifier", 0)
 			passivePerception := intArg(args, "passive_perception", 10)
@@ -632,6 +689,9 @@ func registerReadyAction(registry *Registry, combatMgr *combat.CombatManager) {
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			combatantID, _ := args["combatant_id"].(string)
 			trigger, _ := args["trigger"].(string)
 			return combatMgr.ReadyAction(sessionID, combatantID, trigger)
@@ -659,6 +719,9 @@ func registerOpportunityAttack(registry *Registry, combatMgr *combat.CombatManag
 		},
 		Handler: func(args map[string]interface{}) (interface{}, error) {
 			sessionID, _ := args["session_id"].(string)
+			if sessionID == "" {
+				return nil, fmt.Errorf("session_id is required")
+			}
 			attackerID, _ := args["attacker_id"].(string)
 			targetID, _ := args["target_id"].(string)
 			attackBonus := intArg(args, "attack_bonus", 0)

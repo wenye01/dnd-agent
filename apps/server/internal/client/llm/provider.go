@@ -4,14 +4,12 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
 // Provider defines the interface for LLM providers.
 type Provider interface {
-	// SendMessage sends a message to the LLM and returns the complete response.
-	SendMessage(ctx context.Context, req *Request) (*Response, error)
-
 	// StreamMessage sends a message to the LLM and returns a stream of response chunks.
 	StreamMessage(ctx context.Context, req *Request) (<-chan StreamChunk, error)
 
@@ -108,10 +106,13 @@ func NewToolMessage(toolCallID, content string) Message {
 }
 
 // flushToolCall builds a ToolCall from accumulated streaming arguments.
-func flushToolCall(id, name string, buf *strings.Builder) *ToolCall {
+// Returns a non-nil error if the buffered JSON arguments cannot be parsed.
+func flushToolCall(id, name string, buf *strings.Builder) (*ToolCall, error) {
 	var args map[string]interface{}
 	if buf != nil && buf.Len() > 0 {
-		_ = json.Unmarshal([]byte(buf.String()), &args)
+		if err := json.Unmarshal([]byte(buf.String()), &args); err != nil {
+			return nil, fmt.Errorf("parse tool call arguments for %q: %w", name, err)
+		}
 	}
-	return &ToolCall{ID: id, Name: name, Arguments: args}
+	return &ToolCall{ID: id, Name: name, Arguments: args}, nil
 }

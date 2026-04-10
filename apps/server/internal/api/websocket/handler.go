@@ -62,13 +62,3 @@ func (h *Hub) handleUserInput(client *Client, msg models.ClientMessage) {
 func getCurrentTimestamp() int64 {
 	return time.Now().Unix()
 }
-
-// newServerMessage constructs a ServerMessage with common fields pre-filled.
-func newServerMessage(msgType string, payload map[string]interface{}, requestID string) *models.ServerMessage {
-	return &models.ServerMessage{
-		Type:      msgType,
-		Payload:   payload,
-		RequestID: requestID,
-		Timestamp: getCurrentTimestamp(),
-	}
-}

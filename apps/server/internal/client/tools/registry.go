@@ -4,10 +4,12 @@ package tools
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"sync"
 
 	"github.com/dnd-game/server/internal/client/llm"
 	"github.com/dnd-game/server/internal/server/dice"
+	"github.com/rs/zerolog/log"
 )
 
 // Registry manages available tools for LLM function calling.
@@ -160,13 +162,20 @@ func RegisterDiceTools(registry *Registry, diceService *dice.Service) {
 // toInt converts an interface{} to int with a default fallback.
 // Handles float64, int, float32, and json.Number types commonly
 // produced by JSON deserialization.
+// Logs a warning when a non-integer float value is silently truncated.
 func toInt(v interface{}, defaultVal int) int {
 	switch val := v.(type) {
 	case float64:
+		if _, frac := math.Modf(val); frac != 0 {
+			log.Warn().Float64("value", val).Msg("toInt: truncating non-integer float64 to int")
+		}
 		return int(val)
 	case int:
 		return val
 	case float32:
+		if _, frac := math.Modf(float64(val)); frac != 0 {
+			log.Warn().Float32("value", val).Msg("toInt: truncating non-integer float32 to int")
+		}
 		return int(val)
 	case json.Number:
 		if i, err := val.Int64(); err == nil {

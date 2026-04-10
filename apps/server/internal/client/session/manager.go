@@ -18,6 +18,12 @@ import (
 	"github.com/dnd-game/server/internal/client/llm"
 )
 
+// Default LLM temperature for chat completions.
+const defaultLLMTemperature = 0.8
+
+// Stream channel buffer size for forwarding LLM response chunks.
+const streamChanSize = 100
+
 // Manager manages LLM conversation sessions.
 type Manager struct {
 	provider llm.Provider
@@ -64,6 +70,29 @@ func (m *Manager) DeleteSession(sessionID string) {
 	delete(m.sessions, sessionID)
 }
 
+// forwardStream reads chunks from src and forwards them to a new buffered channel.
+// This avoids duplicating the forwarding goroutine in SendMessage/ContinueMessage.
+func forwardStream(src <-chan llm.StreamChunk) <-chan llm.StreamChunk {
+	dst := make(chan llm.StreamChunk, streamChanSize)
+	go func() {
+		defer close(dst)
+		for chunk := range src {
+			if chunk.Error != nil {
+				dst <- chunk
+				return
+			}
+			if chunk.Done {
+				dst <- llm.StreamChunk{Done: true}
+				return
+			}
+			if chunk.Delta != "" || chunk.ToolCall != nil {
+				dst <- chunk
+			}
+		}
+	}()
+	return dst
+}
+
 // SendMessage sends a user message and returns a stream of response chunks.
 // The caller is responsible for adding the assistant message to the session
 // after processing the stream (for text responses or tool call responses).
@@ -82,7 +111,7 @@ func (m *Manager) SendMessage(ctx context.Context, sessionID, userContent string
 	req := &llm.Request{
 		Messages:    msgsSnapshot,
 		Tools:       tools,
-		Temperature: 0.8,
+		Temperature: defaultLLMTemperature,
 	}
 
 	// Stream response
@@ -91,35 +120,8 @@ func (m *Manager) SendMessage(ctx context.Context, sessionID, userContent string
 		return nil, fmt.Errorf("stream message: %w", err)
 	}
 
-	// Process stream in goroutine - just forward chunks, do NOT update session.
-	// The caller (handler) manages session history for the agentic loop.
-	resultStream := make(chan llm.StreamChunk, 100)
-
-	go func() {
-		defer close(resultStream)
-
-		for chunk := range stream {
-			if chunk.Error != nil {
-				resultStream <- chunk
-				return
-			}
-
-			if chunk.Done {
-				resultStream <- llm.StreamChunk{Done: true}
-				return
-			}
-
-			if chunk.Delta != "" {
-				resultStream <- chunk
-			}
-
-			if chunk.ToolCall != nil {
-				resultStream <- chunk
-			}
-		}
-	}()
-
-	return resultStream, nil
+	// Forward stream chunks through a buffered channel.
+	return forwardStream(stream), nil
 }
 
 // AddToolResult adds a tool result message to the session.
@@ -190,7 +192,7 @@ func (m *Manager) ContinueMessage(ctx context.Context, sessionID string, tools [
 	req := &llm.Request{
 		Messages:    msgsSnapshot,
 		Tools:       tools,
-		Temperature: 0.8,
+		Temperature: defaultLLMTemperature,
 	}
 
 	// Stream response
@@ -199,34 +201,8 @@ func (m *Manager) ContinueMessage(ctx context.Context, sessionID string, tools [
 		return nil, fmt.Errorf("stream message: %w", err)
 	}
 
-	// Process stream in goroutine - just forward chunks, do NOT update session.
-	resultStream := make(chan llm.StreamChunk, 100)
-
-	go func() {
-		defer close(resultStream)
-
-		for chunk := range stream {
-			if chunk.Error != nil {
-				resultStream <- chunk
-				return
-			}
-
-			if chunk.Done {
-				resultStream <- llm.StreamChunk{Done: true}
-				return
-			}
-
-			if chunk.Delta != "" {
-				resultStream <- chunk
-			}
-
-			if chunk.ToolCall != nil {
-				resultStream <- chunk
-			}
-		}
-	}()
-
-	return resultStream, nil
+	// Forward stream chunks through a buffered channel.
+	return forwardStream(stream), nil
 }
 
 // SetSystemMessage sets or replaces the system message for a session.
@@ -244,23 +220,6 @@ func (m *Manager) SetSystemMessage(sessionID, content string) {
 	} else {
 		sess.Messages = append([]llm.Message{llm.NewSystemMessage(content)}, sess.Messages...)
 	}
-}
-
-// GetMessages returns a defensive copy of all messages in a session.
-// Returns nil if the session does not exist.
-// The caller can safely read/modify the returned slice without holding any lock.
-func (m *Manager) GetMessages(sessionID string) []llm.Message {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	sess, exists := m.sessions[sessionID]
-	if !exists {
-		return nil
-	}
-	// Return a copy so the caller cannot mutate internal state.
-	result := make([]llm.Message, len(sess.Messages))
-	copy(result, sess.Messages)
-	return result
 }
 
 // ClearMessages clears all messages in a session except the system message.

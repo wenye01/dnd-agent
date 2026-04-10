@@ -142,30 +142,38 @@ func setupLogger(cfg *configs.Config) {
 }
 
 // createLLMProvider creates the LLM provider based on configuration.
+//
+// Provider selection logic:
+//   - "minimax": Uses OpenAIProvider (standard OpenAI SDK). MiniMax-M2.7 exposes an
+//     OpenAI-compatible API and does NOT use reasoning_content, so the lightweight
+//     OpenAIProvider suffices.
+//   - "openai" / "glm" / default: Uses GLMProvider (raw HTTP streaming). This provider
+//     explicitly handles the `reasoning_content` field returned by models like
+//     GLM-4.7-Flash, filtering out the model's internal thinking so it is NOT forwarded
+//     to the user-facing narration stream. Any OpenAI-compatible endpoint that may
+//     include `reasoning_content` should use this provider.
 func createLLMProvider(cfg *configs.Config) llm.Provider {
 	switch cfg.LLM.Provider {
 	case "minimax":
-		// MiniMax-M2.7 is OpenAI-compatible, use standard OpenAI provider
+		// MiniMax-M2.7: OpenAI-compatible API without reasoning_content.
+		// Uses the go-openai SDK for standard request/response handling.
 		return llm.NewOpenAIProvider(&llm.OpenAIConfig{
 			APIKey:  cfg.LLM.OpenAI.APIKey,
 			BaseURL: cfg.LLM.OpenAI.BaseURL,
 			Model:   cfg.LLM.OpenAI.Model,
 		})
-	case "openai":
-		// Use GLMProvider for OpenAI-compatible APIs (including GLM)
-		// GLM-4.7-Flash returns content in reasoning_content field
-		return llm.NewGLMProvider(&llm.GLMConfig{
-			APIKey:  cfg.LLM.OpenAI.APIKey,
-			BaseURL: cfg.LLM.OpenAI.BaseURL,
-			Model:   cfg.LLM.OpenAI.Model,
-		})
-	case "glm":
+	case "openai", "glm":
+		// OpenAI-compatible endpoint that may include reasoning_content
+		// (e.g. GLM-4.7-Flash). GLMProvider filters reasoning_content from
+		// the user-facing stream via raw HTTP SSE parsing.
 		return llm.NewGLMProvider(&llm.GLMConfig{
 			APIKey:  cfg.LLM.OpenAI.APIKey,
 			BaseURL: cfg.LLM.OpenAI.BaseURL,
 			Model:   cfg.LLM.OpenAI.Model,
 		})
 	default:
+		// Default: GLMProvider handles reasoning_content filtering for any
+		// unspecified provider, ensuring a safe default behavior.
 		return llm.NewGLMProvider(&llm.GLMConfig{
 			APIKey:  cfg.LLM.OpenAI.APIKey,
 			BaseURL: cfg.LLM.OpenAI.BaseURL,

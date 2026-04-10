@@ -166,11 +166,8 @@ func (p *GLMProvider) SendMessage(ctx context.Context, req *Request) (*Response,
 	}, nil
 }
 
-// StreamMessage sends a streaming request to the GLM API.
-func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan StreamChunk, error) {
-	stream := make(chan StreamChunk, 100)
-
-	// Build GLM request
+// buildGLMRequest converts an internal Request into a GLM API request struct.
+func (p *GLMProvider) buildGLMRequest(req *Request) glmRequest {
 	glmReq := glmRequest{
 		Model:       p.model,
 		Messages:    make([]glmMessage, len(req.Messages)),
@@ -217,6 +214,14 @@ func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan S
 		}
 	}
 
+	return glmReq
+}
+
+// StreamMessage sends a streaming request to the GLM API.
+func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan StreamChunk, error) {
+	stream := make(chan StreamChunk, 100)
+
+	glmReq := p.buildGLMRequest(req)
 	body, err := json.Marshal(glmReq)
 	if err != nil {
 		close(stream)
@@ -279,17 +284,12 @@ func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan S
 			if data == "[DONE]" {
 				// Flush any pending tool call before ending
 				if inToolCall && tcName != "" {
-					var args map[string]interface{}
-					if tcArgsBuf.Len() > 0 {
-						json.Unmarshal([]byte(tcArgsBuf.String()), &args)
+					tc, flushErr := flushToolCall(tcID, tcName, &tcArgsBuf)
+					if flushErr != nil {
+						stream <- StreamChunk{Error: flushErr}
+						return
 					}
-					stream <- StreamChunk{
-						ToolCall: &ToolCall{
-							ID:        tcID,
-							Name:      tcName,
-							Arguments: args,
-						},
-					}
+					stream <- StreamChunk{ToolCall: tc}
 				}
 				stream <- StreamChunk{Done: true}
 				return
@@ -336,17 +336,12 @@ func (p *GLMProvider) StreamMessage(ctx context.Context, req *Request) (<-chan S
 			// On finish reason, flush accumulated tool call
 			if choice.FinishReason != "" {
 				if inToolCall && tcName != "" {
-					var args map[string]interface{}
-					if tcArgsBuf.Len() > 0 {
-						json.Unmarshal([]byte(tcArgsBuf.String()), &args)
+					tc, flushErr := flushToolCall(tcID, tcName, &tcArgsBuf)
+					if flushErr != nil {
+						stream <- StreamChunk{Error: flushErr}
+						return
 					}
-					stream <- StreamChunk{
-						ToolCall: &ToolCall{
-							ID:        tcID,
-							Name:      tcName,
-							Arguments: args,
-						},
-					}
+					stream <- StreamChunk{ToolCall: tc}
 				}
 				stream <- StreamChunk{Done: true}
 				return

@@ -45,58 +45,6 @@ func (p *OpenAIProvider) GetModel() string {
 	return p.model
 }
 
-// SendMessage sends a non-streaming request to the LLM.
-func (p *OpenAIProvider) SendMessage(ctx context.Context, req *Request) (*Response, error) {
-	messages := p.convertMessages(req.Messages)
-
-	chatReq := openai.ChatCompletionRequest{
-		Model:       p.model,
-		Messages:    messages,
-		Temperature: float32(req.Temperature),
-	}
-
-	if len(req.Tools) > 0 {
-		chatReq.Tools = p.convertTools(req.Tools)
-	}
-
-	resp, err := p.client.CreateChatCompletion(ctx, chatReq)
-	if err != nil {
-		return nil, fmt.Errorf("create chat completion: %w", err)
-	}
-
-	if len(resp.Choices) == 0 {
-		return nil, fmt.Errorf("no choices in response")
-	}
-
-	choice := resp.Choices[0]
-	result := &Response{
-		Content: choice.Message.Content,
-		Usage: Usage{
-			PromptTokens:     int(resp.Usage.PromptTokens),
-			CompletionTokens: int(resp.Usage.CompletionTokens),
-			TotalTokens:      int(resp.Usage.TotalTokens),
-		},
-	}
-
-	if len(choice.Message.ToolCalls) > 0 {
-		result.ToolCalls = make([]ToolCall, len(choice.Message.ToolCalls))
-		for i, tc := range choice.Message.ToolCalls {
-			result.ToolCalls[i] = ToolCall{
-				ID:   tc.ID,
-				Name: tc.Function.Name,
-			}
-			if tc.Function.Arguments != "" {
-				var args map[string]interface{}
-				if err := json.Unmarshal([]byte(tc.Function.Arguments), &args); err == nil {
-					result.ToolCalls[i].Arguments = args
-				}
-			}
-		}
-	}
-
-	return result, nil
-}
-
 // StreamMessage sends a streaming request to the LLM.
 func (p *OpenAIProvider) StreamMessage(ctx context.Context, req *Request) (<-chan StreamChunk, error) {
 	stream := make(chan StreamChunk, 100)
@@ -134,17 +82,12 @@ func (p *OpenAIProvider) StreamMessage(ctx context.Context, req *Request) (<-cha
 				if err == io.EOF {
 					// Flush any pending tool call before ending
 					if inToolCall && tcName != "" {
-						var args map[string]interface{}
-						if tcArgsBuf.Len() > 0 {
-							json.Unmarshal([]byte(tcArgsBuf.String()), &args)
+						tc, flushErr := flushToolCall(tcID, tcName, &tcArgsBuf)
+						if flushErr != nil {
+							stream <- StreamChunk{Error: flushErr}
+							return
 						}
-						stream <- StreamChunk{
-							ToolCall: &ToolCall{
-								ID:        tcID,
-								Name:      tcName,
-								Arguments: args,
-							},
-						}
+						stream <- StreamChunk{ToolCall: tc}
 					}
 					stream <- StreamChunk{Done: true}
 					return
@@ -183,17 +126,12 @@ func (p *OpenAIProvider) StreamMessage(ctx context.Context, req *Request) (<-cha
 			finishReason := chunk.Choices[0].FinishReason
 			if finishReason != "" {
 				if inToolCall && tcName != "" {
-					var args map[string]interface{}
-					if tcArgsBuf.Len() > 0 {
-						json.Unmarshal([]byte(tcArgsBuf.String()), &args)
+					tc, flushErr := flushToolCall(tcID, tcName, &tcArgsBuf)
+					if flushErr != nil {
+						stream <- StreamChunk{Error: flushErr}
+						return
 					}
-					stream <- StreamChunk{
-						ToolCall: &ToolCall{
-							ID:        tcID,
-							Name:      tcName,
-							Arguments: args,
-						},
-					}
+					stream <- StreamChunk{ToolCall: tc}
 				}
 				stream <- StreamChunk{Done: true}
 				return
@@ -249,15 +187,3 @@ func (p *OpenAIProvider) convertTools(tools []ToolDefinition) []openai.Tool {
 	return result
 }
 
-// CreateToolSchema creates a JSON schema for a tool's parameters.
-func CreateToolSchema(params string) map[string]interface{} {
-	var schema map[string]interface{}
-	if err := json.Unmarshal([]byte(params), &schema); err != nil {
-		// Return a basic schema if parsing fails
-		return map[string]interface{}{
-			"type":       "object",
-			"properties": map[string]interface{}{},
-		}
-	}
-	return schema
-}

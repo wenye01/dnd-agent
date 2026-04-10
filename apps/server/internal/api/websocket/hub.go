@@ -12,6 +12,14 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Hub configuration constants.
+const (
+	unregisterChanSize    = 64
+	broadcastChanSize     = 256
+	staleCleanupInterval  = 30 * time.Second
+	staleClientTimeout     = 2 * time.Minute
+)
+
 // Hub manages active WebSocket connections and broadcasts messages.
 type Hub struct {
 	clients    map[*Client]bool
@@ -32,8 +40,8 @@ func NewHub(stateManager *state.Manager, sessionMgr *session.Manager, toolRegist
 	return &Hub{
 		clients:      make(map[*Client]bool),
 		register:     make(chan *Client),
-		unregister:   make(chan *Client, 64),
-		broadcast:    make(chan []byte, 256),
+		unregister:   make(chan *Client, unregisterChanSize),
+		broadcast:    make(chan []byte, broadcastChanSize),
 		stateManager: stateManager,
 		sessionMgr:   sessionMgr,
 		toolRegistry: toolRegistry,
@@ -43,7 +51,7 @@ func NewHub(stateManager *state.Manager, sessionMgr *session.Manager, toolRegist
 
 // Run starts the hub's main event loop.
 func (h *Hub) Run() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(staleCleanupInterval)
 	defer ticker.Stop()
 
 	for {
@@ -158,7 +166,7 @@ func (h *Hub) SendError(client *Client, errMsg string) {
 			"code":    "SERVER_ERROR",
 			"message": errMsg,
 		},
-		Timestamp: time.Now().Unix(),
+		Timestamp: getCurrentTimestamp(),
 	}
 	client.SendMessage(message)
 }
@@ -177,7 +185,7 @@ func (h *Hub) cleanupStaleClients() {
 
 	now := time.Now()
 	for client := range h.clients {
-		if now.Sub(client.LastActivity) > 2*time.Minute {
+		if now.Sub(client.LastActivity) > staleClientTimeout {
 			h.logger.Info().
 				Str("session_id", client.SessionID).
 				Msg("removing stale client")
@@ -190,9 +198,3 @@ func (h *Hub) cleanupStaleClients() {
 	}
 }
 
-// GetClientCount returns the number of connected clients.
-func (h *Hub) GetClientCount() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.clients)
-}

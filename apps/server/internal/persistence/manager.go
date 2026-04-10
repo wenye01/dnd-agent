@@ -7,19 +7,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 
 	"github.com/dnd-game/server/internal/shared/state"
 )
-
-// AdapterError is returned when type adaptation fails.
-type AdapterError struct {
-	Message string
-}
-
-func (e *AdapterError) Error() string {
-	return e.Message
-}
 
 // Manager handles persistence of game sessions.
 type Manager struct {
@@ -39,9 +31,28 @@ func NewManager(basePath string) (*Manager, error) {
 	}, nil
 }
 
+// validSessionID matches session IDs containing only alphanumeric characters,
+// hyphens, and underscores. This prevents path traversal attacks (e.g. "..").
+var validSessionID = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+// validateSessionID checks that a session ID contains only safe characters.
+func validateSessionID(sessionID string) error {
+	if sessionID == "" {
+		return fmt.Errorf("session ID must not be empty")
+	}
+	if !validSessionID.MatchString(sessionID) {
+		return fmt.Errorf("session ID %q contains illegal characters; only alphanumeric, hyphen, and underscore are allowed", sessionID)
+	}
+	return nil
+}
+
 // CreateSession creates a new session directory.
 // Returns an error if the session directory already exists.
 func (m *Manager) CreateSession(sessionID string) error {
+	if err := validateSessionID(sessionID); err != nil {
+		return err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -56,6 +67,10 @@ func (m *Manager) CreateSession(sessionID string) error {
 
 // DeleteSession removes a session directory and all its contents.
 func (m *Manager) DeleteSession(sessionID string) error {
+	if err := validateSessionID(sessionID); err != nil {
+		return err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -69,6 +84,10 @@ func (m *Manager) DeleteSession(sessionID string) error {
 
 // SessionExists checks if a session directory exists.
 func (m *Manager) SessionExists(sessionID string) bool {
+	if err := validateSessionID(sessionID); err != nil {
+		return false
+	}
+
 	dir := m.sessionPath(sessionID)
 	info, err := os.Stat(dir)
 	return err == nil && info.IsDir()
@@ -76,18 +95,29 @@ func (m *Manager) SessionExists(sessionID string) bool {
 
 // SaveState saves the current game state to a JSON file.
 func (m *Manager) SaveState(sessionID string, gameState *state.GameState) error {
+	if err := validateSessionID(sessionID); err != nil {
+		return err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	path := filepath.Join(m.sessionPath(sessionID), "state.json")
+	dir := m.sessionPath(sessionID)
+	path := filepath.Join(dir, "state.json")
 
 	data, err := json.MarshalIndent(gameState, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal state: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("write state file: %w", err)
+	// Atomic write: write to temp file then rename to prevent corruption
+	// if the process crashes mid-write.
+	tmpPath := path + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		return fmt.Errorf("write state temp file: %w", err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("rename state file: %w", err)
 	}
 
 	return nil
@@ -95,6 +125,10 @@ func (m *Manager) SaveState(sessionID string, gameState *state.GameState) error 
 
 // LoadState loads the game state from a JSON file.
 func (m *Manager) LoadState(sessionID string) (*state.GameState, error) {
+	if err := validateSessionID(sessionID); err != nil {
+		return nil, err
+	}
+
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -122,6 +156,10 @@ type MessageEntry struct {
 
 // AppendMessage appends a message to the messages JSONL file.
 func (m *Manager) AppendMessage(sessionID string, entry *MessageEntry) error {
+	if err := validateSessionID(sessionID); err != nil {
+		return err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -149,6 +187,10 @@ func (m *Manager) AppendMessage(sessionID string, entry *MessageEntry) error {
 // offset is the number of messages to skip, limit is the max number to return.
 // A limit of 0 means no limit.
 func (m *Manager) LoadMessages(sessionID string, offset, limit int) ([]*MessageEntry, error) {
+	if err := validateSessionID(sessionID); err != nil {
+		return nil, err
+	}
+
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
