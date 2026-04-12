@@ -1119,4 +1119,183 @@ describe('gameStore v0.4 Phase 4 handlers', () => {
       expect(useGameStore.getState().gameState).toBeNull()
     })
   })
+
+  // Additional edge-case tests for improved coverage
+  describe('handleSpellCast - spell slot edge cases', () => {
+    it('should decrement spell slot usage for matching character', () => {
+      createGameStateWithCharacter()
+
+      useGameStore.getState().handleSpellCast({
+        eventId: 'spell-slot-1',
+        timestamp: Date.now(),
+        characterId: 'char-1',
+        spellId: 'magic_missile',
+        spellName: 'Magic Missile',
+        slotLevelUsed: 1,
+        concentrating: false,
+      })
+
+      const char = useGameStore.getState().gameState!.party[0]
+      expect(char.spellSlots![1].used).toBe(1)
+      expect(char.spellSlots![2].used).toBe(0)
+      expect(char.spellSlots![3].used).toBe(0)
+    })
+
+    it('should not modify spell slots when slotLevelUsed is 0', () => {
+      createGameStateWithCharacter()
+
+      useGameStore.getState().handleSpellCast({
+        eventId: 'spell-cantrip-1',
+        timestamp: Date.now(),
+        characterId: 'char-1',
+        spellId: 'fire_bolt',
+        spellName: 'Fire Bolt',
+        slotLevelUsed: 0,
+        concentrating: false,
+      })
+
+      const char = useGameStore.getState().gameState!.party[0]
+      expect(char.spellSlots![1].used).toBe(0)
+    })
+
+    it('should not modify spell slots when slot level does not exist', () => {
+      createGameStateWithCharacter()
+
+      useGameStore.getState().handleSpellCast({
+        eventId: 'spell-high-1',
+        timestamp: Date.now(),
+        characterId: 'char-1',
+        spellId: 'meteor_swarm',
+        spellName: 'Meteor Swarm',
+        slotLevelUsed: 9,
+        concentrating: false,
+      })
+
+      const char = useGameStore.getState().gameState!.party[0]
+      // All slot levels unchanged
+      expect(char.spellSlots![1].used).toBe(0)
+      expect(char.spellSlots![2].used).toBe(0)
+      expect(char.spellSlots![3].used).toBe(0)
+    })
+
+    it('should accumulate spell slot usage across multiple casts', () => {
+      createGameStateWithCharacter()
+
+      for (let i = 0; i < 3; i++) {
+        useGameStore.getState().handleSpellCast({
+          eventId: `spell-multi-${i}`,
+          timestamp: Date.now(),
+          characterId: 'char-1',
+          spellId: 'magic_missile',
+          spellName: 'Magic Missile',
+          slotLevelUsed: 1,
+          concentrating: false,
+        })
+      }
+
+      const char = useGameStore.getState().gameState!.party[0]
+      expect(char.spellSlots![1].used).toBe(3)
+    })
+
+    it('should not modify slots when character has no spellSlots', () => {
+      createGameStateWithCharacter({ spellSlots: undefined })
+
+      useGameStore.getState().handleSpellCast({
+        eventId: 'spell-no-slots-1',
+        timestamp: Date.now(),
+        characterId: 'char-1',
+        spellId: 'magic_missile',
+        spellName: 'Magic Missile',
+        slotLevelUsed: 1,
+        concentrating: false,
+      })
+
+      const char = useGameStore.getState().gameState!.party[0]
+      expect(char.spellSlots).toBeUndefined()
+    })
+  })
+
+  describe('handleEquip - edge cases', () => {
+    it('should handle equip with no acBonus (undefined)', () => {
+      createGameStateWithCharacter()
+      const baseAc = useGameStore.getState().gameState!.party[0].armorClass
+
+      useGameStore.getState().handleEquip({
+        eventId: 'equip-nobonus-1',
+        timestamp: Date.now(),
+        characterId: 'char-1',
+        itemId: 'longsword-1',
+        itemName: 'Longsword',
+        slot: 'main_hand',
+        // acBonus intentionally omitted
+      })
+
+      const char = useGameStore.getState().gameState!.party[0]
+      expect(char.armorClass).toBe(baseAc)
+      expect(char.equipment.find((e) => e.slot === 'main_hand')?.itemId).toBe('longsword-1')
+    })
+
+    it('should correctly recalculate AC when replacing armor in same slot', () => {
+      createGameStateWithCharacter()
+      const baseAc = useGameStore.getState().gameState!.party[0].armorClass
+
+      // Equip leather armor (+2 AC)
+      useGameStore.getState().handleEquip({
+        eventId: 'equip-replace-ac-1',
+        timestamp: Date.now(),
+        characterId: 'char-1',
+        itemId: 'leather-armor-1',
+        itemName: 'Leather Armor',
+        slot: 'chest',
+        acBonus: 2,
+      })
+      expect(useGameStore.getState().gameState!.party[0].armorClass).toBe(baseAc + 2)
+
+      // Replace with chain mail (+5 AC) in same slot
+      useGameStore.getState().handleEquip({
+        eventId: 'equip-replace-ac-2',
+        timestamp: Date.now(),
+        characterId: 'char-1',
+        itemId: 'chain-mail-1',
+        itemName: 'Chain Mail',
+        slot: 'chest',
+        acBonus: 5,
+      })
+
+      const char = useGameStore.getState().gameState!.party[0]
+      expect(char.armorClass).toBe(baseAc + 5)
+    })
+
+    it('should set baseArmorClass on first equip and preserve it', () => {
+      createGameStateWithCharacter()
+      const originalAc = useGameStore.getState().gameState!.party[0].armorClass
+
+      useGameStore.getState().handleEquip({
+        eventId: 'equip-base-1',
+        timestamp: Date.now(),
+        characterId: 'char-1',
+        itemId: 'chain-mail-1',
+        itemName: 'Chain Mail',
+        slot: 'chest',
+        acBonus: 5,
+      })
+
+      const afterFirst = useGameStore.getState().gameState!.party[0]
+      expect(afterFirst.baseArmorClass).toBe(originalAc)
+
+      // Unequip should restore baseArmorClass-based AC
+      useGameStore.getState().handleUnequip({
+        eventId: 'unequip-base-1',
+        timestamp: Date.now(),
+        characterId: 'char-1',
+        itemId: 'chain-mail-1',
+        itemName: 'Chain Mail',
+        slot: 'chest',
+      })
+
+      const afterUnequip = useGameStore.getState().gameState!.party[0]
+      expect(afterUnequip.armorClass).toBe(originalAc)
+      expect(afterUnequip.baseArmorClass).toBe(originalAc)
+    })
+  })
 })

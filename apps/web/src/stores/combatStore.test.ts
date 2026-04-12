@@ -1002,4 +1002,92 @@ describe('combatStore', () => {
       expect(useCombatStore.getState().combat).toBeNull()
     })
   })
+
+  // Additional edge-case tests for improved coverage
+  describe('handleCombatSpellCast - log truncation', () => {
+    it('should truncate log entries when exceeding 100 entries', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      // Add 100 log entries via addLogEntry first
+      for (let i = 0; i < 100; i++) {
+        useCombatStore.getState().addLogEntry(`Entry ${i}`, 'info')
+      }
+      expect(useCombatStore.getState().logEntries).toHaveLength(100)
+
+      // Now cast a spell which adds one more entry, triggering truncation
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-trunc-1',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        spellId: 'magic_missile',
+        spellName: 'Magic Missile',
+        slotLevelUsed: 1,
+        concentrating: false,
+        damage: 5,
+        damageType: 'force',
+      })
+
+      const entries = useCombatStore.getState().logEntries
+      expect(entries).toHaveLength(100)
+      // The oldest entry should have been removed
+      expect(entries[0].text).toBe('Entry 1')
+      // The newest entry should be the spell cast
+      expect(entries[99].text).toContain('Magic Missile')
+    })
+
+    it('should format damage log without damageType when not provided', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-nodtype-1',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        spellId: 'eldritch_blast',
+        spellName: 'Eldritch Blast',
+        slotLevelUsed: 0,
+        concentrating: false,
+        damage: 8,
+        // damageType intentionally omitted
+      })
+
+      const entries = useCombatStore.getState().logEntries
+      const lastEntry = entries[entries.length - 1]
+      expect(lastEntry.text).toContain('Eldritch Blast')
+      expect(lastEntry.text).toContain('8')
+      expect(lastEntry.type).toBe('damage')
+    })
+  })
+
+  describe('handleCombatItemUse - log truncation', () => {
+    it('should truncate log entries when exceeding 100 entries', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      // Add 100 log entries first
+      for (let i = 0; i < 100; i++) {
+        useCombatStore.getState().addLogEntry(`Entry ${i}`, 'info')
+      }
+      expect(useCombatStore.getState().logEntries).toHaveLength(100)
+
+      // Now use an item which triggers truncation
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-trunc-1',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        itemId: 'potion-heal-1',
+        itemName: 'Healing Potion',
+        itemType: 'consumable',
+        consumed: true,
+        healing: 8,
+      })
+
+      const entries = useCombatStore.getState().logEntries
+      expect(entries).toHaveLength(100)
+      expect(entries[99].text).toContain('Healing Potion')
+    })
+  })
 })
