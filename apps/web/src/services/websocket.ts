@@ -26,6 +26,12 @@ export {
   isErrorPayload,
   isCombatEventPayload,
   isUserInputPayload,
+  isSpellCastPayload,
+  isItemUsePayload,
+  isEquipPayload,
+  isUnequipPayload,
+  isMapInteractPayload,
+  isMapSwitchPayload,
 } from './typeGuards'
 
 export interface WebSocketOptions {

@@ -60,4 +60,20 @@ const (
 	MsgTypeError = "error"
 	// MsgTypePong is the response to ping messages.
 	MsgTypePong = "pong"
+
+	// --- v0.4 Phase 4: Extended event types for spell/item/map integration ---
+
+	// MsgTypeSpellCast is for spell casting event notifications.
+	MsgTypeSpellCast = "spell_cast"
+	// MsgTypeItemUse is for item use event notifications.
+	MsgTypeItemUse = "item_use"
+	// MsgTypeEquip is for equipment change event notifications.
+	MsgTypeEquip = "equip"
+	// MsgTypeUnequip is for unequip event notifications.
+	MsgTypeUnequip = "unequip"
+	// MsgTypeMapInteract is for map interaction event notifications.
+	MsgTypeMapInteract = "map_interact"
+	// MsgTypeMapSwitch is for map switch/transition event notifications.
+	MsgTypeMapSwitch = "map_switch"
 )
+

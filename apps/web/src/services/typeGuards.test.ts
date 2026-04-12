@@ -18,8 +18,14 @@ import {
   isCombatData,
   isCombatEventPayload,
   isStateUpdatePayload,
+  isSpellCastPayload,
+  isItemUsePayload,
+  isEquipPayload,
+  isUnequipPayload,
+  isMapInteractPayload,
+  isMapSwitchPayload,
 } from './typeGuards'
-import { COMBAT_EVENT_TYPES, STATE_UPDATE_TYPES } from '../config/constants'
+import { COMBAT_EVENT_TYPES, STATE_UPDATE_TYPES, GAME_EVENT_TYPES } from '../config/constants'
 
 // ---------------------------------------------------------------
 // Shared: non-object inputs that should fail every type guard
@@ -213,5 +219,269 @@ describe('isStateUpdatePayload (exhaustive)', () => {
 
   it.each(NON_OBJECTS)('should reject non-object ($name)', ({ value }) => {
     expect(isStateUpdatePayload(value)).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------
+// v0.4 Phase 4: Type guards for new game event payloads
+// ---------------------------------------------------------------
+
+describe('GAME_EVENT_TYPES', () => {
+  it('should contain all 6 game event types', () => {
+    expect(GAME_EVENT_TYPES).toHaveLength(6)
+    expect(GAME_EVENT_TYPES).toContain('spell_cast')
+    expect(GAME_EVENT_TYPES).toContain('item_use')
+    expect(GAME_EVENT_TYPES).toContain('equip')
+    expect(GAME_EVENT_TYPES).toContain('unequip')
+    expect(GAME_EVENT_TYPES).toContain('map_interact')
+    expect(GAME_EVENT_TYPES).toContain('map_switch')
+  })
+
+  it('should have no duplicates', () => {
+    const unique = new Set(GAME_EVENT_TYPES)
+    expect(unique.size).toBe(GAME_EVENT_TYPES.length)
+  })
+})
+
+describe('isSpellCastPayload', () => {
+  const validPayload = {
+    eventId: 'spell-1',
+    timestamp: Date.now(),
+    characterId: 'wizard-1',
+    targetId: 'goblin-1',
+    spellId: 'magic_missile',
+    spellName: 'Magic Missile',
+    slotLevelUsed: 1,
+    concentrating: false,
+  }
+
+  it('should accept a valid spell_cast payload', () => {
+    expect(isSpellCastPayload(validPayload)).toBe(true)
+  })
+
+  it('should accept payload with optional damage and healing', () => {
+    expect(isSpellCastPayload({ ...validPayload, damage: 10, damageType: 'force' })).toBe(true)
+    expect(isSpellCastPayload({ ...validPayload, healing: 8 })).toBe(true)
+    expect(isSpellCastPayload({ ...validPayload, damage: 10, healing: 0 })).toBe(true)
+  })
+
+  it('should accept payload without targetId', () => {
+    const { targetId: _targetId, ...noTarget } = validPayload
+    void _targetId
+    expect(isSpellCastPayload(noTarget)).toBe(true)
+  })
+
+  it.each(NON_OBJECTS)('should reject non-object ($name)', ({ value }) => {
+    expect(isSpellCastPayload(value)).toBe(false)
+  })
+
+  it('should reject when required string fields are missing', () => {
+    expect(isSpellCastPayload({ ...validPayload, eventId: undefined })).toBe(false)
+    expect(isSpellCastPayload({ ...validPayload, characterId: undefined })).toBe(false)
+    expect(isSpellCastPayload({ ...validPayload, spellId: undefined })).toBe(false)
+    expect(isSpellCastPayload({ ...validPayload, spellName: undefined })).toBe(false)
+  })
+
+  it('should reject when required number fields are wrong type', () => {
+    expect(isSpellCastPayload({ ...validPayload, slotLevelUsed: '1' })).toBe(false)
+    expect(isSpellCastPayload({ ...validPayload, slotLevelUsed: undefined })).toBe(false)
+  })
+
+  it('should reject when concentrating is not boolean', () => {
+    expect(isSpellCastPayload({ ...validPayload, concentrating: 'yes' })).toBe(false)
+    expect(isSpellCastPayload({ ...validPayload, concentrating: 1 })).toBe(false)
+    expect(isSpellCastPayload({ ...validPayload, concentrating: undefined })).toBe(false)
+  })
+
+  it('should reject empty object', () => {
+    expect(isSpellCastPayload({})).toBe(false)
+  })
+})
+
+describe('isItemUsePayload', () => {
+  const validPayload = {
+    eventId: 'item-1',
+    timestamp: Date.now(),
+    characterId: 'wizard-1',
+    itemId: 'potion-heal-1',
+    itemName: 'Healing Potion',
+    itemType: 'consumable',
+    consumed: true,
+  }
+
+  it('should accept a valid item_use payload', () => {
+    expect(isItemUsePayload(validPayload)).toBe(true)
+  })
+
+  it('should accept payload with optional fields', () => {
+    expect(isItemUsePayload({ ...validPayload, healing: 8, damage: 0, description: 'A red vial' })).toBe(true)
+  })
+
+  it('should accept payload when consumed is false', () => {
+    expect(isItemUsePayload({ ...validPayload, consumed: false })).toBe(true)
+  })
+
+  it.each(NON_OBJECTS)('should reject non-object ($name)', ({ value }) => {
+    expect(isItemUsePayload(value)).toBe(false)
+  })
+
+  it('should reject when required string fields are wrong type', () => {
+    expect(isItemUsePayload({ ...validPayload, itemId: 123 })).toBe(false)
+    expect(isItemUsePayload({ ...validPayload, itemName: null })).toBe(false)
+    expect(isItemUsePayload({ ...validPayload, itemType: undefined })).toBe(false)
+  })
+
+  it('should reject when consumed is not boolean', () => {
+    expect(isItemUsePayload({ ...validPayload, consumed: 'yes' })).toBe(false)
+    expect(isItemUsePayload({ ...validPayload, consumed: 1 })).toBe(false)
+  })
+
+  it('should reject empty object', () => {
+    expect(isItemUsePayload({})).toBe(false)
+  })
+})
+
+describe('isEquipPayload', () => {
+  const validPayload = {
+    eventId: 'equip-1',
+    timestamp: Date.now(),
+    characterId: 'wizard-1',
+    itemId: 'chain-mail-1',
+    itemName: 'Chain Mail',
+    slot: 'chest',
+  }
+
+  it('should accept a valid equip payload', () => {
+    expect(isEquipPayload(validPayload)).toBe(true)
+  })
+
+  it('should accept payload with optional acBonus and oldItemId', () => {
+    expect(isEquipPayload({ ...validPayload, acBonus: 5, oldItemId: 'leather-armor-1' })).toBe(true)
+  })
+
+  it.each(NON_OBJECTS)('should reject non-object ($name)', ({ value }) => {
+    expect(isEquipPayload(value)).toBe(false)
+  })
+
+  it('should reject when slot is missing', () => {
+    expect(isEquipPayload({ ...validPayload, slot: undefined })).toBe(false)
+  })
+
+  it('should reject when slot is wrong type', () => {
+    expect(isEquipPayload({ ...validPayload, slot: 123 })).toBe(false)
+  })
+
+  it('should reject empty object', () => {
+    expect(isEquipPayload({})).toBe(false)
+  })
+})
+
+describe('isUnequipPayload', () => {
+  const validPayload = {
+    eventId: 'unequip-1',
+    timestamp: Date.now(),
+    characterId: 'wizard-1',
+    itemId: 'longsword-1',
+    itemName: 'Longsword',
+    slot: 'main_hand',
+  }
+
+  it('should accept a valid unequip payload', () => {
+    expect(isUnequipPayload(validPayload)).toBe(true)
+  })
+
+  it.each(NON_OBJECTS)('should reject non-object ($name)', ({ value }) => {
+    expect(isUnequipPayload(value)).toBe(false)
+  })
+
+  it('should reject when required fields are missing', () => {
+    expect(isUnequipPayload({ ...validPayload, characterId: undefined })).toBe(false)
+    expect(isUnequipPayload({ ...validPayload, itemId: undefined })).toBe(false)
+    expect(isUnequipPayload({ ...validPayload, slot: undefined })).toBe(false)
+  })
+
+  it('should reject empty object', () => {
+    expect(isUnequipPayload({})).toBe(false)
+  })
+})
+
+describe('isMapInteractPayload', () => {
+  const validPayload = {
+    eventId: 'map-1',
+    timestamp: Date.now(),
+    characterId: 'wizard-1',
+    interactableId: 'chest-1',
+    interactableType: 'chest' as const,
+    action: 'open',
+    mapId: 'map-dungeon-1',
+    position: { x: 5, y: 3 },
+  }
+
+  it('should accept a valid map_interact payload', () => {
+    expect(isMapInteractPayload(validPayload)).toBe(true)
+  })
+
+  it('should accept all interactableType values', () => {
+    for (const type of ['door', 'chest', 'npc', 'trigger'] as const) {
+      expect(isMapInteractPayload({ ...validPayload, interactableType: type })).toBe(true)
+    }
+  })
+
+  it.each(NON_OBJECTS)('should reject non-object ($name)', ({ value }) => {
+    expect(isMapInteractPayload(value)).toBe(false)
+  })
+
+  it('should reject when position is null', () => {
+    expect(isMapInteractPayload({ ...validPayload, position: null })).toBe(false)
+  })
+
+  it('should reject when position is missing', () => {
+    const { position: _position, ...noPosition } = validPayload
+    void _position
+    expect(isMapInteractPayload(noPosition)).toBe(false)
+  })
+
+  it('should reject when required string fields are wrong type', () => {
+    expect(isMapInteractPayload({ ...validPayload, interactableId: 123 })).toBe(false)
+    expect(isMapInteractPayload({ ...validPayload, action: undefined })).toBe(false)
+    expect(isMapInteractPayload({ ...validPayload, mapId: null })).toBe(false)
+  })
+
+  it('should reject empty object', () => {
+    expect(isMapInteractPayload({})).toBe(false)
+  })
+})
+
+describe('isMapSwitchPayload', () => {
+  const validPayload = {
+    eventId: 'mapswitch-1',
+    timestamp: Date.now(),
+    characterId: 'wizard-1',
+    fromMapId: 'map-dungeon-1',
+    toMapId: 'map-dungeon-2',
+    entryPoint: 'south_entrance',
+    position: { x: 0, y: 5 },
+  }
+
+  it('should accept a valid map_switch payload', () => {
+    expect(isMapSwitchPayload(validPayload)).toBe(true)
+  })
+
+  it.each(NON_OBJECTS)('should reject non-object ($name)', ({ value }) => {
+    expect(isMapSwitchPayload(value)).toBe(false)
+  })
+
+  it('should reject when position is null', () => {
+    expect(isMapSwitchPayload({ ...validPayload, position: null })).toBe(false)
+  })
+
+  it('should reject when required string fields are missing', () => {
+    expect(isMapSwitchPayload({ ...validPayload, fromMapId: undefined })).toBe(false)
+    expect(isMapSwitchPayload({ ...validPayload, toMapId: undefined })).toBe(false)
+    expect(isMapSwitchPayload({ ...validPayload, entryPoint: undefined })).toBe(false)
+  })
+
+  it('should reject empty object', () => {
+    expect(isMapSwitchPayload({})).toBe(false)
   })
 })

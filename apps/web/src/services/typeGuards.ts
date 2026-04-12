@@ -2,6 +2,12 @@ import type {
   NarrationPayload,
   DiceResultPayload,
   ErrorPayload,
+  SpellCastPayload,
+  ItemUsePayload,
+  EquipPayload,
+  UnequipPayload,
+  MapInteractPayload,
+  MapSwitchPayload,
 } from '../types'
 import {
   COMBAT_EVENT_TYPES,
@@ -268,5 +274,90 @@ export function isCombatData(data: unknown): data is import('../types').CombatSt
     Array.isArray(obj.initiatives) &&
     Array.isArray(obj.activeEffects) &&
     ('status' in obj && typeof obj.status === 'string')
+  )
+}
+
+// --- v0.4 Phase 4: Type guards for new event payloads ---
+
+// Type guard for spell cast payload
+export function isSpellCastPayload(payload: unknown): payload is SpellCastPayload {
+  if (typeof payload !== 'object' || payload === null) return false
+  const obj = payload as Record<string, unknown>
+  return (
+    typeof obj.eventId === 'string' &&
+    typeof obj.characterId === 'string' &&
+    typeof obj.spellId === 'string' &&
+    typeof obj.spellName === 'string' &&
+    typeof obj.slotLevelUsed === 'number' &&
+    typeof obj.concentrating === 'boolean'
+  )
+}
+
+// Type guard for item use payload
+export function isItemUsePayload(payload: unknown): payload is ItemUsePayload {
+  if (typeof payload !== 'object' || payload === null) return false
+  const obj = payload as Record<string, unknown>
+  return (
+    typeof obj.eventId === 'string' &&
+    typeof obj.characterId === 'string' &&
+    typeof obj.itemId === 'string' &&
+    typeof obj.itemName === 'string' &&
+    typeof obj.itemType === 'string' &&
+    typeof obj.consumed === 'boolean'
+  )
+}
+
+// Type guard for equip payload
+export function isEquipPayload(payload: unknown): payload is EquipPayload {
+  if (typeof payload !== 'object' || payload === null) return false
+  const obj = payload as Record<string, unknown>
+  return (
+    typeof obj.eventId === 'string' &&
+    typeof obj.characterId === 'string' &&
+    typeof obj.itemId === 'string' &&
+    typeof obj.itemName === 'string' &&
+    typeof obj.slot === 'string'
+  )
+}
+
+// Type guard for unequip payload
+export function isUnequipPayload(payload: unknown): payload is UnequipPayload {
+  if (typeof payload !== 'object' || payload === null) return false
+  const obj = payload as Record<string, unknown>
+  return (
+    typeof obj.eventId === 'string' &&
+    typeof obj.characterId === 'string' &&
+    typeof obj.itemId === 'string' &&
+    typeof obj.itemName === 'string' &&
+    typeof obj.slot === 'string'
+  )
+}
+
+// Type guard for map interact payload
+export function isMapInteractPayload(payload: unknown): payload is MapInteractPayload {
+  if (typeof payload !== 'object' || payload === null) return false
+  const obj = payload as Record<string, unknown>
+  return (
+    typeof obj.eventId === 'string' &&
+    typeof obj.characterId === 'string' &&
+    typeof obj.interactableId === 'string' &&
+    typeof obj.interactableType === 'string' &&
+    typeof obj.action === 'string' &&
+    typeof obj.mapId === 'string' &&
+    typeof obj.position === 'object' && obj.position !== null
+  )
+}
+
+// Type guard for map switch payload
+export function isMapSwitchPayload(payload: unknown): payload is MapSwitchPayload {
+  if (typeof payload !== 'object' || payload === null) return false
+  const obj = payload as Record<string, unknown>
+  return (
+    typeof obj.eventId === 'string' &&
+    typeof obj.characterId === 'string' &&
+    typeof obj.fromMapId === 'string' &&
+    typeof obj.toMapId === 'string' &&
+    typeof obj.entryPoint === 'string' &&
+    typeof obj.position === 'object' && obj.position !== null
   )
 }

@@ -388,6 +388,503 @@ describe('combatStore', () => {
     })
   })
 
+  // ---------------------------------------------------------------
+  // v0.4 Phase 4: handleCombatSpellCast tests
+  // ---------------------------------------------------------------
+  describe('handleCombatSpellCast', () => {
+    it('should apply damage to target combatant', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-1',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        spellId: 'magic_missile',
+        spellName: 'Magic Missile',
+        slotLevelUsed: 1,
+        concentrating: false,
+        damage: 10,
+        damageType: 'force',
+      })
+
+      const goblin = useCombatStore.getState().getCombatant('goblin-1')
+      expect(goblin?.currentHp).toBe(20) // 30 - 10 = 20
+    })
+
+    it('should not reduce HP below 0 from spell damage', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-2',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        spellId: 'disintegrate',
+        spellName: 'Disintegrate',
+        slotLevelUsed: 6,
+        concentrating: false,
+        damage: 999,
+        damageType: 'force',
+      })
+
+      const goblin = useCombatStore.getState().getCombatant('goblin-1')
+      expect(goblin?.currentHp).toBe(0)
+    })
+
+    it('should apply healing to caster combatant', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 15 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-3',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        spellId: 'cure_wounds',
+        spellName: 'Cure Wounds',
+        slotLevelUsed: 1,
+        concentrating: false,
+        healing: 10,
+      })
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.currentHp).toBe(25) // 15 + 10 = 25
+    })
+
+    it('should cap healing at maxHp', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 28, maxHp: 30 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-4',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        spellId: 'cure_wounds',
+        spellName: 'Cure Wounds',
+        slotLevelUsed: 1,
+        concentrating: false,
+        healing: 10,
+      })
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.currentHp).toBe(30)
+    })
+
+    it('should add damage log entry when damage is dealt', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-5',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        spellId: 'fireball',
+        spellName: 'Fireball',
+        slotLevelUsed: 3,
+        concentrating: false,
+        damage: 28,
+        damageType: 'fire',
+      })
+
+      const entries = useCombatStore.getState().logEntries
+      expect(entries.length).toBeGreaterThan(0)
+      expect(entries[entries.length - 1].text).toContain('Fireball')
+      expect(entries[entries.length - 1].text).toContain('28')
+      expect(entries[entries.length - 1].type).toBe('damage')
+    })
+
+    it('should add heal log entry when healing is applied', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 10 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-6',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        spellId: 'cure_wounds',
+        spellName: 'Cure Wounds',
+        slotLevelUsed: 1,
+        concentrating: false,
+        healing: 8,
+      })
+
+      const entries = useCombatStore.getState().logEntries
+      expect(entries[entries.length - 1].text).toContain('Cure Wounds')
+      expect(entries[entries.length - 1].text).toContain('8')
+      expect(entries[entries.length - 1].type).toBe('heal')
+    })
+
+    it('should add info log entry when spell has no damage or healing', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-7',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        spellId: 'shield',
+        spellName: 'Shield',
+        slotLevelUsed: 1,
+        concentrating: false,
+      })
+
+      const entries = useCombatStore.getState().logEntries
+      expect(entries[entries.length - 1].text).toContain('Shield')
+      expect(entries[entries.length - 1].type).toBe('info')
+    })
+
+    it('should emit SPELL_CAST event on eventBus', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+      const handler = vi.fn()
+      eventBus.on(GameEvents.SPELL_CAST, handler)
+
+      const payload = {
+        eventId: 'spell-8',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        spellId: 'magic_missile',
+        spellName: 'Magic Missile',
+        slotLevelUsed: 1,
+        concentrating: false,
+        damage: 5,
+        damageType: 'force',
+      }
+
+      useCombatStore.getState().handleCombatSpellCast(payload)
+      expect(handler).toHaveBeenCalledWith(payload)
+    })
+
+    it('should emit EFFECT_DAMAGE event when damage is dealt', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+      const handler = vi.fn()
+      eventBus.on(GameEvents.EFFECT_DAMAGE, handler)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-9',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        spellId: 'magic_missile',
+        spellName: 'Magic Missile',
+        slotLevelUsed: 1,
+        concentrating: false,
+        damage: 10,
+        damageType: 'force',
+      })
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: 'damage',
+          target: 'goblin-1',
+          damage: 10,
+          damageType: 'force',
+        }),
+      )
+    })
+
+    it('should emit EFFECT_HEAL event when healing is applied', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 10 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+      const handler = vi.fn()
+      eventBus.on(GameEvents.EFFECT_HEAL, handler)
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-10',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        spellId: 'cure_wounds',
+        spellName: 'Cure Wounds',
+        slotLevelUsed: 1,
+        concentrating: false,
+        healing: 8,
+      })
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: 'heal',
+          characterId: 'fighter-1',
+          amount: 8,
+        }),
+      )
+    })
+
+    it('should do nothing when combat is null', () => {
+      expect(useCombatStore.getState().combat).toBeNull()
+
+      useCombatStore.getState().handleCombatSpellCast({
+        eventId: 'spell-11',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        spellId: 'magic_missile',
+        spellName: 'Magic Missile',
+        slotLevelUsed: 1,
+        concentrating: false,
+        damage: 10,
+        damageType: 'force',
+      })
+
+      expect(useCombatStore.getState().combat).toBeNull()
+      expect(useCombatStore.getState().logEntries).toHaveLength(0)
+    })
+  })
+
+  // ---------------------------------------------------------------
+  // v0.4 Phase 4: handleCombatItemUse tests
+  // ---------------------------------------------------------------
+  describe('handleCombatItemUse', () => {
+    it('should apply healing to the character using the item', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 15 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-1',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        itemId: 'potion-heal-1',
+        itemName: 'Healing Potion',
+        itemType: 'consumable',
+        consumed: true,
+        healing: 8,
+      })
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.currentHp).toBe(23) // 15 + 8 = 23
+    })
+
+    it('should cap item healing at maxHp', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 28, maxHp: 30 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-2',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        itemId: 'potion-heal-1',
+        itemName: 'Healing Potion',
+        itemType: 'consumable',
+        consumed: true,
+        healing: 10,
+      })
+
+      const fighter = useCombatStore.getState().getCombatant('fighter-1')
+      expect(fighter?.currentHp).toBe(30)
+    })
+
+    it('should apply damage to target combatant', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-3',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        itemId: 'alchemist-fire-1',
+        itemName: 'Alchemist\'s Fire',
+        itemType: 'consumable',
+        consumed: true,
+        damage: 7,
+      })
+
+      const goblin = useCombatStore.getState().getCombatant('goblin-1')
+      expect(goblin?.currentHp).toBe(23) // 30 - 7 = 23
+    })
+
+    it('should not reduce target HP below 0 from item damage', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-4',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        itemId: 'bomb-1',
+        itemName: 'Bomb',
+        itemType: 'consumable',
+        consumed: true,
+        damage: 999,
+      })
+
+      const goblin = useCombatStore.getState().getCombatant('goblin-1')
+      expect(goblin?.currentHp).toBe(0)
+    })
+
+    it('should add heal log entry when healing is applied', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 10 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-5',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        itemId: 'potion-heal-1',
+        itemName: 'Healing Potion',
+        itemType: 'consumable',
+        consumed: true,
+        healing: 8,
+      })
+
+      const entries = useCombatStore.getState().logEntries
+      expect(entries[entries.length - 1].text).toContain('Healing Potion')
+      expect(entries[entries.length - 1].text).toContain('8')
+      expect(entries[entries.length - 1].type).toBe('heal')
+    })
+
+    it('should add damage log entry when damage is dealt', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-6',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        itemId: 'alchemist-fire-1',
+        itemName: 'Alchemist\'s Fire',
+        itemType: 'consumable',
+        consumed: true,
+        damage: 7,
+      })
+
+      const entries = useCombatStore.getState().logEntries
+      expect(entries[entries.length - 1].text).toContain('Alchemist\'s Fire')
+      expect(entries[entries.length - 1].text).toContain('7')
+      expect(entries[entries.length - 1].type).toBe('damage')
+    })
+
+    it('should emit ITEM_USE event on eventBus', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+      const handler = vi.fn()
+      eventBus.on(GameEvents.ITEM_USE, handler)
+
+      const payload = {
+        eventId: 'item-7',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        itemId: 'potion-heal-1',
+        itemName: 'Healing Potion',
+        itemType: 'consumable',
+        consumed: true,
+        healing: 8,
+      }
+
+      useCombatStore.getState().handleCombatItemUse(payload)
+      expect(handler).toHaveBeenCalledWith(payload)
+    })
+
+    it('should emit EFFECT_HEAL event when healing is applied', () => {
+      const combat = createMockCombatState({
+        participants: [
+          createMockCombatant({ id: 'fighter-1', name: 'Hero', currentHp: 10 }),
+          createMockCombatant({ id: 'goblin-1', name: 'Goblin', type: 'enemy' }),
+        ],
+      })
+      useCombatStore.getState().setCombat(combat)
+      const handler = vi.fn()
+      eventBus.on(GameEvents.EFFECT_HEAL, handler)
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-8',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        itemId: 'potion-heal-1',
+        itemName: 'Healing Potion',
+        itemType: 'consumable',
+        consumed: true,
+        healing: 8,
+      })
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: 'heal',
+          characterId: 'fighter-1',
+          amount: 8,
+        }),
+      )
+    })
+
+    it('should add info log entry for items with no damage or healing', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-9',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        itemId: 'torch-1',
+        itemName: 'Torch',
+        itemType: 'tool',
+        consumed: false,
+      })
+
+      const entries = useCombatStore.getState().logEntries
+      expect(entries[entries.length - 1].text).toContain('Torch')
+      expect(entries[entries.length - 1].type).toBe('info')
+    })
+
+    it('should do nothing when combat is null', () => {
+      expect(useCombatStore.getState().combat).toBeNull()
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-10',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        itemId: 'potion-heal-1',
+        itemName: 'Healing Potion',
+        itemType: 'consumable',
+        consumed: true,
+        healing: 8,
+      })
+
+      expect(useCombatStore.getState().combat).toBeNull()
+      expect(useCombatStore.getState().logEntries).toHaveLength(0)
+    })
+  })
+
   describe('applyDamage', () => {
     it('should reduce currentHp by damage amount', () => {
       const combat = createMockCombatState()

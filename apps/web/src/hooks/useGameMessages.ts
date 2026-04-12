@@ -12,6 +12,12 @@ import {
   isGameStateData,
   isPartyData,
   isCombatData,
+  isSpellCastPayload,
+  isItemUsePayload,
+  isEquipPayload,
+  isUnequipPayload,
+  isMapInteractPayload,
+  isMapSwitchPayload,
 } from '../services/typeGuards'
 import type { CombatEventPayload, CombatEventType } from '../services/typeGuards'
 import type { CombatLogEntry } from '../stores/combatStore'
@@ -212,11 +218,11 @@ export function useGameMessages() {
    * Sync combat event to Zustand stores (chatStore + combatStore).
    * Handles HP mutations, combat state, current unit, and log entries.
    */
-  function syncCombatEventToStores(
+  const syncCombatEventToStores = useCallback((
     payload: CombatEventPayload,
     text: string,
     logType: CombatLogEntry['type'],
-  ): void {
+  ): void => {
     const combatStore = useCombatStore.getState()
     const { eventType, characterId } = payload
 
@@ -247,7 +253,7 @@ export function useGameMessages() {
     // Always write to both stores
     addSystemMessage(text)
     combatStore.addLogEntry(text, logType)
-  }
+  }, [addSystemMessage])
 
   /**
    * Emit eventBus effects for combat events.
@@ -296,12 +302,153 @@ export function useGameMessages() {
     const { text, logType } = formatCombatEventMessage(payload)
     syncCombatEventToStores(payload, text, logType)
     emitCombatEventEffects(payload)
+  }, [syncCombatEventToStores])
+
+  // --- v0.4 Phase 4: New event type handlers ---
+
+  /** Handle spell_cast server messages. */
+  const handleSpellCastEvent = useCallback((payload: unknown) => {
+    if (!isSpellCastPayload(payload)) {
+      console.error('Invalid spell_cast payload:', payload)
+      return
+    }
+
+    const { characterId, spellName, damage, healing, damageType, targetId } = payload
+
+    // Update gameStore with spell slot usage
+    useGameStore.getState().handleSpellCast(payload)
+
+    // If in combat, update combatStore
+    if (useCombatStore.getState().isCombatActive) {
+      useCombatStore.getState().handleCombatSpellCast(payload)
+    }
+
+    // Emit EventBus event for Phaser spell animation
+    eventBus.emit(GameEvents.SPELL_CAST, payload)
+
+    // Build notification text
+    let text = `${characterId} casts ${spellName}`
+    if (damage) {
+      text += ` dealing ${damage}${damageType ? ` ${damageType}` : ''} damage to ${targetId ?? 'target'}`
+    }
+    if (healing) {
+      text += ` healing ${healing} HP`
+    }
+    addSystemMessage(text)
+  }, [addSystemMessage])
+
+  /** Handle item_use server messages. */
+  const handleItemUseEvent = useCallback((payload: unknown) => {
+    if (!isItemUsePayload(payload)) {
+      console.error('Invalid item_use payload:', payload)
+      return
+    }
+
+    const { characterId, itemName, consumed, healing, damage } = payload
+
+    // Update gameStore (removes consumed items from inventory)
+    useGameStore.getState().handleItemUse(payload)
+
+    // If in combat, also update combatStore with item effects
+    if (useCombatStore.getState().isCombatActive) {
+      useCombatStore.getState().handleCombatItemUse(payload)
+    }
+
+    // Emit EventBus event for Phaser item use animation
+    eventBus.emit(GameEvents.ITEM_USE, payload)
+
+    // Build notification text
+    let text = `${characterId} uses ${itemName}`
+    if (consumed) text += ' (consumed)'
+    if (healing) text += ` restoring ${healing} HP`
+    if (damage) text += ` dealing ${damage} damage`
+    addSystemMessage(text)
+  }, [addSystemMessage])
+
+  /** Handle equip server messages. */
+  const handleEquipEvent = useCallback((payload: unknown) => {
+    if (!isEquipPayload(payload)) {
+      console.error('Invalid equip payload:', payload)
+      return
+    }
+
+    const { characterId, itemName, slot, acBonus } = payload
+
+    // Update gameStore (updates equipment and AC)
+    useGameStore.getState().handleEquip(payload)
+
+    // Emit EventBus event for Phaser visual update
+    eventBus.emit(GameEvents.EQUIP_CHANGE, payload)
+
+    let text = `${characterId} equips ${itemName} in ${slot} slot`
+    if (acBonus) text += ` (+${acBonus} AC)`
+    addSystemMessage(text)
+  }, [addSystemMessage])
+
+  /** Handle unequip server messages. */
+  const handleUnequipEvent = useCallback((payload: unknown) => {
+    if (!isUnequipPayload(payload)) {
+      console.error('Invalid unequip payload:', payload)
+      return
+    }
+
+    const { characterId, itemName, slot } = payload
+
+    // Update gameStore (returns item to inventory)
+    useGameStore.getState().handleUnequip(payload)
+
+    // Emit EventBus event for Phaser visual update
+    eventBus.emit(GameEvents.UNEQUIP_CHANGE, payload)
+
+    addSystemMessage(`${characterId} unequips ${itemName} from ${slot} slot`)
+  }, [addSystemMessage])
+
+  /** Handle map_interact server messages. */
+  const handleMapInteractEvent = useCallback((payload: unknown) => {
+    if (!isMapInteractPayload(payload)) {
+      console.error('Invalid map_interact payload:', payload)
+      return
+    }
+
+    const { characterId, interactableType, action } = payload
+
+    // Emit EventBus event for Phaser map interaction
+    eventBus.emit(GameEvents.MAP_INTERACT, payload)
+
+    addSystemMessage(`${characterId} ${action}s ${interactableType} on the map`)
+  }, [addSystemMessage])
+
+  /** Handle map_switch server messages. */
+  const handleMapSwitchEvent = useCallback((payload: unknown) => {
+    if (!isMapSwitchPayload(payload)) {
+      console.error('Invalid map_switch payload:', payload)
+      return
+    }
+
+    const { toMapId, fromMapId } = payload
+
+    // Update gameStore with new map
+    useGameStore.getState().handleMapSwitch(payload)
+
+    // Emit EventBus event for Phaser map transition animation
+    eventBus.emit(GameEvents.MAP_SWITCH, payload)
+
+    addSystemMessage(`Map changed from ${fromMapId} to ${toMapId}`)
   }, [addSystemMessage])
 
   // Forward combat actions from eventBus to WebSocket
   const sendCombatAction = useCallback((payload: Record<string, unknown>) => {
     const message: ClientMessage = {
       type: 'combat_action',
+      payload,
+    }
+    send(message)
+  }, [send])
+
+  // Forward map actions from eventBus to WebSocket
+  const sendMapAction = useCallback((payload: Record<string, unknown>) => {
+    const message: ClientMessage = {
+      type: 'map_action',
       payload,
     }
     send(message)
@@ -323,12 +470,45 @@ export function useGameMessages() {
       sendCombatAction(d)
     })
 
+    // v0.4 Phase 4: Forward spell/item/map events from eventBus to WebSocket
+    const unsubSpellCast = eventBus.on(GameEvents.SPELL_CAST, (data) => {
+      const d = data as Record<string, unknown>
+      if (d.source !== 'server') {
+        sendCombatAction({ action: 'spell', ...d })
+      }
+    })
+
+    const unsubItemUse = eventBus.on(GameEvents.ITEM_USE, (data) => {
+      const d = data as Record<string, unknown>
+      if (d.source !== 'server') {
+        sendCombatAction({ action: 'item', ...d })
+      }
+    })
+
+    const unsubMapInteract = eventBus.on(GameEvents.MAP_INTERACT, (data) => {
+      const d = data as Record<string, unknown>
+      if (d.source !== 'server') {
+        sendMapAction({ action: 'interact', ...d })
+      }
+    })
+
+    const unsubMapSwitch = eventBus.on(GameEvents.MAP_SWITCH, (data) => {
+      const d = data as Record<string, unknown>
+      if (d.source !== 'server') {
+        sendMapAction({ action: 'switch_map', ...d })
+      }
+    })
+
     return () => {
       unsubMove()
       unsubAttack()
       unsubAction()
+      unsubSpellCast()
+      unsubItemUse()
+      unsubMapInteract()
+      unsubMapSwitch()
     }
-  }, [sendCombatAction])
+  }, [sendCombatAction, sendMapAction])
 
   useEffect(() => {
     const unsubscribe = subscribe((message: ServerMessage) => {
@@ -351,6 +531,25 @@ export function useGameMessages() {
         case 'pong':
           // Heartbeat response, no action needed
           break
+        // v0.4 Phase 4: New event types
+        case 'spell_cast':
+          handleSpellCastEvent(message.payload)
+          break
+        case 'item_use':
+          handleItemUseEvent(message.payload)
+          break
+        case 'equip':
+          handleEquipEvent(message.payload)
+          break
+        case 'unequip':
+          handleUnequipEvent(message.payload)
+          break
+        case 'map_interact':
+          handleMapInteractEvent(message.payload)
+          break
+        case 'map_switch':
+          handleMapSwitchEvent(message.payload)
+          break
         default: {
           // Use exhaustive check for unknown message types
           const unknownType = (message as ServerMessage & { type: string }).type
@@ -367,5 +566,11 @@ export function useGameMessages() {
     handleDiceResult,
     handleError,
     handleCombatEvent,
+    handleSpellCastEvent,
+    handleItemUseEvent,
+    handleEquipEvent,
+    handleUnequipEvent,
+    handleMapInteractEvent,
+    handleMapSwitchEvent,
   ])
 }

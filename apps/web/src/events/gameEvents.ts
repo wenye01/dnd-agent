@@ -23,6 +23,31 @@ export const GameEvents = {
   EFFECT_STATUS: 'effect:status',
   EFFECT_DEATH: 'effect:death',
   EFFECT_MISS: 'effect:miss',
+
+  // --- v0.4 Phase 4: Spell/Item/Map integration events ---
+
+  // Spell events (React -> Phaser for animations, Phaser -> React for results)
+  SPELL_CAST: 'spell:cast',
+  SPELL_EFFECT: 'spell:effect',
+  SPELL_COMPLETE: 'spell:complete',
+
+  // Item events (React -> Phaser for animations)
+  ITEM_USE: 'item:use',
+  ITEM_EFFECT: 'item:effect',
+
+  // Equipment events (React -> Phaser for visual updates)
+  EQUIP_CHANGE: 'equip:change',
+  UNEQUIP_CHANGE: 'unequip:change',
+
+  // Map events (React -> Phaser for transitions, Phaser -> React for results)
+  MAP_INTERACT: 'map:interact',
+  MAP_SWITCH: 'map:switch',
+  MAP_SWITCH_COMPLETE: 'map:switch_complete',
+  MAP_LOAD: 'map:load',
+
+  // Visual feedback events (Store -> Phaser)
+  EFFECT_DAMAGE_NUMBER: 'effect:damage_number',
+  EFFECT_STATUS_ICON: 'effect:status_icon',
 } as const
 
 export type GameEventType = (typeof GameEvents)[keyof typeof GameEvents]

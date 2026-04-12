@@ -27,6 +27,34 @@ describe('GameEvents', () => {
     expect(GameEvents.EFFECT_MISS).toBe('effect:miss')
   })
 
+  it('should have spell events (v0.4 Phase 4)', () => {
+    expect(GameEvents.SPELL_CAST).toBe('spell:cast')
+    expect(GameEvents.SPELL_EFFECT).toBe('spell:effect')
+    expect(GameEvents.SPELL_COMPLETE).toBe('spell:complete')
+  })
+
+  it('should have item events (v0.4 Phase 4)', () => {
+    expect(GameEvents.ITEM_USE).toBe('item:use')
+    expect(GameEvents.ITEM_EFFECT).toBe('item:effect')
+  })
+
+  it('should have equipment events (v0.4 Phase 4)', () => {
+    expect(GameEvents.EQUIP_CHANGE).toBe('equip:change')
+    expect(GameEvents.UNEQUIP_CHANGE).toBe('unequip:change')
+  })
+
+  it('should have map events (v0.4 Phase 4)', () => {
+    expect(GameEvents.MAP_INTERACT).toBe('map:interact')
+    expect(GameEvents.MAP_SWITCH).toBe('map:switch')
+    expect(GameEvents.MAP_SWITCH_COMPLETE).toBe('map:switch_complete')
+    expect(GameEvents.MAP_LOAD).toBe('map:load')
+  })
+
+  it('should have visual feedback events (v0.4 Phase 4)', () => {
+    expect(GameEvents.EFFECT_DAMAGE_NUMBER).toBe('effect:damage_number')
+    expect(GameEvents.EFFECT_STATUS_ICON).toBe('effect:status_icon')
+  })
+
   it('should have unique event names (no collisions)', () => {
     const values = Object.values(GameEvents)
     const uniqueValues = new Set(values)

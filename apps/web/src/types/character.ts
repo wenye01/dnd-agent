@@ -15,6 +15,7 @@ export interface SkillProficiencies {
 export interface EquipmentSlot {
   slot: string
   itemId: string | null
+  acBonus?: number
 }
 
 // 背包物品
@@ -53,6 +54,7 @@ export interface Character {
   currentHitPoints: number
   temporaryHitPoints: number
   armorClass: number
+  baseArmorClass?: number // Base AC without equipment bonuses; set on first equip
   speed: number
   initiative: number
   proficiencyBonus: number
