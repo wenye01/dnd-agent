@@ -435,4 +435,111 @@ func TestLongRest(t *testing.T) {
 			t.Errorf("currentHp = %d, want 20 (max)", result["currentHp"])
 		}
 	})
+
+	t.Run("restores spell slots for wizard on long rest", func(t *testing.T) {
+		mock := &mockDiceRoller{}
+		sm := state.NewManager()
+		sessionID := "test-long-rest-spell-slots"
+		sm.CreateSession(sessionID)
+
+		cm := NewCombatManager(sm, mock)
+
+		// Create a wizard character in the party with depleted spell slots.
+		sm.UpdateSession(sessionID, func(gs *state.GameState) {
+			gs.Party = append(gs.Party, &models.Character{
+				ID:               "wizard1",
+				Name:             "Gandalf",
+				Class:            "wizard",
+				Level:            5,
+				HP:               20,
+				MaxHP:            28,
+				ProficiencyBonus: 3,
+				Stats:            models.AbilityScores{Intelligence: 16},
+				SpellSlots:       map[int]int{1: 1, 2: 0, 3: 0}, // mostly depleted
+			})
+
+			// Start combat with the wizard as participant.
+			gs.Combat = &state.CombatState{
+				Status: state.CombatActive,
+				Round:  1,
+				Participants: []*state.Combatant{
+					{
+						ID:          "wizard1",
+						Name:        "Gandalf",
+						Type:        state.CombatantPlayer,
+						MaxHP:       28,
+						CurrentHP:   20,
+						AC:          12,
+						HitDice:     models.HitDiceInfo{Size: 6, Total: 5, Current: 5},
+						DeathSaves:  &models.DeathSaves{},
+					},
+				},
+			}
+		})
+
+		result, err := cm.LongRest(sessionID, "wizard1")
+		if err != nil {
+			t.Fatalf("LongRest failed: %v", err)
+		}
+
+		if result["currentHp"].(int) != 28 {
+			t.Errorf("currentHp = %d, want 28 (max)", result["currentHp"])
+		}
+
+		// Verify spell slots were restored to max for wizard level 5.
+		gs := sm.GetSession(sessionID)
+		wizard := gs.Party[0]
+		expectedSlots := map[int]int{1: 4, 2: 3, 3: 2}
+		for level, expected := range expectedSlots {
+			if wizard.SpellSlots[level] != expected {
+				t.Errorf("level %d spell slots: got %d, want %d", level, wizard.SpellSlots[level], expected)
+			}
+		}
+	})
+
+	t.Run("non-caster gets nil spell slots on long rest", func(t *testing.T) {
+		mock := &mockDiceRoller{}
+		sm := state.NewManager()
+		sessionID := "test-long-rest-noncaster"
+		sm.CreateSession(sessionID)
+
+		cm := NewCombatManager(sm, mock)
+
+		sm.UpdateSession(sessionID, func(gs *state.GameState) {
+			gs.Party = append(gs.Party, &models.Character{
+				ID:    "fighter1",
+				Name:  "Fighter",
+				Class: "fighter",
+				Level: 5,
+				HP:    20,
+				MaxHP: 44,
+			})
+			gs.Combat = &state.CombatState{
+				Status: state.CombatActive,
+				Round:  1,
+				Participants: []*state.Combatant{
+					{
+						ID:         "fighter1",
+						Name:       "Fighter",
+						Type:       state.CombatantPlayer,
+						MaxHP:      44,
+						CurrentHP:  20,
+						HitDice:    models.HitDiceInfo{Size: 10, Total: 5, Current: 5},
+						DeathSaves: &models.DeathSaves{},
+					},
+				},
+			}
+		})
+
+		_, err := cm.LongRest(sessionID, "fighter1")
+		if err != nil {
+			t.Fatalf("LongRest failed: %v", err)
+		}
+
+		gs := sm.GetSession(sessionID)
+		fighter := gs.Party[0]
+		if fighter.SpellSlots != nil {
+			t.Errorf("non-caster should have nil spell slots after long rest, got %v", fighter.SpellSlots)
+		}
+	})
 }

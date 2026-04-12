@@ -3,10 +3,18 @@ package combat
 import (
 	"fmt"
 
+	"github.com/dnd-game/server/internal/server/spell"
 	"github.com/dnd-game/server/internal/shared/models"
 	"github.com/dnd-game/server/internal/shared/state"
 	"github.com/dnd-game/server/internal/shared/types"
 )
+
+// restorePartySpellSlots restores all spell slots for a party character
+// to their maximum based on class and level. This is called during long rest.
+// Delegates to spell.SlotManager to avoid duplicating the SRD slot tables.
+func restorePartySpellSlots(ch *models.Character) {
+	spell.NewSlotManager().RestoreAllSlots(ch)
+}
 
 // findCombatantInPartyOrCombat looks up a combatant by ID, first in the active
 // combat state, then in the party list (converting party characters to
@@ -139,7 +147,7 @@ func (cm *CombatManager) ShortRest(sessionID, combatantID string, diceToSpend in
 }
 
 // LongRest performs a long rest: restore HP to MaxHP, restore half of spent
-// hit dice (rounded down, minimum 0). Spell slots are NOT restored in this phase.
+// hit dice (rounded down, minimum 0), and restore all spell slots.
 func (cm *CombatManager) LongRest(sessionID, combatantID string) (map[string]interface{}, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
@@ -186,6 +194,8 @@ func (cm *CombatManager) LongRest(sessionID, combatantID string) (map[string]int
 				ch.HitDice.Current = combatant.HitDice.Current
 				ch.DeathSaves.Successes = 0
 				ch.DeathSaves.Failures = 0
+				// Restore spell slots on long rest via spell.SlotManager.
+				restorePartySpellSlots(ch)
 				break
 			}
 		}
@@ -215,4 +225,3 @@ func (cm *CombatManager) LongRest(sessionID, combatantID string) (map[string]int
 		"message":          fmt.Sprintf("%s takes a long rest. HP restored to %d/%d. Recovered %d hit dice (%d/%d).", combatant.Name, combatant.CurrentHP, combatant.MaxHP, recoveredDice, combatant.HitDice.Current, combatant.HitDice.Total),
 	}, nil
 }
-
