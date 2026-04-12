@@ -4,6 +4,8 @@
  */
 import Phaser from 'phaser'
 import { gameConfig } from './config'
+import { CombatScene } from './scenes/CombatScene'
+import { SceneMapScene } from './scenes/SceneMapScene'
 
 export type SceneType = 'combat' | 'exploring'
 
@@ -20,6 +22,7 @@ class GameManagerClass {
     const config: Phaser.Types.Core.GameConfig = {
       ...gameConfig,
       parent: parentId,
+      scene: [CombatScene, SceneMapScene],
     }
 
     this.game = new Phaser.Game(config)
