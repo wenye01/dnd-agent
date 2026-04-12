@@ -66,6 +66,9 @@ func main() {
 	toolRegistry := tools.NewRegistry()
 	tools.RegisterDiceTools(toolRegistry, diceService)
 	tools.RegisterCombatTools(toolRegistry, combatManager)
+	tools.RegisterSpellTools(toolRegistry)
+	tools.RegisterItemTools(toolRegistry)
+	tools.RegisterMapTools(toolRegistry)
 	log.Info().Int("tools", len(toolRegistry.List())).Msg("tools registered")
 
 	// Create WebSocket hub

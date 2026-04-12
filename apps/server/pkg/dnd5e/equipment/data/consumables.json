@@ -1,0 +1,124 @@
+[
+  {
+    "id": "potion_of_healing",
+    "name": "Potion of Healing",
+    "description": "A red, glowing liquid that restores hit points when consumed.",
+    "type": "consumable",
+    "consumableType": "potion",
+    "uses": 1,
+    "maxUses": 1,
+    "effect": {
+      "type": "heal",
+      "diceCount": 2,
+      "diceSize": 4,
+      "bonusValue": 2,
+      "duration": 0
+    }
+  },
+  {
+    "id": "potion_of_greater_healing",
+    "name": "Potion of Greater Healing",
+    "description": "A more potent healing potion with a deeper crimson hue.",
+    "type": "consumable",
+    "consumableType": "potion",
+    "uses": 1,
+    "maxUses": 1,
+    "effect": {
+      "type": "heal",
+      "diceCount": 4,
+      "diceSize": 4,
+      "bonusValue": 4,
+      "duration": 0
+    }
+  },
+  {
+    "id": "potion_of_superior_healing",
+    "name": "Potion of Superior Healing",
+    "description": "A powerful healing potion that glows with radiant light.",
+    "type": "consumable",
+    "consumableType": "potion",
+    "uses": 1,
+    "maxUses": 1,
+    "effect": {
+      "type": "heal",
+      "diceCount": 8,
+      "diceSize": 4,
+      "bonusValue": 8,
+      "duration": 0
+    }
+  },
+  {
+    "id": "potion_of_supreme_healing",
+    "name": "Potion of Supreme Healing",
+    "description": "The most powerful healing potion, radiating warm golden light.",
+    "type": "consumable",
+    "consumableType": "potion",
+    "uses": 1,
+    "maxUses": 1,
+    "effect": {
+      "type": "heal",
+      "diceCount": 10,
+      "diceSize": 4,
+      "bonusValue": 20,
+      "duration": 0
+    }
+  },
+  {
+    "id": "antitoxin",
+    "name": "Antitoxin",
+    "description": "A vial of liquid that grants advantage on saving throws against poison for 1 hour.",
+    "type": "consumable",
+    "consumableType": "potion",
+    "uses": 1,
+    "maxUses": 1,
+    "effect": {
+      "type": "buff",
+      "bonusValue": 0,
+      "duration": 600
+    }
+  },
+  {
+    "id": "potion_of_speed",
+    "name": "Potion of Speed",
+    "description": "Drinking this potion doubles your speed and grants an additional action on each of your turns for 1 minute.",
+    "type": "consumable",
+    "consumableType": "potion",
+    "uses": 1,
+    "maxUses": 1,
+    "effect": {
+      "type": "buff",
+      "bonusValue": 0,
+      "duration": 10
+    }
+  },
+  {
+    "id": "scroll_of_fireball",
+    "name": "Scroll of Fireball",
+    "description": "A scroll containing the fireball spell. Single use.",
+    "type": "consumable",
+    "consumableType": "scroll",
+    "uses": 1,
+    "maxUses": 1,
+    "effect": {
+      "type": "damage",
+      "diceCount": 8,
+      "diceSize": 6,
+      "bonusValue": 0,
+      "duration": 0
+    }
+  },
+  {
+    "id": "ration",
+    "name": "Rations (1 day)",
+    "description": "Dry, preserved food suitable for travel.",
+    "type": "consumable",
+    "consumableType": "food",
+    "uses": 1,
+    "maxUses": 1,
+    "effect": {
+      "type": "utility",
+      "bonusValue": 0,
+      "duration": 0
+    }
+  }
+]

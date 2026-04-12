@@ -1,0 +1,121 @@
+{
+  "id": "tutorial",
+  "name": "The Drunken Dragon",
+  "description": "A simple introductory adventure. The party arrives at a small village and discovers mysterious happenings at the local tavern.",
+  "version": "0.1.0",
+  "levelRange": [1, 3],
+  "chapters": [
+    {
+      "id": "ch1_arrival",
+      "name": "Arrival at Millbrook",
+      "description": "The party arrives at the village of Millbrook and heads to the local tavern for information.",
+      "order": 1,
+      "scenes": [
+        {
+          "id": "scene_1_tavern",
+          "name": "The Drunken Dragon Tavern",
+          "description": "A warm, bustling tavern. The innkeeper greets you warmly but seems worried.",
+          "mapId": "tavern",
+          "entranceId": "main_entrance",
+          "npcs": ["innkeeper_ben"],
+          "enemies": [],
+          "triggers": [
+            {
+              "id": "trigger_talk_innkeeper",
+              "name": "Talk to the Innkeeper",
+              "enabled": true,
+              "oneTime": true,
+              "condition": {
+                "type": "talk_to_npc",
+                "params": {"npcId": "innkeeper_ben"}
+              },
+              "actions": [
+                {
+                  "type": "show_dialog",
+                  "params": {
+                    "npcId": "innkeeper_ben",
+                    "text": "Welcome, travelers! I'm Ben, the innkeeper. Strange things have been happening in the cellar lately. Odd sounds at night... Would you be willing to investigate?"
+                  }
+                }
+              ],
+              "triggered": false
+            }
+          ],
+          "interactables": [
+            {
+              "id": "notice_board",
+              "name": "Notice Board",
+              "type": "interactable",
+              "position": {"x": 3, "y": 2},
+              "properties": {
+                "description": "A board with several faded notices pinned to it."
+              }
+            }
+          ],
+          "exits": [
+            {
+              "id": "exit_cellar",
+              "position": {"x": 17, "y": 12},
+              "targetChapterId": "ch1_arrival",
+              "targetSceneId": "scene_2_cellar"
+            }
+          ]
+        },
+        {
+          "id": "scene_2_cellar",
+          "name": "The Tavern Cellar",
+          "description": "A dark, damp cellar beneath the tavern. Barrels and crates line the walls, and a faint draft comes from the northeast corner.",
+          "mapId": "tavern_cellar",
+          "entranceId": "stairs_entrance",
+          "npcs": [],
+          "enemies": ["rat_swarm"],
+          "triggers": [
+            {
+              "id": "trigger_rat_attack",
+              "name": "Rat Ambush",
+              "enabled": true,
+              "oneTime": true,
+              "condition": {
+                "type": "enter_area",
+                "params": {"x": 8, "y": 5, "radius": 3}
+              },
+              "actions": [
+                {
+                  "type": "spawn_enemy",
+                  "params": {"enemyId": "rat_swarm", "position": {"x": 8, "y": 5}}
+                },
+                {
+                  "type": "send_message",
+                  "params": {"text": "A swarm of rats emerges from the shadows!"}
+                }
+              ],
+              "triggered": false
+            }
+          ],
+          "interactables": [],
+          "exits": []
+        }
+      ],
+      "completionCondition": {
+        "type": "kill_enemy",
+        "params": {"enemyId": "rat_swarm"}
+      }
+    }
+  ],
+  "npcs": [
+    {
+      "id": "innkeeper_ben",
+      "name": "Ben the Innkeeper",
+      "race": "human",
+      "class": "commoner",
+      "level": 1,
+      "disposition": "friendly",
+      "dialogTree": null
+    }
+  ],
+  "maps": ["tavern", "tavern_cellar"],
+  "startChapter": "ch1_arrival",
+  "startScene": "scene_1_tavern",
+  "startMap": "tavern",
+  "startPosition": {"x": 10, "y": 13}
+}

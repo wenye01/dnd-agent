@@ -1,0 +1,67 @@
+{
+  "id": "tavern",
+  "name": "The Drunken Dragon Tavern",
+  "description": "A warm, bustling tavern filled with the scent of ale and roasting meat. A large hearth dominates the north wall, and wooden tables are scattered across the floor.",
+  "width": 20,
+  "height": 15,
+  "gridType": "square",
+  "tiles": [
+    [{"position": {"x": 0, "y": 0}, "type": "wall", "walkable": false, "difficult": false}, {"position": {"x": 1, "y": 0}, "type": "wall", "walkable": false, "difficult": false}],
+    [{"position": {"x": 0, "y": 1}, "type": "wall", "walkable": false, "difficult": false}, {"position": {"x": 1, "y": 1}, "type": "floor", "walkable": true, "difficult": false}]
+  ],
+  "walls": [],
+  "objects": [
+    {
+      "id": "hearth",
+      "name": "Stone Hearth",
+      "position": {"x": 10, "y": 0},
+      "size": {"width": 3, "height": 1},
+      "type": "decoration",
+      "interactive": false,
+      "properties": {"description": "A crackling fire warms the room."}
+    },
+    {
+      "id": "bar_counter",
+      "name": "Bar Counter",
+      "position": {"x": 15, "y": 3},
+      "size": {"width": 5, "height": 1},
+      "type": "furniture",
+      "interactive": true,
+      "properties": {"description": "A long wooden bar counter with various bottles."}
+    },
+    {
+      "id": "table_1",
+      "name": "Wooden Table",
+      "position": {"x": 5, "y": 5},
+      "size": {"width": 2, "height": 1},
+      "type": "furniture",
+      "interactive": false,
+      "properties": {"description": "A sturdy wooden table with four chairs."}
+    },
+    {
+      "id": "chest_1",
+      "name": "Wooden Chest",
+      "position": {"x": 17, "y": 1},
+      "size": {"width": 1, "height": 1},
+      "type": "container",
+      "interactive": true,
+      "properties": {"locked": false, "description": "A dusty wooden chest behind the bar."}
+    }
+  ],
+  "connections": [],
+  "entrances": [
+    {
+      "id": "main_entrance",
+      "position": {"x": 10, "y": 14},
+      "direction": "south"
+    }
+  ],
+  "exits": [
+    {
+      "id": "exit_south",
+      "position": {"x": 10, "y": 14},
+      "targetMapId": "village_square",
+      "targetEntrance": "tavern_door"
+    }
+  ]
+}

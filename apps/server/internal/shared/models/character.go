@@ -41,6 +41,12 @@ type Character struct {
 	IsDead              bool                   `json:"isDead,omitempty"`     // Character has permanently died
 	ArmorProficiencies  []string               `json:"armorProficiencies"`   // Armor proficiencies from class
 	WeaponProficiencies []string               `json:"weaponProficiencies"`  // Weapon proficiencies from class
+
+	// Spell system fields (v0.4)
+	KnownSpells     []string          `json:"knownSpells,omitempty"`     // IDs of known spells
+	PreparedSpells  []string          `json:"preparedSpells,omitempty"`  // IDs of prepared spells
+	SpellSlots      map[int]int       `json:"spellSlots,omitempty"`      // Spell slot level -> remaining count
+	Concentration   *ConcentrationInfo `json:"concentration,omitempty"`  // Active concentration
 }
 
 // AbilityScores represents the six ability scores.
