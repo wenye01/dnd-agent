@@ -5,7 +5,7 @@ import { useUIStore } from '../stores/uiStore'
 import { useGameStore } from '../stores/gameStore'
 import { useCombatStore } from '../stores/combatStore'
 import { ChatPanel } from '../components/chat'
-import { CharacterPanel, QuickActions } from '../components/panels'
+import { CharacterPanel, QuickActions, InventoryPanel, SpellbookPanel } from '../components/panels'
 import { MainLayout } from '../components/layout'
 import { ConnectionStatus } from '../components/ui'
 import { Button } from '../components/ui'
@@ -32,10 +32,23 @@ function GamePage() {
   }, [sessionId, isLoading, navigate])
 
   // UI state for panel toggles
-  const { isPanelOpen, togglePanel } = useUIStore()
+  const { isPanelOpen, togglePanel, activePanel, setActivePanel } = useUIStore()
   const [showCharacterCreation, setShowCharacterCreation] = useState(false)
   const isCombatActive = useCombatStore((s) => s.isCombatActive)
   const phase = useGameStore((s) => s.gameState?.phase)
+
+  // Render active left panel
+  const renderLeftPanel = () => {
+    switch (activePanel) {
+      case 'inventory':
+        return <InventoryPanel />
+      case 'spells':
+        return <SpellbookPanel />
+      case 'character':
+      default:
+        return <CharacterPanel />
+    }
+  }
 
   if (isLoading) {
     return (
@@ -150,8 +163,26 @@ function GamePage() {
             <div className="absolute inset-0 pointer-events-none" style={{
               background: 'radial-gradient(ellipse at 50% 20%, rgba(212,168,67,0.04) 0%, transparent 50%), radial-gradient(ellipse at 50% 80%, rgba(155,109,255,0.03) 0%, transparent 50%)',
             }} />
+            {/* Panel tab switcher */}
+            <div className="flex gap-1 px-3 pt-2 relative z-10">
+              {(['character', 'inventory', 'spells'] as const).map((panel) => (
+                <button
+                  key={panel}
+                  className={`
+                    px-2.5 py-1 rounded text-[10px] font-display tracking-wider uppercase transition-all duration-200 cursor-pointer
+                    ${activePanel === panel
+                      ? 'bg-gold/15 text-gold border border-gold/25'
+                      : 'text-stone-text/40 hover:text-parchment hover:bg-cave/40 border border-transparent'
+                    }
+                  `}
+                  onClick={() => setActivePanel(panel)}
+                >
+                  {panel === 'character' ? '\u{1F464} Party' : panel === 'inventory' ? '\u{1F392} Items' : '\u{1F4D6} Spells'}
+                </button>
+              ))}
+            </div>
             <div className="flex-1 overflow-y-auto p-3 relative">
-              <CharacterPanel />
+              {renderLeftPanel()}
             </div>
             <QuickActions />
           </div>

@@ -37,4 +37,27 @@ describe('GameEvents', () => {
     const eventType: GameEventType = GameEvents.COMBAT_START
     expect(typeof eventType).toBe('string')
   })
+
+  // v0.4 Phase 3: Scene map events
+  it('should have scene map events', () => {
+    expect(GameEvents.SCENEMAP_TILE_CLICK).toBe('scenemap:tile_click')
+    expect(GameEvents.SCENEMAP_INTERACT).toBe('scenemap:interact')
+    expect(GameEvents.SCENEMAP_TRANSITION_START).toBe('scenemap:transition_start')
+    expect(GameEvents.SCENEMAP_TRANSITION_END).toBe('scenemap:transition_end')
+  })
+
+  // v0.4 Phase 3: Inventory events
+  it('should have inventory events', () => {
+    expect(GameEvents.INVENTORY_EQUIP).toBe('inventory:equip')
+    expect(GameEvents.INVENTORY_UNEQUIP).toBe('inventory:unequip')
+    expect(GameEvents.INVENTORY_USE).toBe('inventory:use')
+    expect(GameEvents.INVENTORY_DROP).toBe('inventory:drop')
+  })
+
+  // v0.4 Phase 3: Spell events
+  it('should have spell events', () => {
+    expect(GameEvents.SPELL_CAST).toBe('spell:cast')
+    expect(GameEvents.SPELL_PREPARE).toBe('spell:prepare')
+    expect(GameEvents.SPELL_UNPREPARE).toBe('spell:unprepare')
+  })
 })
