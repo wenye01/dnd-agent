@@ -19,7 +19,9 @@ import (
 	"github.com/dnd-game/server/internal/persistence"
 	"github.com/dnd-game/server/internal/server/combat"
 	"github.com/dnd-game/server/internal/server/dice"
+	"github.com/dnd-game/server/internal/server/spell"
 	"github.com/dnd-game/server/internal/shared/state"
+	"github.com/dnd-game/server/pkg/dnd5e/spells"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
@@ -62,11 +64,22 @@ func main() {
 	// Create combat manager
 	combatManager := combat.NewCombatManager(stateManager, diceService)
 
+	// Create spell system
+	spellStore, err := spells.LoadSpellStore("pkg/dnd5e/spells/data/spells.json")
+	if err != nil {
+		log.Warn().Err(err).Msg("spell data not loaded, spell tools will have no data")
+		spellStore = spells.NewSpellStore(nil)
+	}
+	slotManager := spell.NewSlotManager()
+	concentrationManager := spell.NewConcentrationManager(diceService)
+	effectApplier := spell.NewEffectApplier(diceService)
+	castingManager := spell.NewCastingManager(spellStore, slotManager, concentrationManager, effectApplier, diceService)
+
 	// Create tool registry
 	toolRegistry := tools.NewRegistry()
 	tools.RegisterDiceTools(toolRegistry, diceService)
 	tools.RegisterCombatTools(toolRegistry, combatManager)
-	tools.RegisterSpellTools(toolRegistry)
+	tools.RegisterSpellTools(toolRegistry, stateManager, castingManager, spellStore)
 	tools.RegisterItemTools(toolRegistry)
 	tools.RegisterMapTools(toolRegistry)
 	log.Info().Int("tools", len(toolRegistry.List())).Msg("tools registered")
