@@ -30,6 +30,8 @@ export interface StateUpdatePayload {
 export interface CombatEventPayload {
   eventType: CombatEventType
   characterId?: string
+  characterName?: string
+  spellName?: string
   round?: number
   data?: unknown
   target?: string

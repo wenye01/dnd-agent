@@ -8,6 +8,7 @@ import { SpellSlotsBar } from './SpellSlotsBar'
 import { SpellGroup } from './SpellGroup'
 import { SpellDetail } from './SpellDetail'
 import { ConcentrationBadge } from './ConcentrationBadge'
+import { isSpellcasterClass } from '../../../utils/spellcasters'
 
 // Mock spell data for development (Phase 4 will replace with real API data)
 const MOCK_SPELLS: Spell[] = [
@@ -129,11 +130,6 @@ const MOCK_SPELLS: Spell[] = [
   },
 ]
 
-const SPELLCASTER_CLASSES = [
-  'wizard', 'sorcerer', 'cleric', 'bard', 'druid', 'warlock',
-  'paladin', 'ranger',
-]
-
 const SCHOOL_FILTER_OPTIONS: { value: SpellSchool | 'all'; label: string }[] = [
   { value: 'all', label: 'All Schools' },
   { value: 'abjuration', label: 'Abjuration' },
@@ -158,7 +154,7 @@ export default function SpellbookPanel() {
 
   // Find spellcaster character
   const spellcaster = party?.find(
-    (c) => SPELLCASTER_CLASSES.includes(c.class.toLowerCase())
+    (c) => isSpellcasterClass(c.class)
   )
   const characterId = selectedCharacterId || spellcaster?.id || null
   const character = party?.find((c) => c.id === characterId)
@@ -201,7 +197,9 @@ export default function SpellbookPanel() {
   const handleCast = (spell: Spell) => {
     eventBus.emit(GameEvents.SPELL_CAST, {
       characterId,
+      characterName: character?.name,
       spellId: spell.id,
+      spellName: spell.name,
       level: spell.level,
     })
     setIsDetailOpen(false)
@@ -234,10 +232,10 @@ export default function SpellbookPanel() {
     <Panel title="Spellbook" variant="parchment">
       <div className="p-3 space-y-3">
         {/* Character selector (for multi-caster parties) */}
-        {party.filter((c) => SPELLCASTER_CLASSES.includes(c.class.toLowerCase())).length > 1 && (
+        {party.filter((c) => isSpellcasterClass(c.class)).length > 1 && (
           <div className="flex gap-1 flex-wrap">
             {party
-              .filter((c) => SPELLCASTER_CLASSES.includes(c.class.toLowerCase()))
+              .filter((c) => isSpellcasterClass(c.class))
               .map((char) => (
                 <button
                   key={char.id}

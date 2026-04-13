@@ -10,6 +10,7 @@ import {
   isErrorPayload,
   isCombatEventPayload,
   isGameStateData,
+  isPartialGameState,
   isPartyData,
   isCombatData,
   isSpellCastPayload,
@@ -70,7 +71,7 @@ export function useGameMessages() {
       case 'game':
         // For game state, we validate it's a valid GameState object
         // The server should send complete GameState, so we use a type guard
-        if (isGameStateData(data)) {
+        if (isGameStateData(data) || isPartialGameState(data)) {
           updateGameState(data)
         } else {
           console.error('Invalid game state data:', data)
@@ -155,7 +156,8 @@ export function useGameMessages() {
   function formatCombatEventMessage(
     payload: CombatEventPayload,
   ): { text: string; logType: CombatLogEntry['type'] } {
-    const { eventType, characterId, round } = payload
+    const { eventType, characterId, characterName, round, spellName } = payload
+    const actorLabel = characterName ?? characterId ?? 'Unknown'
 
     switch (eventType) {
       case 'combat_start':
@@ -167,52 +169,52 @@ export function useGameMessages() {
       case 'round_end':
         return { text: `Round ${round ?? 1} ends.`, logType: 'system' }
       case 'turn_start':
-        return { text: `Turn starts for ${characterId ?? 'unknown'}.`, logType: 'turn' }
+        return { text: `Turn starts for ${actorLabel}.`, logType: 'turn' }
       case 'turn_end':
-        return { text: `Turn ends for ${characterId ?? 'unknown'}.`, logType: 'turn' }
+        return { text: `Turn ends for ${actorLabel}.`, logType: 'turn' }
       case 'attack': {
         const hitStatus = payload.isHit === false ? ' (MISS)' : payload.isCrit ? ' (CRIT!)' : ''
         return {
-          text: `${characterId ?? 'Unknown'} attacks ${payload.target ?? 'target'}${hitStatus}`,
+          text: `${actorLabel} attacks ${payload.target ?? 'target'}${hitStatus}`,
           logType: 'damage',
         }
       }
       case 'damage': {
         const amount = payload.damage ?? payload.amount ?? 0
-        let text = `${payload.target ?? characterId ?? 'Unknown'} takes ${amount} damage`
+        let text = `${payload.target ?? actorLabel} takes ${amount} damage`
         if (payload.damageType) text += ` (${payload.damageType})`
         return { text, logType: 'damage' }
       }
       case 'heal':
-        return { text: `${characterId ?? 'Unknown'} heals ${payload.amount ?? 0} HP`, logType: 'heal' }
+        return { text: `${actorLabel} heals ${payload.amount ?? 0} HP`, logType: 'heal' }
       case 'death':
-        return { text: `${characterId ?? 'Unknown'} has fallen!`, logType: 'damage' }
+        return { text: `${actorLabel} has fallen!`, logType: 'damage' }
       case 'unconscious':
-        return { text: `${characterId ?? 'Unknown'} has been knocked unconscious!`, logType: 'damage' }
+        return { text: `${actorLabel} has been knocked unconscious!`, logType: 'damage' }
       case 'opportunity_attack':
         return {
-          text: `${characterId ?? 'Unknown'} makes an opportunity attack on ${payload.target ?? 'target'}!`,
+          text: `${actorLabel} makes an opportunity attack on ${payload.target ?? 'target'}!`,
           logType: 'damage',
         }
       case 'condition_applied':
-        return { text: `${characterId ?? 'Unknown'} gains condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
+        return { text: `${actorLabel} gains condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
       case 'condition_removed':
-        return { text: `${characterId ?? 'Unknown'} loses condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
+        return { text: `${actorLabel} loses condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
       case 'initiative_rolled':
         return { text: `Initiative rolled for round ${round ?? 1}.`, logType: 'system' }
       case 'move':
-        return { text: `${characterId ?? 'Unknown'} moves.`, logType: 'info' }
+        return { text: `${actorLabel} moves.`, logType: 'info' }
       case 'spell':
         return {
-          text: `${characterId ?? 'Unknown'} casts a spell${payload.target ? ` targeting ${payload.target}` : ''}.`,
+          text: `${actorLabel} casts ${spellName ?? 'a spell'}${payload.target ? ` targeting ${payload.target}` : ''}.`,
           logType: 'info',
         }
       case 'item':
         return { text: 'Use item action.', logType: 'info' }
       case 'dodge':
-        return { text: `${characterId ?? 'Unknown'} dodges.`, logType: 'info' }
+        return { text: `${actorLabel} dodges.`, logType: 'info' }
       case 'disengage':
-        return { text: `${characterId ?? 'Unknown'} disengages.`, logType: 'info' }
+        return { text: `${actorLabel} disengages.`, logType: 'info' }
       default:
         return { text: `Combat event: ${eventType}`, logType: 'info' }
     }

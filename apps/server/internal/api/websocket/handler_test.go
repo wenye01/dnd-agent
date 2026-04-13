@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dnd-game/server/internal/shared/models"
+	"github.com/dnd-game/server/internal/shared/state"
 )
 
 // mockSessionMgr mocks the session.Manager for testing.
@@ -251,6 +252,97 @@ func TestHandleCombatAction_PayloadFormat(t *testing.T) {
 				t.Error("Payload should not contain 'action' field - it should be 'eventType'")
 			}
 		})
+	}
+}
+
+func TestHandleCombatAction_PreservesSpellContext(t *testing.T) {
+	payload := map[string]interface{}{
+		"eventType":     "spell",
+		"characterId":   "char-1",
+		"characterName": "Wizard Tester",
+		"spellId":       "fire_bolt",
+		"spellName":     "Fire Bolt",
+	}
+
+	msg := &models.ServerMessage{
+		Type:      models.MsgTypeCombatEvent,
+		Payload:   payload,
+		Timestamp: 0,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("Failed to marshal message: %v", err)
+	}
+
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+
+	payloadMap := decoded["payload"].(map[string]interface{})
+	if payloadMap["characterName"] != "Wizard Tester" {
+		t.Errorf("Expected characterName to round-trip, got '%v'", payloadMap["characterName"])
+	}
+	if payloadMap["spellName"] != "Fire Bolt" {
+		t.Errorf("Expected spellName to round-trip, got '%v'", payloadMap["spellName"])
+	}
+}
+
+func TestSendGameStateSnapshots_SendsGameAndCombatState(t *testing.T) {
+	hub := &Hub{
+		stateManager: state.NewManager(),
+	}
+
+	sessionID := "session-1"
+	if gs := hub.stateManager.CreateSession(sessionID); gs == nil {
+		t.Fatal("CreateSession() returned nil")
+	}
+	if err := hub.stateManager.UpdateSession(sessionID, func(gs *state.GameState) {
+		gs.Phase = state.PhaseCombat
+		gs.CurrentMapID = "map-forest"
+		gs.Combat = &state.CombatState{
+			Status:        state.CombatActive,
+			Round:         1,
+			TurnIndex:     0,
+			Initiatives:   []*state.InitiativeEntry{},
+			Participants:  []*state.Combatant{},
+			ActiveEffects: []*state.ActiveEffect{},
+		}
+	}); err != nil {
+		t.Fatalf("UpdateSession() error = %v", err)
+	}
+
+	client := &Client{
+		SessionID: sessionID,
+		send:      make(chan []byte, 4),
+	}
+
+	hub.sendGameStateSnapshots(client, "req-1")
+
+	var messages []*models.ServerMessage
+	for i := 0; i < 2; i++ {
+		data := <-client.send
+		var msg models.ServerMessage
+		if err := json.Unmarshal(data, &msg); err != nil {
+			t.Fatalf("json.Unmarshal() error = %v", err)
+		}
+		messages = append(messages, &msg)
+	}
+
+	gamePayload := messages[0].Payload.(map[string]interface{})
+	if gamePayload["stateType"] != "game" {
+		t.Fatalf("Expected first stateType 'game', got %v", gamePayload["stateType"])
+	}
+	gameData := gamePayload["data"].(map[string]interface{})
+	if gameData["phase"] != string(state.PhaseCombat) {
+		t.Errorf("Expected phase '%s', got '%v'", state.PhaseCombat, gameData["phase"])
+	}
+
+	combatPayload := messages[1].Payload.(map[string]interface{})
+	if combatPayload["stateType"] != "combat" {
+		t.Fatalf("Expected second stateType 'combat', got %v", combatPayload["stateType"])
+	}
+	if combatPayload["data"] == nil {
+		t.Fatal("Expected combat snapshot data to be present")
 	}
 }
 
@@ -517,14 +609,14 @@ func TestMapInteractPayload_Serialization(t *testing.T) {
 	msg := &models.ServerMessage{
 		Type: models.MsgTypeMapInteract,
 		Payload: map[string]interface{}{
-			"eventId":         "map-123",
-			"timestamp":       int64(1710000000),
-			"characterId":     "wizard-1",
-			"interactableId":  "chest-1",
+			"eventId":          "map-123",
+			"timestamp":        int64(1710000000),
+			"characterId":      "wizard-1",
+			"interactableId":   "chest-1",
 			"interactableType": "chest",
-			"action":          "open",
-			"mapId":           "map-dungeon-1",
-			"position":        map[string]interface{}{"x": float64(5), "y": float64(3)},
+			"action":           "open",
+			"mapId":            "map-dungeon-1",
+			"position":         map[string]interface{}{"x": float64(5), "y": float64(3)},
 		},
 		Timestamp: 0,
 	}
@@ -589,10 +681,10 @@ func TestBuildSpellCastPayload(t *testing.T) {
 		"target_id": "goblin-1",
 	}
 	result := map[string]interface{}{
-		"success":        true,
-		"spellName":      "Magic Missile",
-		"slotLevelUsed":  float64(1),
-		"concentrating":  false,
+		"success":       true,
+		"spellName":     "Magic Missile",
+		"slotLevelUsed": float64(1),
+		"concentrating": false,
 		"effects": []interface{}{
 			map[string]interface{}{
 				"type":       "damage",
@@ -655,11 +747,11 @@ func TestBuildItemUsePayload(t *testing.T) {
 		"item_id":      "potion-heal-1",
 	}
 	result := map[string]interface{}{
-		"success":   true,
-		"itemName":  "Healing Potion",
-		"itemType":  "consumable",
-		"consumed":  true,
-		"healing":   float64(8),
+		"success":  true,
+		"itemName": "Healing Potion",
+		"itemType": "consumable",
+		"consumed": true,
+		"healing":  float64(8),
 	}
 
 	payload := buildItemUsePayload(args, result)
@@ -680,11 +772,11 @@ func TestBuildItemUsePayload(t *testing.T) {
 // TestToIntFromResult verifies the toIntFromResult helper for type coercion.
 func TestToIntFromResult(t *testing.T) {
 	tests := []struct {
-		name        string
-		m           map[string]interface{}
-		key         string
-		defaultVal  int
-		expected    int
+		name       string
+		m          map[string]interface{}
+		key        string
+		defaultVal int
+		expected   int
 	}{
 		{"float64 value", map[string]interface{}{"x": float64(42)}, "x", 0, 42},
 		{"int value", map[string]interface{}{"x": 7}, "x", 0, 7},
@@ -962,11 +1054,11 @@ func TestBuildItemUsePayload_WithTargetAndDamage(t *testing.T) {
 		"target_id":    "goblin-1",
 	}
 	result := map[string]interface{}{
-		"success":    true,
-		"itemName":   "Alchemist's Fire",
-		"itemType":   "consumable",
-		"consumed":   true,
-		"damage":     float64(7),
+		"success":     true,
+		"itemName":    "Alchemist's Fire",
+		"itemType":    "consumable",
+		"consumed":    true,
+		"damage":      float64(7),
 		"description": "A flask of volatile liquid",
 	}
 

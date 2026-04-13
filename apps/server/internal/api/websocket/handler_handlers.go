@@ -84,21 +84,34 @@ func (h *Hub) handleMapAction(client *Client, msg models.ClientMessage) {
 
 // handleCombatAction processes combat-related actions.
 func (h *Hub) handleCombatAction(client *Client, msg models.ClientMessage) {
-	var payload struct {
-		Action string `json:"action"`
-		Target string `json:"target"`
-	}
+	var payload map[string]interface{}
 	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 		h.SendError(client, "invalid combat_action payload")
 		return
 	}
 
+	action, _ := payload["action"].(string)
+	target, _ := payload["target"].(string)
+	if target == "" {
+		target, _ = payload["targetId"].(string)
+	}
+
+	responsePayload := map[string]interface{}{
+		"eventType": action,
+	}
+	for key, value := range payload {
+		if key == "action" {
+			continue
+		}
+		responsePayload[key] = value
+	}
+	if target != "" {
+		responsePayload["target"] = target
+	}
+
 	client.SendMessage(&models.ServerMessage{
-		Type: models.MsgTypeCombatEvent,
-		Payload: map[string]interface{}{
-			"eventType": payload.Action,
-			"target":    payload.Target,
-		},
+		Type:      models.MsgTypeCombatEvent,
+		Payload:   responsePayload,
 		Timestamp: getCurrentTimestamp(),
 	})
 }
