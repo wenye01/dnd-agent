@@ -133,6 +133,16 @@ export const useGameStore = create<GameStore>()(
 
       // v0.4 Phase 4: Handle equip server events.
       // Updates character equipment and recalculates AC from baseAC + all equipment bonuses.
+      //
+      // 【AC 计算约定】
+      // 公式: armorClass = baseArmorClass + Σ(equipment[].acBonus)
+      //
+      // - baseArmorClass 在角色首次装备时从当前 armorClass 快照（char.baseArmorClass ?? char.armorClass），
+      //   捕获角色天生的 AC 值（例如 10 + 敏捷调整量），此值一旦设定不再改变。
+      // - 每次装备/卸载时，从 equipment 数组中所有槽位的 acBonus 求和，
+      //   再加上 baseArmorClass 得到最终 armorClass。
+      // - 前后端必须使用相同的公式，否则 AC 会产生不一致。
+      //
       handleEquip: (payload) =>
         set((state) => {
           if (!state.gameState) return state
@@ -160,6 +170,15 @@ export const useGameStore = create<GameStore>()(
 
       // v0.4 Phase 4: Handle unequip server events.
       // Removes item from equipment slot, recalculates AC from remaining equipment, and adds back to inventory.
+      //
+      // 【AC 计算约定】
+      // 公式: armorClass = baseArmorClass + Σ(equipment[].acBonus)
+      //
+      // - 卸载时从 equipment 数组移除对应槽位后，对剩余所有装备的 acBonus 求和，
+      //   再加上 baseArmorClass 重算 armorClass。
+      // - baseArmorClass 始终保持不变（由首次装备时快照确定）。
+      // - 前后端必须使用相同的公式，否则 AC 会产生不一致。
+      //
       handleUnequip: (payload) =>
         set((state) => {
           if (!state.gameState) return state

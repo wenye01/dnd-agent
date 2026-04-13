@@ -51,6 +51,7 @@ resource/
 # Test coverage
 coverage/
 *.lcov
+coverage.out
 
 # Lock files (project uses pnpm)
 package-lock.json

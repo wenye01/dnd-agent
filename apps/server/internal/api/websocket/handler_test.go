@@ -751,7 +751,8 @@ func TestBuildSpellCastPayload_MissingEffects(t *testing.T) {
 	}
 }
 
-// TestBuildSpellCastPayload_MultipleEffects verifies damage accumulation across effects.
+// TestBuildSpellCastPayload_MultipleEffects verifies damage accumulation and
+// deduplicated damageType collection across multiple effects.
 func TestBuildSpellCastPayload_MultipleEffects(t *testing.T) {
 	args := map[string]interface{}{
 		"caster_id": "wizard-1",
@@ -765,6 +766,7 @@ func TestBuildSpellCastPayload_MultipleEffects(t *testing.T) {
 		"concentrating": false,
 		"effects": []interface{}{
 			map[string]interface{}{"damage": float64(6), "damageType": "fire"},
+			map[string]interface{}{"damage": float64(4), "damageType": "force"},
 			map[string]interface{}{"damage": float64(8), "damageType": "fire"},
 			map[string]interface{}{"healing": float64(3)},
 		},
@@ -772,14 +774,18 @@ func TestBuildSpellCastPayload_MultipleEffects(t *testing.T) {
 
 	payload := buildSpellCastPayload(args, result)
 
-	if payload["damage"] != 14 { // 6 + 8
-		t.Errorf("Expected damage 14, got '%v'", payload["damage"])
+	// Total damage = 6 + 4 + 8 = 18
+	if payload["damage"] != 18 {
+		t.Errorf("Expected damage 18, got '%v'", payload["damage"])
 	}
+	// Total healing = 3
 	if payload["healing"] != 3 {
 		t.Errorf("Expected healing 3, got '%v'", payload["healing"])
 	}
-	if payload["damageType"] != "fire" {
-		t.Errorf("Expected damageType 'fire', got '%v'", payload["damageType"])
+	// Two distinct damageTypes (fire, force) → comma-separated string.
+	// Duplicate "fire" from the third effect should be deduplicated.
+	if payload["damageType"] != "fire,force" {
+		t.Errorf("Expected damageType 'fire,force', got '%v'", payload["damageType"])
 	}
 }
 

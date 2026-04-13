@@ -289,13 +289,15 @@ func buildSpellCastPayload(args map[string]interface{}, result map[string]interf
 	// toIntFromResult returns 0 by default, so no separate existence check is needed.
 	var totalDamage int
 	var totalHealing int
-	var damageType string
+	var damageTypes []string
+	seenDT := make(map[string]bool)
 	if effects, ok := result["effects"].([]interface{}); ok {
 		for _, e := range effects {
 			if em, ok := e.(map[string]interface{}); ok {
 				totalDamage += toIntFromResult(em, "damage", 0)
-				if dt, ok := em["damageType"].(string); ok && dt != "" {
-					damageType = dt
+				if dt, ok := em["damageType"].(string); ok && dt != "" && !seenDT[dt] {
+					seenDT[dt] = true
+					damageTypes = append(damageTypes, dt)
 				}
 				totalHealing += toIntFromResult(em, "healing", 0)
 			}
@@ -320,8 +322,13 @@ func buildSpellCastPayload(args map[string]interface{}, result map[string]interf
 	if totalHealing > 0 {
 		payload["healing"] = totalHealing
 	}
-	if damageType != "" {
-		payload["damageType"] = damageType
+	switch len(damageTypes) {
+	case 1:
+		payload["damageType"] = damageTypes[0]
+	default:
+		if len(damageTypes) > 1 {
+			payload["damageType"] = strings.Join(damageTypes, ",")
+		}
 	}
 	return payload
 }

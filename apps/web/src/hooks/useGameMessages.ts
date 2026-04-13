@@ -217,6 +217,10 @@ export function useGameMessages() {
   /**
    * Sync combat event to Zustand stores (chatStore + combatStore).
    * Handles HP mutations, combat state, current unit, and log entries.
+   *
+   * 依赖数组说明: 仅包含 [addSystemMessage]，因为 useCombatStore 是通过
+   * useCombatStore.getState() 在函数体内直接调用的模块级单例（引用稳定不变），
+   * eventBus 同样是模块级单例，两者都不需要列入 useCallback 的依赖数组。
    */
   const syncCombatEventToStores = useCallback((
     payload: CombatEventPayload,
