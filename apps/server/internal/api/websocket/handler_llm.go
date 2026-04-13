@@ -33,6 +33,11 @@ func (h *Hub) processLLMResponse(client *Client, text, requestID string) {
 // response without any tool calls (agentic loop).
 const maxToolLoopIterations = 5
 
+const (
+	combatEventStart = "combat_start"
+	combatEventEnd   = "combat_end"
+)
+
 func (h *Hub) processStreamWithToolLoop(ctx context.Context, client *Client, stream <-chan llm.StreamChunk, tools []llm.ToolDefinition, requestID string) {
 	var fullText strings.Builder
 	var toolCalls []llm.ToolCall
@@ -134,6 +139,28 @@ func (h *Hub) executeAndSendToolResult(client *Client, tc *llm.ToolCall, request
 			Timestamp: getCurrentTimestamp(),
 		})
 
+	case "start_combat":
+		h.sendGameStateSnapshots(client, requestID)
+		client.SendMessage(&models.ServerMessage{
+			Type: models.MsgTypeCombatEvent,
+			Payload: map[string]interface{}{
+				"eventType": combatEventStart,
+			},
+			RequestID: requestID,
+			Timestamp: getCurrentTimestamp(),
+		})
+
+	case "end_combat":
+		h.sendGameStateSnapshots(client, requestID)
+		client.SendMessage(&models.ServerMessage{
+			Type: models.MsgTypeCombatEvent,
+			Payload: map[string]interface{}{
+				"eventType": combatEventEnd,
+			},
+			RequestID: requestID,
+			Timestamp: getCurrentTimestamp(),
+		})
+
 	case "cast_spell":
 		// Build spell_cast event from the tool result
 		if castResult, ok := result.(map[string]interface{}); ok {
@@ -219,6 +246,37 @@ func (h *Hub) executeAndSendToolResult(client *Client, tc *llm.ToolCall, request
 		Str("tool", tc.Name).
 		Interface("result", result).
 		Msg("tool executed")
+}
+
+func (h *Hub) sendGameStateSnapshots(client *Client, requestID string) {
+	gs := h.stateManager.GetSession(client.SessionID)
+	if gs == nil {
+		return
+	}
+
+	client.SendMessage(&models.ServerMessage{
+		Type: models.MsgTypeStateUpdate,
+		Payload: map[string]interface{}{
+			"stateType": "game",
+			"data": map[string]interface{}{
+				"sessionId":    gs.SessionID,
+				"phase":        gs.Phase,
+				"currentMapId": gs.CurrentMapID,
+			},
+		},
+		RequestID: requestID,
+		Timestamp: getCurrentTimestamp(),
+	})
+
+	client.SendMessage(&models.ServerMessage{
+		Type: models.MsgTypeStateUpdate,
+		Payload: map[string]interface{}{
+			"stateType": "combat",
+			"data":      gs.Combat,
+		},
+		RequestID: requestID,
+		Timestamp: getCurrentTimestamp(),
+	})
 }
 
 // filterThinkTags filters <think/> reasoning blocks from streaming text.
@@ -441,14 +499,14 @@ func buildMapInteractPayload(args map[string]interface{}, result map[string]inte
 	}
 
 	return map[string]interface{}{
-		"eventId":         generateEventID("map"),
-		"timestamp":       getCurrentTimestamp(),
-		"characterId":     characterID,
-		"interactableId":  targetID,
+		"eventId":          generateEventID("map"),
+		"timestamp":        getCurrentTimestamp(),
+		"characterId":      characterID,
+		"interactableId":   targetID,
 		"interactableType": interactableType,
-		"action":          action,
-		"mapId":           mapID,
-		"position":        pos,
+		"action":           action,
+		"mapId":            mapID,
+		"position":         pos,
 	}
 }
 

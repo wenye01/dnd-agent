@@ -159,6 +159,22 @@ describe('useGameMessages', () => {
       expect(gameState!.phase).toBe('combat')
     })
 
+    it('should handle partial game state update without sessionId replacement', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({
+        type: 'state_update',
+        payload: { stateType: 'game', data: { phase: 'combat' } },
+        timestamp: Date.now(),
+      })
+
+      const gameState = useGameStore.getState().gameState
+      expect(gameState).not.toBeNull()
+      expect(gameState!.sessionId).toBe('session-123')
+      expect(gameState!.phase).toBe('combat')
+    })
+
     it('should handle party update via WebSocket', () => {
       renderHook(() => useGameMessages())
       const handler = getWebSocketHandler()!
@@ -459,6 +475,27 @@ describe('useGameMessages', () => {
       const content = useChatStore.getState().messages[0].content
       expect(content).toContain('casts a spell')
       expect(content).toContain('dragon')
+    })
+
+    it('should prefer characterName and spellName for spell events', () => {
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({
+        type: 'combat_event',
+        payload: {
+          eventType: 'spell',
+          characterId: 'char-1',
+          characterName: '法师测试',
+          spellName: 'Fire Bolt',
+        },
+        timestamp: Date.now(),
+      })
+
+      const content = useChatStore.getState().messages[0].content
+      expect(content).toContain('法师测试')
+      expect(content).toContain('Fire Bolt')
+      expect(content).not.toContain('Unknown')
     })
 
     it('should handle item event', () => {

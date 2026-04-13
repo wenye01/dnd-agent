@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Dice5, Package, Sparkles, Save } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { useWebSocket } from '../../contexts/WebSocketContext'
 import { useGameStore } from '../../stores/gameStore'
+import { isStateUpdatePayload } from '../../services/typeGuards'
+import { isSpellcasterClass } from '../../utils/spellcasters'
 
 const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
 
@@ -160,9 +162,7 @@ function InventoryDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
 function SpellsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const party = useGameStore((s) => s.gameState?.party)
 
-  const spellcasters = party?.filter((c) =>
-    ['Wizard', 'Sorcerer', 'Cleric', 'Bard', 'Druid', 'Warlock'].includes(c.class)
-  )
+  const spellcasters = party?.filter((c) => isSpellcasterClass(c.class))
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Spellbook" size="md">
@@ -198,11 +198,59 @@ export default function QuickActions() {
   const [showRollCheck, setShowRollCheck] = useState(false)
   const [showInventory, setShowInventory] = useState(false)
   const [showSpells, setShowSpells] = useState(false)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
+  const { send, subscribe } = useWebSocket()
   const party = useGameStore((s) => s.gameState?.party)
 
-  const spellcasters = party?.filter((c) =>
-    ['Wizard', 'Sorcerer', 'Cleric', 'Bard', 'Druid', 'Warlock'].includes(c.class)
-  )
+  const spellcasters = party?.filter((c) => isSpellcasterClass(c.class))
+
+  useEffect(() => {
+    if (saveState !== 'success' && saveState !== 'error') {
+      return undefined
+    }
+
+    const timer = window.setTimeout(() => {
+      setSaveState('idle')
+    }, 2500)
+
+    return () => window.clearTimeout(timer)
+  }, [saveState])
+
+  useEffect(() => {
+    return subscribe((message) => {
+      if (message.type === 'error' && saveState === 'saving') {
+        setSaveState('error')
+        return
+      }
+
+      if (message.type !== 'state_update' || !isStateUpdatePayload(message.payload)) {
+        return
+      }
+
+      const { stateType, data } = message.payload
+      if (
+        stateType === 'notification' &&
+        typeof data === 'object' &&
+        data !== null &&
+        'status' in data
+      ) {
+        const status = (data as { status?: string }).status
+        if (status === 'game_saved') {
+          setSaveState('success')
+        }
+      }
+    })
+  }, [saveState, subscribe])
+
+  const handleSave = () => {
+    setSaveState('saving')
+    send({
+      type: 'management',
+      payload: {
+        action: 'save',
+      },
+    })
+  }
 
   const actions = [
     {
@@ -226,8 +274,8 @@ export default function QuickActions() {
     {
       icon: Save,
       label: 'Save',
-      onClick: () => {},
-      disabled: false,
+      onClick: handleSave,
+      disabled: saveState === 'saving',
     },
   ]
 
@@ -256,6 +304,17 @@ export default function QuickActions() {
               </button>
             )
           })}
+        </div>
+        <div className="mt-2 min-h-[1rem] px-0.5 text-center text-[10px] font-display tracking-wider uppercase">
+          {saveState === 'saving' && (
+            <span className="text-gold/75">Saving adventure...</span>
+          )}
+          {saveState === 'success' && (
+            <span className="text-emerald-300/80">Save complete</span>
+          )}
+          {saveState === 'error' && (
+            <span className="text-blood/80">Save failed</span>
+          )}
         </div>
       </div>
 
