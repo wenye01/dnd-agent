@@ -107,12 +107,49 @@ func NewToolMessage(toolCallID, content string) Message {
 
 // flushToolCall builds a ToolCall from accumulated streaming arguments.
 // Returns a non-nil error if the buffered JSON arguments cannot be parsed.
+//
+// Standard OpenAI-compatible APIs stream tool call arguments as JSON fragments
+// that concatenate into a single valid JSON object. However, some providers
+// (e.g. MiniMax) send each chunk as a complete JSON object, causing the
+// accumulated buffer to contain concatenated objects like:
+//
+//	{"formula":"2d6+3"}{"formula":"2d6+3"}
+//
+// This function handles both cases: it first tries standard JSON parsing, then
+// falls back to JSONL-style parsing by splitting on "}{" and keeping the last
+// valid JSON object (which is the most complete/successful call).
 func flushToolCall(id, name string, buf *strings.Builder) (*ToolCall, error) {
 	var args map[string]interface{}
-	if buf != nil && buf.Len() > 0 {
-		if err := json.Unmarshal([]byte(buf.String()), &args); err != nil {
-			return nil, fmt.Errorf("parse tool call arguments for %q: %w", name, err)
+	if buf == nil || buf.Len() == 0 {
+		return &ToolCall{ID: id, Name: name, Arguments: args}, nil
+	}
+
+	raw := buf.String()
+
+	// Attempt 1: standard JSON parse (works for normal OpenAI fragment accumulation)
+	if err := json.Unmarshal([]byte(raw), &args); err == nil {
+		return &ToolCall{ID: id, Name: name, Arguments: args}, nil
+	}
+
+	// Attempt 2: JSONL-style parsing for providers that send complete JSON per chunk.
+	// Split on "}{" which indicates concatenated JSON objects. Try from last to
+	// first because the last object is typically the most complete repetition.
+	parts := strings.Split(raw, "}{")
+	if len(parts) > 1 {
+		for i := len(parts) - 1; i >= 0; i-- {
+			candidate := parts[i]
+			// Restore the braces removed by Split
+			if i > 0 {
+				candidate = "{" + candidate
+			}
+			if i < len(parts)-1 {
+				candidate = candidate + "}"
+			}
+			if err := json.Unmarshal([]byte(candidate), &args); err == nil {
+				return &ToolCall{ID: id, Name: name, Arguments: args}, nil
+			}
 		}
 	}
-	return &ToolCall{ID: id, Name: name, Arguments: args}, nil
+
+	return nil, fmt.Errorf("parse tool call arguments for %q: invalid JSON in buffer (%d bytes)", name, len(raw))
 }

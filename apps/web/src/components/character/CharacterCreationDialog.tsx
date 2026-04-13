@@ -4,8 +4,8 @@ import { Button } from '../ui/Button'
 import { characterApi, type CreateCharacterRequest, type ServerCharacter } from '../../services/api'
 import { useGameStore } from '../../stores/gameStore'
 import { Sword, Shield, Wand2, User } from 'lucide-react'
-import type { Character, Ability, Condition, DeathSaves, SpellSlots } from '../../types'
 import { getModifier, formatModifier } from '../../utils/modifiers'
+import { serverToClientCharacter } from '../../utils/characterTransform'
 
 interface CharacterCreationDialogProps {
   isOpen: boolean
@@ -412,45 +412,4 @@ export function CharacterCreationDialog({ isOpen, onClose }: CharacterCreationDi
       </form>
     </Modal>
   )
-}
-
-function serverToClientCharacter(char: ServerCharacter): Character {
-  return {
-    id: char.id,
-    name: char.name,
-    race: char.race,
-    class: char.class,
-    level: char.level,
-    background: char.background,
-    alignment: '',
-    abilityScores: {
-      strength: char.stats.strength,
-      dexterity: char.stats.dexterity,
-      constitution: char.stats.constitution,
-      intelligence: char.stats.intelligence,
-      wisdom: char.stats.wisdom,
-      charisma: char.stats.charisma,
-    },
-    maxHitPoints: char.maxHp,
-    currentHitPoints: char.hp,
-    temporaryHitPoints: 0,
-    armorClass: char.ac,
-    speed: char.speed,
-    initiative: Math.floor((char.stats.dexterity - 10) / 2),
-    proficiencyBonus: char.proficiencyBonus,
-    skills: char.skills,
-    savingThrows: Object.entries(char.savingThrows)
-      .filter(([, v]) => v)
-      .map(([k]) => k as Ability),
-    conditions: (char.conditions ?? []) as Condition[],
-    deathSaves: char.deathSaves as DeathSaves | undefined,
-    equipment: char.equipment ?? [],
-    inventory: char.inventory.map((item) => ({
-      id: item.id,
-      name: item.name,
-      quantity: 1,
-      description: item.description,
-    })),
-    spellSlots: char.spellSlots as SpellSlots | undefined,
-  }
 }

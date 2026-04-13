@@ -23,6 +23,7 @@ import type { CombatEventPayload, CombatEventType } from '../services/typeGuards
 import type { CombatLogEntry } from '../stores/combatStore'
 import type { ServerMessage, ClientMessage } from '../types'
 import { eventBus, GameEvents } from '../events'
+import { normalizePartyCharacters } from '../utils/characterTransform'
 
 export function useGameMessages() {
   const { subscribe, send } = useWebSocket()
@@ -77,7 +78,10 @@ export function useGameMessages() {
         break
       case 'party':
         if (isPartyData(data)) {
-          updateParty(data)
+          // The WebSocket path may deliver raw server-format characters
+          // (with `stats` instead of `abilityScores`).  Normalize before
+          // storing so that the frontend always receives client-format data.
+          updateParty(normalizePartyCharacters(data))
         } else {
           console.error('Invalid party data:', data)
         }

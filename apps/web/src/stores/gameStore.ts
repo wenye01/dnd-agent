@@ -83,7 +83,22 @@ export const useGameStore = create<GameStore>()(
 
       updateParty: (party) =>
         set((state) => ({
-          gameState: state.gameState ? { ...state.gameState, party } : null,
+          gameState: state.gameState
+            ? { ...state.gameState, party }
+            : {
+                sessionId: '',
+                phase: 'exploring' as const,
+                party,
+                currentMapId: '',
+                combat: null,
+                scenario: null,
+                metadata: {
+                  createdAt: Date.now(),
+                  updatedAt: Date.now(),
+                  playTime: 0,
+                  scenarioId: '',
+                },
+              },
         })),
 
       updateCombat: (combat) =>
