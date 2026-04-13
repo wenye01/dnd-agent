@@ -30,6 +30,19 @@ export const STATE_UPDATE_TYPES = ['game', 'party', 'combat', 'map', 'notificati
 /** State update type string literal — derived from STATE_UPDATE_TYPES. */
 export type StateUpdateType = typeof STATE_UPDATE_TYPES[number]
 
+// v0.4 Phase 4: Extended server event types for spell/item/map integration
+export const GAME_EVENT_TYPES = [
+  'spell_cast',
+  'item_use',
+  'equip',
+  'unequip',
+  'map_interact',
+  'map_switch',
+] as const
+
+/** Game event type string literal — derived from GAME_EVENT_TYPES. */
+export type GameEventType = typeof GAME_EVENT_TYPES[number]
+
 // Combat event types (matches backend combat.EventType constants)
 // Single source of truth for both the runtime array and the derived type.
 export const COMBAT_EVENT_TYPES = [

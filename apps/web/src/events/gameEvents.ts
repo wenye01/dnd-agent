@@ -36,10 +36,30 @@ export const GameEvents = {
   INVENTORY_USE: 'inventory:use',
   INVENTORY_DROP: 'inventory:drop',
 
-  // Spell events (React -> WebSocket)
+  // Spell events (React -> WebSocket / Phaser animations)
   SPELL_CAST: 'spell:cast',
   SPELL_PREPARE: 'spell:prepare',
   SPELL_UNPREPARE: 'spell:unprepare',
+  SPELL_EFFECT: 'spell:effect',
+  SPELL_COMPLETE: 'spell:complete',
+
+  // Item events (React -> Phaser for animations)
+  ITEM_USE: 'item:use',
+  ITEM_EFFECT: 'item:effect',
+
+  // Equipment events (React -> Phaser for visual updates)
+  EQUIP_CHANGE: 'equip:change',
+  UNEQUIP_CHANGE: 'unequip:change',
+
+  // Map events (React -> Phaser for transitions, Phaser -> React for results)
+  MAP_INTERACT: 'map:interact',
+  MAP_SWITCH: 'map:switch',
+  MAP_SWITCH_COMPLETE: 'map:switch_complete',
+  MAP_LOAD: 'map:load',
+
+  // Visual feedback events (Store -> Phaser)
+  EFFECT_DAMAGE_NUMBER: 'effect:damage_number',
+  EFFECT_STATUS_ICON: 'effect:status_icon',
 } as const
 
 export type GameEventType = (typeof GameEvents)[keyof typeof GameEvents]

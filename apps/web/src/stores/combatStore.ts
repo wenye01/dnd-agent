@@ -18,6 +18,7 @@
  */
 import { create } from 'zustand'
 import type { Combatant, CombatState } from '../types'
+import type { SpellCastPayload, ItemUsePayload } from '../types'
 import { eventBus, GameEvents } from '../events'
 
 export type TargetMode = 'none' | 'attack' | 'spell' | 'item'
@@ -60,6 +61,10 @@ interface CombatStore {
   updateCombatant: (id: string, updates: Partial<Combatant>) => void
   applyDamage: (targetId: string, amount: number) => void
   applyHeal: (targetId: string, amount: number) => void
+
+  // v0.4 Phase 4: Combat spell/item event handlers
+  handleCombatSpellCast: (payload: SpellCastPayload) => void
+  handleCombatItemUse: (payload: ItemUsePayload) => void
 
   // WebSocket request dispatchers
   requestMove: (position: { x: number; y: number }) => void
@@ -198,6 +203,123 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       ...data,
     })
   },
+
+  // v0.4 Phase 4: Handle spell_cast events during combat.
+  // Applies spell damage/healing to combatants and triggers visual effects.
+  handleCombatSpellCast: (payload) =>
+    set((state) => {
+      if (!state.combat) return state
+      const participants = state.combat.participants.map((p) => {
+        // Apply damage to the target
+        if (payload.targetId && p.id === payload.targetId && payload.damage) {
+          const newHp = Math.max(0, p.currentHp - payload.damage)
+          return { ...p, currentHp: newHp }
+        }
+        // Apply healing to the caster
+        if (p.id === payload.characterId && payload.healing) {
+          return { ...p, currentHp: Math.min(p.maxHp, p.currentHp + payload.healing) }
+        }
+        return p
+      })
+
+      // Log the spell cast
+      const logText = payload.damage
+        ? `${payload.characterId} casts ${payload.spellName} for ${payload.damage} ${payload.damageType ?? ''} damage`
+        : payload.healing
+          ? `${payload.characterId} casts ${payload.spellName} healing ${payload.healing} HP`
+          : `${payload.characterId} casts ${payload.spellName}`
+
+      // Emit moved to useGameMessages.ts handler (single source of truth to avoid double animation)
+      if (payload.damage && payload.targetId) {
+        eventBus.emit(GameEvents.EFFECT_DAMAGE, {
+          eventType: 'damage',
+          characterId: payload.characterId,
+          target: payload.targetId,
+          damage: payload.damage,
+          damageType: payload.damageType,
+        })
+      }
+      if (payload.healing) {
+        eventBus.emit(GameEvents.EFFECT_HEAL, {
+          eventType: 'heal',
+          characterId: payload.characterId,
+          amount: payload.healing,
+        })
+      }
+
+      const entries = [
+        ...state.logEntries,
+        {
+          id: `log-${++_logIdCounter}`,
+          text: logText,
+          timestamp: Date.now(),
+          type: (payload.damage ? 'damage' : payload.healing ? 'heal' : 'info') as CombatLogEntry['type'],
+        },
+      ]
+
+      return {
+        combat: { ...state.combat, participants },
+        logEntries: entries.length > 100 ? entries.slice(-100) : entries,
+      }
+    }),
+
+  // v0.4 Phase 4: Handle item_use events during combat.
+  // Applies item effects (healing/damage) to combatants.
+  handleCombatItemUse: (payload) =>
+    set((state) => {
+      if (!state.combat) return state
+
+      const participants = state.combat.participants.map((p) => {
+        // Apply healing to the character using the item
+        if (p.id === payload.characterId && payload.healing) {
+          return { ...p, currentHp: Math.min(p.maxHp, p.currentHp + payload.healing) }
+        }
+        // Apply damage to the target if any
+        if (payload.targetId && p.id === payload.targetId && payload.damage) {
+          return { ...p, currentHp: Math.max(0, p.currentHp - payload.damage) }
+        }
+        return p
+      })
+
+      // Log the item use
+      const logText = payload.healing
+        ? `${payload.characterId} uses ${payload.itemName} healing ${payload.healing} HP`
+        : payload.damage
+          ? `${payload.characterId} uses ${payload.itemName} for ${payload.damage} damage`
+          : `${payload.characterId} uses ${payload.itemName}`
+
+      // Emit moved to useGameMessages.ts handler (single source of truth to avoid double animation)
+      if (payload.healing) {
+        eventBus.emit(GameEvents.EFFECT_HEAL, {
+          eventType: 'heal',
+          characterId: payload.characterId,
+          amount: payload.healing,
+        })
+      }
+      if (payload.damage && payload.targetId) {
+        eventBus.emit(GameEvents.EFFECT_DAMAGE, {
+          eventType: 'damage',
+          characterId: payload.characterId,
+          target: payload.targetId,
+          damage: payload.damage,
+        })
+      }
+
+      const entries = [
+        ...state.logEntries,
+        {
+          id: `log-${++_logIdCounter}`,
+          text: logText,
+          timestamp: Date.now(),
+          type: (payload.healing ? 'heal' : payload.damage ? 'damage' : 'info') as CombatLogEntry['type'],
+        },
+      ]
+
+      return {
+        combat: { ...state.combat, participants },
+        logEntries: entries.length > 100 ? entries.slice(-100) : entries,
+      }
+    }),
 
   reset: () =>
     set({

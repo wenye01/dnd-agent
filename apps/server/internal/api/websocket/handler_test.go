@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/dnd-game/server/internal/shared/models"
@@ -355,5 +356,650 @@ func TestErrorMessage_CodeFieldPresent(t *testing.T) {
 	// Verify old "error" field is NOT present
 	if _, exists := payloadMap["error"]; exists {
 		t.Error("Error payload should not have old 'error' field")
+	}
+}
+
+// --- v0.4 Phase 4: Game event payload serialization tests ---
+
+// TestSpellCastPayload_Serialization verifies spell_cast event payloads round-trip correctly.
+func TestSpellCastPayload_Serialization(t *testing.T) {
+	msg := &models.ServerMessage{
+		Type: models.MsgTypeSpellCast,
+		Payload: map[string]interface{}{
+			"eventId":       "spell-123",
+			"timestamp":     int64(1710000000),
+			"characterId":   "wizard-1",
+			"targetId":      "goblin-1",
+			"spellId":       "magic_missile",
+			"spellName":     "Magic Missile",
+			"slotLevelUsed": 1,
+			"concentrating": false,
+			"damage":        10,
+			"damageType":    "force",
+		},
+		Timestamp: 0,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("Failed to marshal spell_cast: %v", err)
+	}
+
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+
+	if decoded["type"] != "spell_cast" {
+		t.Errorf("Expected type 'spell_cast', got '%v'", decoded["type"])
+	}
+
+	payloadMap := decoded["payload"].(map[string]interface{})
+	if payloadMap["spellId"] != "magic_missile" {
+		t.Errorf("Expected spellId 'magic_missile', got '%v'", payloadMap["spellId"])
+	}
+	if payloadMap["characterId"] != "wizard-1" {
+		t.Errorf("Expected characterId 'wizard-1', got '%v'", payloadMap["characterId"])
+	}
+	if payloadMap["damage"] != float64(10) {
+		t.Errorf("Expected damage 10, got '%v'", payloadMap["damage"])
+	}
+}
+
+// TestItemUsePayload_Serialization verifies item_use event payloads round-trip correctly.
+func TestItemUsePayload_Serialization(t *testing.T) {
+	msg := &models.ServerMessage{
+		Type: models.MsgTypeItemUse,
+		Payload: map[string]interface{}{
+			"eventId":     "item-123",
+			"timestamp":   int64(1710000000),
+			"characterId": "wizard-1",
+			"itemId":      "potion-heal-1",
+			"itemName":    "Healing Potion",
+			"itemType":    "consumable",
+			"consumed":    true,
+			"healing":     8,
+		},
+		Timestamp: 0,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("Failed to marshal item_use: %v", err)
+	}
+
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+
+	if decoded["type"] != "item_use" {
+		t.Errorf("Expected type 'item_use', got '%v'", decoded["type"])
+	}
+
+	payloadMap := decoded["payload"].(map[string]interface{})
+	if payloadMap["consumed"] != true {
+		t.Errorf("Expected consumed true, got '%v'", payloadMap["consumed"])
+	}
+	if payloadMap["healing"] != float64(8) {
+		t.Errorf("Expected healing 8, got '%v'", payloadMap["healing"])
+	}
+}
+
+// TestEquipPayload_Serialization verifies equip event payloads round-trip correctly.
+func TestEquipPayload_Serialization(t *testing.T) {
+	msg := &models.ServerMessage{
+		Type: models.MsgTypeEquip,
+		Payload: map[string]interface{}{
+			"eventId":     "equip-123",
+			"timestamp":   int64(1710000000),
+			"characterId": "wizard-1",
+			"itemId":      "chain-mail-1",
+			"itemName":    "Chain Mail",
+			"slot":        "chest",
+			"acBonus":     5,
+		},
+		Timestamp: 0,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("Failed to marshal equip: %v", err)
+	}
+
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+
+	if decoded["type"] != "equip" {
+		t.Errorf("Expected type 'equip', got '%v'", decoded["type"])
+	}
+
+	payloadMap := decoded["payload"].(map[string]interface{})
+	if payloadMap["slot"] != "chest" {
+		t.Errorf("Expected slot 'chest', got '%v'", payloadMap["slot"])
+	}
+	if payloadMap["acBonus"] != float64(5) {
+		t.Errorf("Expected acBonus 5, got '%v'", payloadMap["acBonus"])
+	}
+}
+
+// TestUnequipPayload_Serialization verifies unequip event payloads round-trip correctly.
+func TestUnequipPayload_Serialization(t *testing.T) {
+	msg := &models.ServerMessage{
+		Type: models.MsgTypeUnequip,
+		Payload: map[string]interface{}{
+			"eventId":     "unequip-123",
+			"timestamp":   int64(1710000000),
+			"characterId": "wizard-1",
+			"itemId":      "longsword-1",
+			"itemName":    "Longsword",
+			"slot":        "main_hand",
+		},
+		Timestamp: 0,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("Failed to marshal unequip: %v", err)
+	}
+
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+
+	if decoded["type"] != "unequip" {
+		t.Errorf("Expected type 'unequip', got '%v'", decoded["type"])
+	}
+
+	payloadMap := decoded["payload"].(map[string]interface{})
+	if payloadMap["slot"] != "main_hand" {
+		t.Errorf("Expected slot 'main_hand', got '%v'", payloadMap["slot"])
+	}
+}
+
+// TestMapInteractPayload_Serialization verifies map_interact event payloads round-trip correctly.
+func TestMapInteractPayload_Serialization(t *testing.T) {
+	msg := &models.ServerMessage{
+		Type: models.MsgTypeMapInteract,
+		Payload: map[string]interface{}{
+			"eventId":         "map-123",
+			"timestamp":       int64(1710000000),
+			"characterId":     "wizard-1",
+			"interactableId":  "chest-1",
+			"interactableType": "chest",
+			"action":          "open",
+			"mapId":           "map-dungeon-1",
+			"position":        map[string]interface{}{"x": float64(5), "y": float64(3)},
+		},
+		Timestamp: 0,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("Failed to marshal map_interact: %v", err)
+	}
+
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+
+	if decoded["type"] != "map_interact" {
+		t.Errorf("Expected type 'map_interact', got '%v'", decoded["type"])
+	}
+
+	payloadMap := decoded["payload"].(map[string]interface{})
+	if payloadMap["interactableId"] != "chest-1" {
+		t.Errorf("Expected interactableId 'chest-1', got '%v'", payloadMap["interactableId"])
+	}
+}
+
+// TestMapSwitchPayload_Serialization verifies map_switch event payloads round-trip correctly.
+func TestMapSwitchPayload_Serialization(t *testing.T) {
+	msg := &models.ServerMessage{
+		Type: models.MsgTypeMapSwitch,
+		Payload: map[string]interface{}{
+			"eventId":     "mapswitch-123",
+			"timestamp":   int64(1710000000),
+			"characterId": "wizard-1",
+			"fromMapId":   "map-dungeon-1",
+			"toMapId":     "map-dungeon-2",
+			"entryPoint":  "south_entrance",
+			"position":    map[string]interface{}{"x": float64(0), "y": float64(5)},
+		},
+		Timestamp: 0,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("Failed to marshal map_switch: %v", err)
+	}
+
+	var decoded map[string]interface{}
+	json.Unmarshal(data, &decoded)
+
+	if decoded["type"] != "map_switch" {
+		t.Errorf("Expected type 'map_switch', got '%v'", decoded["type"])
+	}
+
+	payloadMap := decoded["payload"].(map[string]interface{})
+	if payloadMap["toMapId"] != "map-dungeon-2" {
+		t.Errorf("Expected toMapId 'map-dungeon-2', got '%v'", payloadMap["toMapId"])
+	}
+}
+
+// TestBuildSpellCastPayload verifies the buildSpellCastPayload helper.
+func TestBuildSpellCastPayload(t *testing.T) {
+	args := map[string]interface{}{
+		"caster_id": "wizard-1",
+		"spell_id":  "magic_missile",
+		"target_id": "goblin-1",
+	}
+	result := map[string]interface{}{
+		"success":        true,
+		"spellName":      "Magic Missile",
+		"slotLevelUsed":  float64(1),
+		"concentrating":  false,
+		"effects": []interface{}{
+			map[string]interface{}{
+				"type":       "damage",
+				"targetId":   "goblin-1",
+				"damage":     float64(10),
+				"damageType": "force",
+			},
+		},
+	}
+
+	payload := buildSpellCastPayload(args, result)
+
+	if payload["characterId"] != "wizard-1" {
+		t.Errorf("Expected characterId 'wizard-1', got '%v'", payload["characterId"])
+	}
+	if payload["spellName"] != "Magic Missile" {
+		t.Errorf("Expected spellName 'Magic Missile', got '%v'", payload["spellName"])
+	}
+	if payload["targetId"] != "goblin-1" {
+		t.Errorf("Expected targetId 'goblin-1', got '%v'", payload["targetId"])
+	}
+	if payload["damage"] != 10 {
+		t.Errorf("Expected damage 10, got '%v'", payload["damage"])
+	}
+	if payload["damageType"] != "force" {
+		t.Errorf("Expected damageType 'force', got '%v'", payload["damageType"])
+	}
+}
+
+// TestBuildEquipPayload verifies the buildEquipPayload helper.
+func TestBuildEquipPayload(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"item_id":      "chain-mail-1",
+		"slot":         "chest",
+	}
+	result := map[string]interface{}{
+		"success":  true,
+		"itemName": "Chain Mail",
+		"acBonus":  float64(5),
+	}
+
+	payload := buildEquipPayload(args, result)
+
+	if payload["characterId"] != "wizard-1" {
+		t.Errorf("Expected characterId 'wizard-1', got '%v'", payload["characterId"])
+	}
+	if payload["slot"] != "chest" {
+		t.Errorf("Expected slot 'chest', got '%v'", payload["slot"])
+	}
+	if payload["acBonus"] != 5 {
+		t.Errorf("Expected acBonus 5, got '%v'", payload["acBonus"])
+	}
+}
+
+// TestBuildItemUsePayload verifies the buildItemUsePayload helper.
+func TestBuildItemUsePayload(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"item_id":      "potion-heal-1",
+	}
+	result := map[string]interface{}{
+		"success":   true,
+		"itemName":  "Healing Potion",
+		"itemType":  "consumable",
+		"consumed":  true,
+		"healing":   float64(8),
+	}
+
+	payload := buildItemUsePayload(args, result)
+
+	if payload["characterId"] != "wizard-1" {
+		t.Errorf("Expected characterId 'wizard-1', got '%v'", payload["characterId"])
+	}
+	if payload["consumed"] != true {
+		t.Errorf("Expected consumed true, got '%v'", payload["consumed"])
+	}
+	if payload["healing"] != 8 {
+		t.Errorf("Expected healing 8, got '%v'", payload["healing"])
+	}
+}
+
+// --- v0.4 Phase 4: Additional edge-case tests ---
+
+// TestToIntFromResult verifies the toIntFromResult helper for type coercion.
+func TestToIntFromResult(t *testing.T) {
+	tests := []struct {
+		name        string
+		m           map[string]interface{}
+		key         string
+		defaultVal  int
+		expected    int
+	}{
+		{"float64 value", map[string]interface{}{"x": float64(42)}, "x", 0, 42},
+		{"int value", map[string]interface{}{"x": 7}, "x", 0, 7},
+		{"missing key returns default", map[string]interface{}{}, "x", 99, 99},
+		{"string value returns default", map[string]interface{}{"x": "notanumber"}, "x", 0, 0},
+		{"nil value returns default", map[string]interface{}{"x": nil}, "x", 5, 5},
+		{"zero float64 value", map[string]interface{}{"x": float64(0)}, "x", 10, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := toIntFromResult(tt.m, tt.key, tt.defaultVal)
+			if result != tt.expected {
+				t.Errorf("toIntFromResult(%v, %q, %d) = %d, want %d", tt.m, tt.key, tt.defaultVal, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGenerateEventID verifies that generateEventID produces unique IDs.
+func TestGenerateEventID(t *testing.T) {
+	id1 := generateEventID("spell")
+	id2 := generateEventID("spell")
+
+	if id1 == id2 {
+		t.Error("generateEventID should produce unique IDs")
+	}
+	if len(id1) < 10 {
+		t.Errorf("generateEventID produced suspiciously short ID: %s", id1)
+	}
+	// Should start with prefix
+	if !strings.HasPrefix(id1, "spell-") {
+		t.Errorf("Expected prefix 'spell-', got '%s'", id1)
+	}
+}
+
+// TestBuildSpellCastPayload_MissingEffects verifies spell payload when effects array is absent.
+func TestBuildSpellCastPayload_MissingEffects(t *testing.T) {
+	args := map[string]interface{}{
+		"caster_id": "wizard-1",
+		"spell_id":  "shield",
+	}
+	result := map[string]interface{}{
+		"success":       true,
+		"slotLevelUsed": float64(1),
+		"concentrating": true,
+	}
+
+	payload := buildSpellCastPayload(args, result)
+
+	if payload["characterId"] != "wizard-1" {
+		t.Errorf("Expected characterId 'wizard-1', got '%v'", payload["characterId"])
+	}
+	// spellName should fall back to spellId when not provided
+	if payload["spellName"] != "shield" {
+		t.Errorf("Expected spellName 'shield' (fallback), got '%v'", payload["spellName"])
+	}
+	// No damage or healing fields should be present
+	if _, hasDamage := payload["damage"]; hasDamage {
+		t.Error("damage should not be present when no effects")
+	}
+	if _, hasHealing := payload["healing"]; hasHealing {
+		t.Error("healing should not be present when no effects")
+	}
+}
+
+// TestBuildSpellCastPayload_MultipleEffects verifies damage accumulation and
+// deduplicated damageType collection across multiple effects.
+func TestBuildSpellCastPayload_MultipleEffects(t *testing.T) {
+	args := map[string]interface{}{
+		"caster_id": "wizard-1",
+		"spell_id":  "scorching_ray",
+		"target_id": "goblin-1",
+	}
+	result := map[string]interface{}{
+		"success":       true,
+		"spellName":     "Scorching Ray",
+		"slotLevelUsed": float64(2),
+		"concentrating": false,
+		"effects": []interface{}{
+			map[string]interface{}{"damage": float64(6), "damageType": "fire"},
+			map[string]interface{}{"damage": float64(4), "damageType": "force"},
+			map[string]interface{}{"damage": float64(8), "damageType": "fire"},
+			map[string]interface{}{"healing": float64(3)},
+		},
+	}
+
+	payload := buildSpellCastPayload(args, result)
+
+	// Total damage = 6 + 4 + 8 = 18
+	if payload["damage"] != 18 {
+		t.Errorf("Expected damage 18, got '%v'", payload["damage"])
+	}
+	// Total healing = 3
+	if payload["healing"] != 3 {
+		t.Errorf("Expected healing 3, got '%v'", payload["healing"])
+	}
+	// Two distinct damageTypes (fire, force) → comma-separated string.
+	// Duplicate "fire" from the third effect should be deduplicated.
+	if payload["damageType"] != "fire,force" {
+		t.Errorf("Expected damageType 'fire,force', got '%v'", payload["damageType"])
+	}
+}
+
+// TestBuildUnequipPayload verifies the buildUnequipPayload helper.
+func TestBuildUnequipPayload(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"slot":         "chest",
+	}
+	result := map[string]interface{}{
+		"success":  true,
+		"itemId":   "chain-mail-1",
+		"itemName": "Chain Mail",
+	}
+
+	payload := buildUnequipPayload(args, result)
+
+	if payload["characterId"] != "wizard-1" {
+		t.Errorf("Expected characterId 'wizard-1', got '%v'", payload["characterId"])
+	}
+	if payload["slot"] != "chest" {
+		t.Errorf("Expected slot 'chest', got '%v'", payload["slot"])
+	}
+	if payload["itemId"] != "chain-mail-1" {
+		t.Errorf("Expected itemId 'chain-mail-1', got '%v'", payload["itemId"])
+	}
+	if payload["itemName"] != "Chain Mail" {
+		t.Errorf("Expected itemName 'Chain Mail', got '%v'", payload["itemName"])
+	}
+}
+
+// TestBuildMapInteractPayload verifies the buildMapInteractPayload helper.
+func TestBuildMapInteractPayload(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"target_id":    "door-1",
+		"action":       "open",
+	}
+	result := map[string]interface{}{
+		"success":          true,
+		"interactableType": "door",
+		"mapId":            "map-dungeon-1",
+		"position":         map[string]interface{}{"x": float64(3), "y": float64(7)},
+	}
+
+	payload := buildMapInteractPayload(args, result)
+
+	if payload["characterId"] != "wizard-1" {
+		t.Errorf("Expected characterId 'wizard-1', got '%v'", payload["characterId"])
+	}
+	if payload["interactableId"] != "door-1" {
+		t.Errorf("Expected interactableId 'door-1', got '%v'", payload["interactableId"])
+	}
+	if payload["interactableType"] != "door" {
+		t.Errorf("Expected interactableType 'door', got '%v'", payload["interactableType"])
+	}
+	if payload["action"] != "open" {
+		t.Errorf("Expected action 'open', got '%v'", payload["action"])
+	}
+	if payload["mapId"] != "map-dungeon-1" {
+		t.Errorf("Expected mapId 'map-dungeon-1', got '%v'", payload["mapId"])
+	}
+	pos := payload["position"].(map[string]interface{})
+	if pos["x"] != float64(3) || pos["y"] != float64(7) {
+		t.Errorf("Expected position {x:3, y:7}, got %v", pos)
+	}
+}
+
+// TestBuildMapInteractPayload_MissingPosition verifies default position when missing.
+func TestBuildMapInteractPayload_MissingPosition(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"target_id":    "chest-1",
+		"action":       "open",
+	}
+	result := map[string]interface{}{
+		"success":          true,
+		"interactableType": "chest",
+		"mapId":            "map-1",
+		// position intentionally omitted
+	}
+
+	payload := buildMapInteractPayload(args, result)
+
+	pos := payload["position"].(map[string]interface{})
+	if pos["x"] != 0 || pos["y"] != 0 {
+		t.Errorf("Expected default position {x:0, y:0}, got %v", pos)
+	}
+}
+
+// TestBuildMapSwitchPayload verifies the buildMapSwitchPayload helper.
+func TestBuildMapSwitchPayload(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"from_map_id":  "map-dungeon-1",
+	}
+	result := map[string]interface{}{
+		"success":    true,
+		"toMapId":    "map-dungeon-2",
+		"entryPoint": "south_entrance",
+		"position":   map[string]interface{}{"x": float64(0), "y": float64(5)},
+	}
+
+	payload := buildMapSwitchPayload(args, result)
+
+	if payload["characterId"] != "wizard-1" {
+		t.Errorf("Expected characterId 'wizard-1', got '%v'", payload["characterId"])
+	}
+	if payload["fromMapId"] != "map-dungeon-1" {
+		t.Errorf("Expected fromMapId 'map-dungeon-1', got '%v'", payload["fromMapId"])
+	}
+	if payload["toMapId"] != "map-dungeon-2" {
+		t.Errorf("Expected toMapId 'map-dungeon-2', got '%v'", payload["toMapId"])
+	}
+	if payload["entryPoint"] != "south_entrance" {
+		t.Errorf("Expected entryPoint 'south_entrance', got '%v'", payload["entryPoint"])
+	}
+	pos := payload["position"].(map[string]interface{})
+	if pos["x"] != float64(0) || pos["y"] != float64(5) {
+		t.Errorf("Expected position {x:0, y:5}, got %v", pos)
+	}
+}
+
+// TestBuildMapSwitchPayload_MissingPosition verifies default position when missing.
+func TestBuildMapSwitchPayload_MissingPosition(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"from_map_id":  "map-dungeon-1",
+	}
+	result := map[string]interface{}{
+		"success":    true,
+		"toMapId":    "map-dungeon-2",
+		"entryPoint": "north_entrance",
+		// position intentionally omitted
+	}
+
+	payload := buildMapSwitchPayload(args, result)
+
+	pos := payload["position"].(map[string]interface{})
+	if pos["x"] != 0 || pos["y"] != 0 {
+		t.Errorf("Expected default position {x:0, y:0}, got %v", pos)
+	}
+}
+
+// TestBuildEquipPayload_OldItem verifies equip with oldItemId.
+func TestBuildEquipPayload_OldItem(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"item_id":      "plate-armor-1",
+		"slot":         "chest",
+	}
+	result := map[string]interface{}{
+		"success":   true,
+		"itemName":  "Plate Armor",
+		"acBonus":   float64(7),
+		"oldItemId": "chain-mail-1",
+	}
+
+	payload := buildEquipPayload(args, result)
+
+	if payload["oldItemId"] != "chain-mail-1" {
+		t.Errorf("Expected oldItemId 'chain-mail-1', got '%v'", payload["oldItemId"])
+	}
+	if payload["acBonus"] != 7 {
+		t.Errorf("Expected acBonus 7, got '%v'", payload["acBonus"])
+	}
+}
+
+// TestBuildItemUsePayload_WithTargetAndDamage verifies item use with target and damage.
+func TestBuildItemUsePayload_WithTargetAndDamage(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"item_id":      "alchemist-fire-1",
+		"target_id":    "goblin-1",
+	}
+	result := map[string]interface{}{
+		"success":    true,
+		"itemName":   "Alchemist's Fire",
+		"itemType":   "consumable",
+		"consumed":   true,
+		"damage":     float64(7),
+		"description": "A flask of volatile liquid",
+	}
+
+	payload := buildItemUsePayload(args, result)
+
+	if payload["targetId"] != "goblin-1" {
+		t.Errorf("Expected targetId 'goblin-1', got '%v'", payload["targetId"])
+	}
+	if payload["damage"] != 7 {
+		t.Errorf("Expected damage 7, got '%v'", payload["damage"])
+	}
+	if payload["description"] != "A flask of volatile liquid" {
+		t.Errorf("Expected description, got '%v'", payload["description"])
+	}
+}
+
+// TestBuildSpellCastPayload_NoTargetId verifies spell without target.
+func TestBuildSpellCastPayload_NoTargetId(t *testing.T) {
+	args := map[string]interface{}{
+		"caster_id": "wizard-1",
+		"spell_id":  "shield",
+		// target_id intentionally omitted
+	}
+	result := map[string]interface{}{
+		"success":       true,
+		"spellName":     "Shield",
+		"slotLevelUsed": float64(1),
+		"concentrating": true,
+	}
+
+	payload := buildSpellCastPayload(args, result)
+
+	if _, hasTarget := payload["targetId"]; hasTarget {
+		t.Error("targetId should not be present when not provided")
 	}
 }

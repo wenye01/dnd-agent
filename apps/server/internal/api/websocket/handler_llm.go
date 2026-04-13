@@ -8,6 +8,7 @@ import (
 
 	"github.com/dnd-game/server/internal/client/llm"
 	"github.com/dnd-game/server/internal/shared/models"
+	"github.com/google/uuid"
 )
 
 // processLLMResponse handles the streaming LLM response with agentic loop.
@@ -132,6 +133,85 @@ func (h *Hub) executeAndSendToolResult(client *Client, tc *llm.ToolCall, request
 			RequestID: requestID,
 			Timestamp: getCurrentTimestamp(),
 		})
+
+	case "cast_spell":
+		// Build spell_cast event from the tool result
+		if castResult, ok := result.(map[string]interface{}); ok {
+			if success, _ := castResult["success"].(bool); success {
+				payload := buildSpellCastPayload(tc.Arguments, castResult)
+				client.SendMessage(&models.ServerMessage{
+					Type:      models.MsgTypeSpellCast,
+					Payload:   payload,
+					RequestID: requestID,
+					Timestamp: getCurrentTimestamp(),
+				})
+			}
+		}
+
+	case "use_item":
+		if itemResult, ok := result.(map[string]interface{}); ok {
+			if success, _ := itemResult["success"].(bool); success {
+				payload := buildItemUsePayload(tc.Arguments, itemResult)
+				client.SendMessage(&models.ServerMessage{
+					Type:      models.MsgTypeItemUse,
+					Payload:   payload,
+					RequestID: requestID,
+					Timestamp: getCurrentTimestamp(),
+				})
+			}
+		}
+
+	case "equip_item":
+		if equipResult, ok := result.(map[string]interface{}); ok {
+			if success, _ := equipResult["success"].(bool); success {
+				payload := buildEquipPayload(tc.Arguments, equipResult)
+				client.SendMessage(&models.ServerMessage{
+					Type:      models.MsgTypeEquip,
+					Payload:   payload,
+					RequestID: requestID,
+					Timestamp: getCurrentTimestamp(),
+				})
+			}
+		}
+
+	case "unequip_item":
+		if unequipResult, ok := result.(map[string]interface{}); ok {
+			if success, _ := unequipResult["success"].(bool); success {
+				payload := buildUnequipPayload(tc.Arguments, unequipResult)
+				client.SendMessage(&models.ServerMessage{
+					Type:      models.MsgTypeUnequip,
+					Payload:   payload,
+					RequestID: requestID,
+					Timestamp: getCurrentTimestamp(),
+				})
+			}
+		}
+
+	case "interact":
+		if interactResult, ok := result.(map[string]interface{}); ok {
+			if success, _ := interactResult["success"].(bool); success {
+				payload := buildMapInteractPayload(tc.Arguments, interactResult)
+				client.SendMessage(&models.ServerMessage{
+					Type:      models.MsgTypeMapInteract,
+					Payload:   payload,
+					RequestID: requestID,
+					Timestamp: getCurrentTimestamp(),
+				})
+			}
+		}
+
+	case "map_switch":
+		if mapSwitchResult, ok := result.(map[string]interface{}); ok {
+			if success, _ := mapSwitchResult["success"].(bool); success {
+				payload := buildMapSwitchPayload(tc.Arguments, mapSwitchResult)
+				client.SendMessage(&models.ServerMessage{
+					Type:      models.MsgTypeMapSwitch,
+					Payload:   payload,
+					RequestID: requestID,
+					Timestamp: getCurrentTimestamp(),
+				})
+			}
+		}
 	}
 
 	h.logger.Info().
@@ -197,4 +277,212 @@ func stripThinkTags(text string) string {
 		text = text[:start] + text[start+end+len("</think"):]
 	}
 	return strings.TrimSpace(text)
+}
+
+// --- v0.4 Phase 4: Payload builder helpers for game event messages ---
+
+// generateEventID creates a unique event ID using UUID to avoid collisions
+// when multiple events occur within the same second.
+func generateEventID(prefix string) string {
+	return fmt.Sprintf("%s-%s", prefix, uuid.New().String())
+}
+
+func buildSpellCastPayload(args map[string]interface{}, result map[string]interface{}) map[string]interface{} {
+	casterID, _ := args["caster_id"].(string)
+	spellID, _ := args["spell_id"].(string)
+	targetID, _ := args["target_id"].(string)
+	slotLevel := toIntFromResult(result, "slot_level_used", 0)
+	concentrating, _ := result["concentrating"].(bool)
+	spellName, _ := result["spellName"].(string)
+	if spellName == "" {
+		spellName = spellID
+	}
+
+	// Extract damage/healing from effects array if present.
+	// toIntFromResult returns 0 by default, so no separate existence check is needed.
+	var totalDamage int
+	var totalHealing int
+	var damageTypes []string
+	seenDT := make(map[string]bool)
+	if effects, ok := result["effects"].([]interface{}); ok {
+		for _, e := range effects {
+			if em, ok := e.(map[string]interface{}); ok {
+				totalDamage += toIntFromResult(em, "damage", 0)
+				if dt, ok := em["damageType"].(string); ok && dt != "" && !seenDT[dt] {
+					seenDT[dt] = true
+					damageTypes = append(damageTypes, dt)
+				}
+				totalHealing += toIntFromResult(em, "healing", 0)
+			}
+		}
+	}
+
+	payload := map[string]interface{}{
+		"eventId":       generateEventID("spell"),
+		"timestamp":     getCurrentTimestamp(),
+		"characterId":   casterID,
+		"spellId":       spellID,
+		"spellName":     spellName,
+		"slotLevelUsed": slotLevel,
+		"concentrating": concentrating,
+	}
+	if targetID != "" {
+		payload["targetId"] = targetID
+	}
+	if totalDamage > 0 {
+		payload["damage"] = totalDamage
+	}
+	if totalHealing > 0 {
+		payload["healing"] = totalHealing
+	}
+	switch len(damageTypes) {
+	case 1:
+		payload["damageType"] = damageTypes[0]
+	default:
+		if len(damageTypes) > 1 {
+			payload["damageType"] = strings.Join(damageTypes, ",")
+		}
+	}
+	return payload
+}
+
+func buildItemUsePayload(args map[string]interface{}, result map[string]interface{}) map[string]interface{} {
+	characterID, _ := args["character_id"].(string)
+	itemID, _ := args["item_id"].(string)
+	targetID, _ := args["target_id"].(string)
+	itemName, _ := result["itemName"].(string)
+	if itemName == "" {
+		itemName = itemID
+	}
+	itemType, _ := result["itemType"].(string)
+	consumed, _ := result["consumed"].(bool)
+	healing := toIntFromResult(result, "healing", 0)
+	damage := toIntFromResult(result, "damage", 0)
+	description, _ := result["description"].(string)
+
+	payload := map[string]interface{}{
+		"eventId":     generateEventID("item"),
+		"timestamp":   getCurrentTimestamp(),
+		"characterId": characterID,
+		"itemId":      itemID,
+		"itemName":    itemName,
+		"itemType":    itemType,
+		"consumed":    consumed,
+	}
+	if targetID != "" {
+		payload["targetId"] = targetID
+	}
+	if healing > 0 {
+		payload["healing"] = healing
+	}
+	if damage > 0 {
+		payload["damage"] = damage
+	}
+	if description != "" {
+		payload["description"] = description
+	}
+	return payload
+}
+
+func buildEquipPayload(args map[string]interface{}, result map[string]interface{}) map[string]interface{} {
+	characterID, _ := args["character_id"].(string)
+	itemID, _ := args["item_id"].(string)
+	slot, _ := args["slot"].(string)
+	itemName, _ := result["itemName"].(string)
+	if itemName == "" {
+		itemName = itemID
+	}
+	acBonus := toIntFromResult(result, "acBonus", 0)
+	oldItemID, _ := result["oldItemId"].(string)
+
+	payload := map[string]interface{}{
+		"eventId":     generateEventID("equip"),
+		"timestamp":   getCurrentTimestamp(),
+		"characterId": characterID,
+		"itemId":      itemID,
+		"itemName":    itemName,
+		"slot":        slot,
+	}
+	if acBonus > 0 {
+		payload["acBonus"] = acBonus
+	}
+	if oldItemID != "" {
+		payload["oldItemId"] = oldItemID
+	}
+	return payload
+}
+
+func buildUnequipPayload(args map[string]interface{}, result map[string]interface{}) map[string]interface{} {
+	characterID, _ := args["character_id"].(string)
+	slot, _ := args["slot"].(string)
+	itemID, _ := result["itemId"].(string)
+	itemName, _ := result["itemName"].(string)
+
+	return map[string]interface{}{
+		"eventId":     generateEventID("unequip"),
+		"timestamp":   getCurrentTimestamp(),
+		"characterId": characterID,
+		"itemId":      itemID,
+		"itemName":    itemName,
+		"slot":        slot,
+	}
+}
+
+func buildMapInteractPayload(args map[string]interface{}, result map[string]interface{}) map[string]interface{} {
+	characterID, _ := args["character_id"].(string)
+	targetID, _ := args["target_id"].(string)
+	action, _ := args["action"].(string)
+	interactableType, _ := result["interactableType"].(string)
+	mapID, _ := result["mapId"].(string)
+
+	pos := map[string]interface{}{"x": 0, "y": 0}
+	if p, ok := result["position"].(map[string]interface{}); ok {
+		pos = p
+	}
+
+	return map[string]interface{}{
+		"eventId":         generateEventID("map"),
+		"timestamp":       getCurrentTimestamp(),
+		"characterId":     characterID,
+		"interactableId":  targetID,
+		"interactableType": interactableType,
+		"action":          action,
+		"mapId":           mapID,
+		"position":        pos,
+	}
+}
+
+func buildMapSwitchPayload(args map[string]interface{}, result map[string]interface{}) map[string]interface{} {
+	characterID, _ := args["character_id"].(string)
+	fromMapID, _ := args["from_map_id"].(string)
+	toMapID, _ := result["toMapId"].(string)
+	entryPoint, _ := result["entryPoint"].(string)
+
+	pos := map[string]interface{}{"x": 0, "y": 0}
+	if p, ok := result["position"].(map[string]interface{}); ok {
+		pos = p
+	}
+
+	return map[string]interface{}{
+		"eventId":     generateEventID("mapswitch"),
+		"timestamp":   getCurrentTimestamp(),
+		"characterId": characterID,
+		"fromMapId":   fromMapID,
+		"toMapId":     toMapID,
+		"entryPoint":  entryPoint,
+		"position":    pos,
+	}
+}
+
+// toIntFromResult extracts an integer from a map[string]interface{}.
+func toIntFromResult(m map[string]interface{}, key string, defaultVal int) int {
+	if v, ok := m[key]; ok {
+		switch val := v.(type) {
+		case float64:
+			return int(val)
+		case int:
+			return val
+		}
+	}
+	return defaultVal
 }
