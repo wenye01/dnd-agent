@@ -33,6 +33,11 @@ func (h *Hub) processLLMResponse(client *Client, text, requestID string) {
 // response without any tool calls (agentic loop).
 const maxToolLoopIterations = 5
 
+const (
+	combatEventStart = "combat_start"
+	combatEventEnd   = "combat_end"
+)
+
 func (h *Hub) processStreamWithToolLoop(ctx context.Context, client *Client, stream <-chan llm.StreamChunk, tools []llm.ToolDefinition, requestID string) {
 	var fullText strings.Builder
 	var toolCalls []llm.ToolCall
@@ -139,7 +144,7 @@ func (h *Hub) executeAndSendToolResult(client *Client, tc *llm.ToolCall, request
 		client.SendMessage(&models.ServerMessage{
 			Type: models.MsgTypeCombatEvent,
 			Payload: map[string]interface{}{
-				"eventType": "combat_start",
+				"eventType": combatEventStart,
 			},
 			RequestID: requestID,
 			Timestamp: getCurrentTimestamp(),
@@ -150,7 +155,7 @@ func (h *Hub) executeAndSendToolResult(client *Client, tc *llm.ToolCall, request
 		client.SendMessage(&models.ServerMessage{
 			Type: models.MsgTypeCombatEvent,
 			Payload: map[string]interface{}{
-				"eventType": "combat_end",
+				"eventType": combatEventEnd,
 			},
 			RequestID: requestID,
 			Timestamp: getCurrentTimestamp(),
