@@ -122,10 +122,14 @@ export const useGameStore = create<GameStore>()(
           const party = state.gameState.party.map((char) => {
             if (char.id !== payload.characterId) return char
             if (!payload.consumed) return char
-            // Remove one unit of the consumed item from inventory
-            const inventory = char.inventory.filter(
-              (item) => item.id !== payload.itemId,
-            )
+            // Reduce quantity by 1 for consumed items; remove when quantity reaches 0
+            const inventory = char.inventory
+              .map((item) =>
+                item.id === payload.itemId
+                  ? { ...item, quantity: (item.quantity ?? 1) - 1 }
+                  : item,
+              )
+              .filter((item) => item.quantity > 0)
             return { ...char, inventory }
           })
           return { gameState: { ...state.gameState, party } }

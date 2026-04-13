@@ -199,6 +199,19 @@ func (h *Hub) executeAndSendToolResult(client *Client, tc *llm.ToolCall, request
 				})
 			}
 		}
+
+	case "map_switch":
+		if mapSwitchResult, ok := result.(map[string]interface{}); ok {
+			if success, _ := mapSwitchResult["success"].(bool); success {
+				payload := buildMapSwitchPayload(tc.Arguments, mapSwitchResult)
+				client.SendMessage(&models.ServerMessage{
+					Type:      models.MsgTypeMapSwitch,
+					Payload:   payload,
+					RequestID: requestID,
+					Timestamp: getCurrentTimestamp(),
+				})
+			}
+		}
 	}
 
 	h.logger.Info().
@@ -436,6 +449,28 @@ func buildMapInteractPayload(args map[string]interface{}, result map[string]inte
 		"action":          action,
 		"mapId":           mapID,
 		"position":        pos,
+	}
+}
+
+func buildMapSwitchPayload(args map[string]interface{}, result map[string]interface{}) map[string]interface{} {
+	characterID, _ := args["character_id"].(string)
+	fromMapID, _ := args["from_map_id"].(string)
+	toMapID, _ := result["toMapId"].(string)
+	entryPoint, _ := result["entryPoint"].(string)
+
+	pos := map[string]interface{}{"x": 0, "y": 0}
+	if p, ok := result["position"].(map[string]interface{}); ok {
+		pos = p
+	}
+
+	return map[string]interface{}{
+		"eventId":     generateEventID("mapswitch"),
+		"timestamp":   getCurrentTimestamp(),
+		"characterId": characterID,
+		"fromMapId":   fromMapID,
+		"toMapId":     toMapID,
+		"entryPoint":  entryPoint,
+		"position":    pos,
 	}
 }
 

@@ -876,6 +876,60 @@ func TestBuildMapInteractPayload_MissingPosition(t *testing.T) {
 	}
 }
 
+// TestBuildMapSwitchPayload verifies the buildMapSwitchPayload helper.
+func TestBuildMapSwitchPayload(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"from_map_id":  "map-dungeon-1",
+	}
+	result := map[string]interface{}{
+		"success":    true,
+		"toMapId":    "map-dungeon-2",
+		"entryPoint": "south_entrance",
+		"position":   map[string]interface{}{"x": float64(0), "y": float64(5)},
+	}
+
+	payload := buildMapSwitchPayload(args, result)
+
+	if payload["characterId"] != "wizard-1" {
+		t.Errorf("Expected characterId 'wizard-1', got '%v'", payload["characterId"])
+	}
+	if payload["fromMapId"] != "map-dungeon-1" {
+		t.Errorf("Expected fromMapId 'map-dungeon-1', got '%v'", payload["fromMapId"])
+	}
+	if payload["toMapId"] != "map-dungeon-2" {
+		t.Errorf("Expected toMapId 'map-dungeon-2', got '%v'", payload["toMapId"])
+	}
+	if payload["entryPoint"] != "south_entrance" {
+		t.Errorf("Expected entryPoint 'south_entrance', got '%v'", payload["entryPoint"])
+	}
+	pos := payload["position"].(map[string]interface{})
+	if pos["x"] != float64(0) || pos["y"] != float64(5) {
+		t.Errorf("Expected position {x:0, y:5}, got %v", pos)
+	}
+}
+
+// TestBuildMapSwitchPayload_MissingPosition verifies default position when missing.
+func TestBuildMapSwitchPayload_MissingPosition(t *testing.T) {
+	args := map[string]interface{}{
+		"character_id": "wizard-1",
+		"from_map_id":  "map-dungeon-1",
+	}
+	result := map[string]interface{}{
+		"success":    true,
+		"toMapId":    "map-dungeon-2",
+		"entryPoint": "north_entrance",
+		// position intentionally omitted
+	}
+
+	payload := buildMapSwitchPayload(args, result)
+
+	pos := payload["position"].(map[string]interface{})
+	if pos["x"] != 0 || pos["y"] != 0 {
+		t.Errorf("Expected default position {x:0, y:0}, got %v", pos)
+	}
+}
+
 // TestBuildEquipPayload_OldItem verifies equip with oldItemId.
 func TestBuildEquipPayload_OldItem(t *testing.T) {
 	args := map[string]interface{}{

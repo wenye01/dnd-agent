@@ -229,8 +229,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
           ? `${payload.characterId} casts ${payload.spellName} healing ${payload.healing} HP`
           : `${payload.characterId} casts ${payload.spellName}`
 
-      // Emit visual effect events for Phaser
-      eventBus.emit(GameEvents.SPELL_CAST, payload)
+      // Emit moved to useGameMessages.ts handler (single source of truth to avoid double animation)
       if (payload.damage && payload.targetId) {
         eventBus.emit(GameEvents.EFFECT_DAMAGE, {
           eventType: 'damage',
@@ -289,13 +288,20 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
           ? `${payload.characterId} uses ${payload.itemName} for ${payload.damage} damage`
           : `${payload.characterId} uses ${payload.itemName}`
 
-      // Emit visual effect events for Phaser
-      eventBus.emit(GameEvents.ITEM_USE, payload)
+      // Emit moved to useGameMessages.ts handler (single source of truth to avoid double animation)
       if (payload.healing) {
         eventBus.emit(GameEvents.EFFECT_HEAL, {
           eventType: 'heal',
           characterId: payload.characterId,
           amount: payload.healing,
+        })
+      }
+      if (payload.damage && payload.targetId) {
+        eventBus.emit(GameEvents.EFFECT_DAMAGE, {
+          eventType: 'damage',
+          characterId: payload.characterId,
+          target: payload.targetId,
+          damage: payload.damage,
         })
       }
 

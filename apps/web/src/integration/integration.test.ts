@@ -317,9 +317,11 @@ describe('Phase 4 Integration: Scenario 1 - Spell Casting (Magic Missile)', () =
       damageType: 'force',
     }
 
-    useCombatStore.getState().handleCombatSpellCast(spellPayload)
+    // SPELL_CAST is emitted by the message router (useGameMessages), not by combatStore.
+    // Simulate the router emitting the event (same pattern as map_interact tests).
+    eventBus.emit(GameEvents.SPELL_CAST, { ...spellPayload, source: 'server' as const })
 
-    expect(handler).toHaveBeenCalledWith(spellPayload)
+    expect(handler).toHaveBeenCalledWith({ ...spellPayload, source: 'server' as const })
   })
 })
 

@@ -551,7 +551,7 @@ describe('combatStore', () => {
       expect(entries[entries.length - 1].type).toBe('info')
     })
 
-    it('should emit SPELL_CAST event on eventBus', () => {
+    it('should NOT emit SPELL_CAST event (emitted by useGameMessages instead)', () => {
       const combat = createMockCombatState()
       useCombatStore.getState().setCombat(combat)
       const handler = vi.fn()
@@ -571,7 +571,7 @@ describe('combatStore', () => {
       }
 
       useCombatStore.getState().handleCombatSpellCast(payload)
-      expect(handler).toHaveBeenCalledWith(payload)
+      expect(handler).not.toHaveBeenCalled()
     })
 
     it('should emit EFFECT_DAMAGE event when damage is dealt', () => {
@@ -795,7 +795,7 @@ describe('combatStore', () => {
       expect(entries[entries.length - 1].type).toBe('damage')
     })
 
-    it('should emit ITEM_USE event on eventBus', () => {
+    it('should NOT emit ITEM_USE event (emitted by useGameMessages instead)', () => {
       const combat = createMockCombatState()
       useCombatStore.getState().setCombat(combat)
       const handler = vi.fn()
@@ -813,7 +813,7 @@ describe('combatStore', () => {
       }
 
       useCombatStore.getState().handleCombatItemUse(payload)
-      expect(handler).toHaveBeenCalledWith(payload)
+      expect(handler).not.toHaveBeenCalled()
     })
 
     it('should emit EFFECT_HEAL event when healing is applied', () => {
@@ -845,6 +845,55 @@ describe('combatStore', () => {
           amount: 8,
         }),
       )
+    })
+
+    it('should emit EFFECT_DAMAGE event when item deals damage', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+      const handler = vi.fn()
+      eventBus.on(GameEvents.EFFECT_DAMAGE, handler)
+
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-dmg-1',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        targetId: 'goblin-1',
+        itemId: 'alchemist-fire-1',
+        itemName: 'Alchemist\'s Fire',
+        itemType: 'consumable',
+        consumed: true,
+        damage: 7,
+      })
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: 'damage',
+          characterId: 'fighter-1',
+          target: 'goblin-1',
+          damage: 7,
+        }),
+      )
+    })
+
+    it('should not emit EFFECT_DAMAGE when item has no targetId', () => {
+      const combat = createMockCombatState()
+      useCombatStore.getState().setCombat(combat)
+      const handler = vi.fn()
+      eventBus.on(GameEvents.EFFECT_DAMAGE, handler)
+
+      // damage but no targetId -- should not emit EFFECT_DAMAGE
+      useCombatStore.getState().handleCombatItemUse({
+        eventId: 'item-nodmg-1',
+        timestamp: Date.now(),
+        characterId: 'fighter-1',
+        itemId: 'alchemist-fire-1',
+        itemName: 'Alchemist\'s Fire',
+        itemType: 'consumable',
+        consumed: true,
+        damage: 7,
+      })
+
+      expect(handler).not.toHaveBeenCalled()
     })
 
     it('should add info log entry for items with no damage or healing', () => {

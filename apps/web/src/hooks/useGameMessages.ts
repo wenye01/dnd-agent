@@ -328,7 +328,7 @@ export function useGameMessages() {
     }
 
     // Emit EventBus event for Phaser spell animation
-    eventBus.emit(GameEvents.SPELL_CAST, payload)
+    eventBus.emit(GameEvents.SPELL_CAST, { ...payload, source: 'server' as const })
 
     // Build notification text
     let text = `${characterId} casts ${spellName}`
@@ -359,7 +359,7 @@ export function useGameMessages() {
     }
 
     // Emit EventBus event for Phaser item use animation
-    eventBus.emit(GameEvents.ITEM_USE, payload)
+    eventBus.emit(GameEvents.ITEM_USE, { ...payload, source: 'server' as const })
 
     // Build notification text
     let text = `${characterId} uses ${itemName}`
@@ -382,7 +382,7 @@ export function useGameMessages() {
     useGameStore.getState().handleEquip(payload)
 
     // Emit EventBus event for Phaser visual update
-    eventBus.emit(GameEvents.EQUIP_CHANGE, payload)
+    eventBus.emit(GameEvents.EQUIP_CHANGE, { ...payload, source: 'server' as const })
 
     let text = `${characterId} equips ${itemName} in ${slot} slot`
     if (acBonus) text += ` (+${acBonus} AC)`
@@ -402,7 +402,7 @@ export function useGameMessages() {
     useGameStore.getState().handleUnequip(payload)
 
     // Emit EventBus event for Phaser visual update
-    eventBus.emit(GameEvents.UNEQUIP_CHANGE, payload)
+    eventBus.emit(GameEvents.UNEQUIP_CHANGE, { ...payload, source: 'server' as const })
 
     addSystemMessage(`${characterId} unequips ${itemName} from ${slot} slot`)
   }, [addSystemMessage])
@@ -417,7 +417,7 @@ export function useGameMessages() {
     const { characterId, interactableType, action } = payload
 
     // Emit EventBus event for Phaser map interaction
-    eventBus.emit(GameEvents.MAP_INTERACT, payload)
+    eventBus.emit(GameEvents.MAP_INTERACT, { ...payload, source: 'server' as const })
 
     addSystemMessage(`${characterId} ${action}s ${interactableType} on the map`)
   }, [addSystemMessage])
@@ -435,7 +435,7 @@ export function useGameMessages() {
     useGameStore.getState().handleMapSwitch(payload)
 
     // Emit EventBus event for Phaser map transition animation
-    eventBus.emit(GameEvents.MAP_SWITCH, payload)
+    eventBus.emit(GameEvents.MAP_SWITCH, { ...payload, source: 'server' as const })
 
     addSystemMessage(`Map changed from ${fromMapId} to ${toMapId}`)
   }, [addSystemMessage])
