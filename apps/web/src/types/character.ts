@@ -18,6 +18,25 @@ export interface EquipmentSlot {
   acBonus?: number
 }
 
+// 物品类型
+export type ItemType =
+  | 'weapon'
+  | 'armor'
+  | 'shield'
+  | 'potion'
+  | 'scroll'
+  | 'wand'
+  | 'ring'
+  | 'amulet'
+  | 'cloak'
+  | 'tool'
+  | 'gear'
+  | 'treasure'
+  | 'ammo'
+
+// 物品稀有度
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'very-rare' | 'legendary'
+
 // 背包物品
 export interface InventoryItem {
   id: string
@@ -25,6 +44,60 @@ export interface InventoryItem {
   quantity: number
   weight?: number
   description?: string
+  type?: ItemType
+  rarity?: ItemRarity
+  value?: number
+  // Weapon properties
+  damage?: string
+  damageType?: string
+  // Armor properties
+  armorClass?: number
+  // Consumable properties
+  charges?: number
+  maxCharges?: number
+  // Spell properties (scrolls, wands)
+  spellLevel?: number
+  spellId?: string
+  // Equipment slot this item fits into
+  equipSlot?: string
+  // Display
+  icon?: string
+}
+
+// 法术学派
+export type SpellSchool =
+  | 'abjuration'
+  | 'conjuration'
+  | 'divination'
+  | 'enchantment'
+  | 'evocation'
+  | 'illusion'
+  | 'necromancy'
+  | 'transmutation'
+
+// 法术定义
+export interface Spell {
+  id: string
+  name: string
+  level: number
+  school: SpellSchool
+  castingTime: string
+  range: string
+  duration: string
+  components: string
+  description: string
+  ritual: boolean
+  concentration: boolean
+  // Higher level casting
+  higherLevel?: string
+  // Damage info
+  damage?: string
+  damageType?: string
+  // Save info
+  saveType?: string
+  saveDc?: number
+  // Display
+  icon?: string
 }
 
 // 法术位
@@ -35,6 +108,15 @@ export interface SpellSlotLevel {
 
 // 法术位映射 (1-9级)
 export type SpellSlots = Record<number, SpellSlotLevel>
+
+// 专注状态
+export interface ConcentrationState {
+  spellId: string
+  spellName: string
+  casterId: string
+  targetId?: string
+  remainingRounds?: number
+}
 
 // 角色定义
 export interface Character {
@@ -73,6 +155,13 @@ export interface Character {
 
   // 法术位
   spellSlots?: SpellSlots
+
+  // 已知法术
+  knownSpells?: string[]
+  // 已准备法术
+  preparedSpells?: string[]
+  // 专注状态
+  concentration?: ConcentrationState | null
 }
 
 // 怪物/NPC (简化版角色)

@@ -24,10 +24,22 @@ export const GameEvents = {
   EFFECT_DEATH: 'effect:death',
   EFFECT_MISS: 'effect:miss',
 
-  // --- v0.4 Phase 4: Spell/Item/Map integration events ---
+  // Scene map events (Phaser -> React)
+  SCENEMAP_TILE_CLICK: 'scenemap:tile_click',
+  SCENEMAP_INTERACT: 'scenemap:interact',
+  SCENEMAP_TRANSITION_START: 'scenemap:transition_start',
+  SCENEMAP_TRANSITION_END: 'scenemap:transition_end',
 
-  // Spell events (React -> Phaser for animations, Phaser -> React for results)
+  // Inventory events (React -> WebSocket)
+  INVENTORY_EQUIP: 'inventory:equip',
+  INVENTORY_UNEQUIP: 'inventory:unequip',
+  INVENTORY_USE: 'inventory:use',
+  INVENTORY_DROP: 'inventory:drop',
+
+  // Spell events (React -> WebSocket / Phaser animations)
   SPELL_CAST: 'spell:cast',
+  SPELL_PREPARE: 'spell:prepare',
+  SPELL_UNPREPARE: 'spell:unprepare',
   SPELL_EFFECT: 'spell:effect',
   SPELL_COMPLETE: 'spell:complete',
 

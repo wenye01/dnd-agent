@@ -6,3 +6,7 @@ export { SkillsList } from './SkillsList'
 export { SpellSlotsBar } from './SpellSlotsBar'
 export { SavingThrows } from './SavingThrows'
 export { DeathSavesDisplay } from './DeathSavesDisplay'
+
+// v0.4 Panels
+export { default as InventoryPanel } from './InventoryPanel'
+export { default as SpellbookPanel } from './SpellbookPanel'

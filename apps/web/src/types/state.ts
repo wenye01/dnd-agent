@@ -129,3 +129,28 @@ export interface GameMap {
   tiles: number[][]
   entities: MapEntity[]
 }
+
+// 地图交互点类型
+export type InteractableType = 'door' | 'chest' | 'npc' | 'lever' | 'trap' | 'portal' | 'item'
+
+// 地图交互点
+export interface MapInteractable {
+  id: string
+  type: InteractableType
+  name: string
+  description?: string
+  position: { x: number; y: number }
+  icon?: string
+  isAvailable: boolean
+}
+
+// 地图触发器
+export interface MapTrigger {
+  id: string
+  type: 'area_enter' | 'area_exit' | 'interact' | 'proximity'
+  area: { x: number; y: number; width: number; height: number }
+  action: string
+  data?: unknown
+  once?: boolean
+  triggered?: boolean
+}
