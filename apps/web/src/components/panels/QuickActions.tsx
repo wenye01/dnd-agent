@@ -4,8 +4,13 @@ import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { useWebSocket } from '../../contexts/WebSocketContext'
 import { useGameStore } from '../../stores/gameStore'
+import { useChatStore } from '../../stores/chatStore'
 
 const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
+
+const SPELLCASTER_CLASSES = [
+  'wizard', 'sorcerer', 'cleric', 'bard', 'druid', 'warlock', 'paladin', 'ranger',
+]
 
 function RollCheckDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { send } = useWebSocket()
@@ -161,7 +166,7 @@ function SpellsDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   const party = useGameStore((s) => s.gameState?.party)
 
   const spellcasters = party?.filter((c) =>
-    ['Wizard', 'Sorcerer', 'Cleric', 'Bard', 'Druid', 'Warlock'].includes(c.class)
+    SPELLCASTER_CLASSES.includes(c.class.toLowerCase())
   )
 
   return (
@@ -198,10 +203,12 @@ export default function QuickActions() {
   const [showRollCheck, setShowRollCheck] = useState(false)
   const [showInventory, setShowInventory] = useState(false)
   const [showSpells, setShowSpells] = useState(false)
+  const [saveLabel, setSaveLabel] = useState('Save')
   const party = useGameStore((s) => s.gameState?.party)
+  const addSystemMessage = useChatStore((s) => s.addSystemMessage)
 
   const spellcasters = party?.filter((c) =>
-    ['Wizard', 'Sorcerer', 'Cleric', 'Bard', 'Druid', 'Warlock'].includes(c.class)
+    SPELLCASTER_CLASSES.includes(c.class.toLowerCase())
   )
 
   const actions = [
@@ -225,8 +232,20 @@ export default function QuickActions() {
     },
     {
       icon: Save,
-      label: 'Save',
-      onClick: () => {},
+      label: saveLabel,
+      onClick: () => {
+        const { gameState } = useGameStore.getState()
+        // Zustand persist auto-saves to localStorage; trigger a feedback pulse
+        addSystemMessage('Game saved successfully.')
+        setSaveLabel('Saved!')
+        setTimeout(() => setSaveLabel('Save'), 2000)
+        // Force persist flush by writing a timestamp update
+        if (gameState) {
+          useGameStore.getState().updateGameState({
+            metadata: { ...gameState.metadata, updatedAt: Date.now() },
+          })
+        }
+      },
       disabled: false,
     },
   ]
