@@ -24,6 +24,7 @@ import type { CombatLogEntry } from '../stores/combatStore'
 import type { ServerMessage, ClientMessage } from '../types'
 import { eventBus, GameEvents } from '../events'
 import { normalizePartyCharacters } from '../utils/characterTransform'
+import { resolveCharacterName } from '../utils/characterResolve'
 
 export function useGameMessages() {
   const { subscribe, send } = useWebSocket()
@@ -34,14 +35,6 @@ export function useGameMessages() {
   const appendStreamText = useChatStore((s) => s.appendStreamText)
   const finalizeStreamText = useChatStore((s) => s.finalizeStreamText)
   const addSystemMessage = useChatStore((s) => s.addSystemMessage)
-
-  /** Resolve a characterId to a human-readable name from the current party. */
-  const resolveName = useCallback((characterId: string | undefined | null): string => {
-    if (!characterId) return 'Unknown'
-    const party = useGameStore.getState().gameState?.party
-    const found = party?.find((c) => c.id === characterId)
-    return found?.name ?? characterId
-  }, [])
 
   // Handler functions with useCallback to maintain stable references
   const handleNarration = useCallback((payload: unknown) => {
@@ -164,7 +157,7 @@ export function useGameMessages() {
     payload: CombatEventPayload,
   ): { text: string; logType: CombatLogEntry['type'] } {
     const { eventType, characterId, round } = payload
-    const name = resolveName(characterId)
+    const name = resolveCharacterName(characterId)
 
     switch (eventType) {
       case 'combat_start':
@@ -332,8 +325,8 @@ export function useGameMessages() {
 
     const { characterId, spellName, damage, healing, damageType, targetId } = payload
 
-    const casterName = resolveName(characterId)
-    const targetName = resolveName(targetId)
+    const casterName = resolveCharacterName(characterId)
+    const targetName = resolveCharacterName(targetId)
 
     // Update gameStore with spell slot usage
     useGameStore.getState().handleSpellCast(payload)
@@ -366,7 +359,7 @@ export function useGameMessages() {
 
     const { characterId, itemName, consumed, healing, damage } = payload
 
-    const userName = resolveName(characterId)
+    const userName = resolveCharacterName(characterId)
 
     // Update gameStore (removes consumed items from inventory)
     useGameStore.getState().handleItemUse(payload)
@@ -396,7 +389,7 @@ export function useGameMessages() {
 
     const { characterId, itemName, slot, acBonus } = payload
 
-    const equipName = resolveName(characterId)
+    const equipName = resolveCharacterName(characterId)
 
     // Update gameStore (updates equipment and AC)
     useGameStore.getState().handleEquip(payload)
@@ -418,7 +411,7 @@ export function useGameMessages() {
 
     const { characterId, itemName, slot } = payload
 
-    const unequipName = resolveName(characterId)
+    const unequipName = resolveCharacterName(characterId)
 
     // Update gameStore (returns item to inventory)
     useGameStore.getState().handleUnequip(payload)
@@ -438,7 +431,7 @@ export function useGameMessages() {
 
     const { characterId, interactableType, action } = payload
 
-    const interactName = resolveName(characterId)
+    const interactName = resolveCharacterName(characterId)
 
     // Emit EventBus event for Phaser map interaction
     eventBus.emit(GameEvents.MAP_INTERACT, { ...payload, source: 'server' as const })

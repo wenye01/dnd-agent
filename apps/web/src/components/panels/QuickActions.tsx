@@ -239,8 +239,8 @@ export default function QuickActions() {
         addSystemMessage('Game saved successfully.')
         setSaveLabel('Saved!')
         setTimeout(() => setSaveLabel('Save'), 2000)
-        // Force persist flush by writing a timestamp update
-        if (gameState) {
+        // Force persist flush by writing a timestamp update (only if metadata exists)
+        if (gameState?.metadata) {
           useGameStore.getState().updateGameState({
             metadata: { ...gameState.metadata, updatedAt: Date.now() },
           })

@@ -20,15 +20,7 @@ import { create } from 'zustand'
 import type { Combatant, CombatState } from '../types'
 import type { SpellCastPayload, ItemUsePayload } from '../types'
 import { eventBus, GameEvents } from '../events'
-import { useGameStore } from './gameStore'
-
-/** Resolve a characterId to a human-readable name from the current party. */
-function resolveName(characterId: string | undefined | null): string {
-  if (!characterId) return 'Unknown'
-  const party = useGameStore.getState().gameState?.party
-  const found = party?.find((c) => c.id === characterId)
-  return found?.name ?? characterId
-}
+import { resolveCharacterName } from '../utils/characterResolve'
 
 export type TargetMode = 'none' | 'attack' | 'spell' | 'item'
 
@@ -232,7 +224,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       })
 
       // Log the spell cast
-      const casterName = resolveName(payload.characterId)
+      const casterName = resolveCharacterName(payload.characterId)
       const logText = payload.damage
         ? `${casterName} casts ${payload.spellName} for ${payload.damage} ${payload.damageType ?? ''} damage`
         : payload.healing
@@ -292,7 +284,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       })
 
       // Log the item use
-      const userName = resolveName(payload.characterId)
+      const userName = resolveCharacterName(payload.characterId)
       const logText = payload.healing
         ? `${userName} uses ${payload.itemName} healing ${payload.healing} HP`
         : payload.damage
