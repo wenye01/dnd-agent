@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Dice5, Package, Sparkles, Save } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
@@ -204,8 +204,11 @@ export default function QuickActions() {
   const [showInventory, setShowInventory] = useState(false)
   const [showSpells, setShowSpells] = useState(false)
   const [saveLabel, setSaveLabel] = useState('Save')
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const party = useGameStore((s) => s.gameState?.party)
   const addSystemMessage = useChatStore((s) => s.addSystemMessage)
+
+  useEffect(() => () => clearTimeout(saveTimerRef.current), [])
 
   const spellcasters = party?.filter((c) =>
     SPELLCASTER_CLASSES.includes(c.class.toLowerCase())
@@ -235,15 +238,14 @@ export default function QuickActions() {
       label: saveLabel,
       onClick: () => {
         const { gameState } = useGameStore.getState()
-        // Zustand persist auto-saves to localStorage; trigger a feedback pulse
-        addSystemMessage('Game saved successfully.')
-        setSaveLabel('Saved!')
-        setTimeout(() => setSaveLabel('Save'), 2000)
-        // Force persist flush by writing a timestamp update (only if metadata exists)
         if (gameState?.metadata) {
           useGameStore.getState().updateGameState({
             metadata: { ...gameState.metadata, updatedAt: Date.now() },
           })
+          addSystemMessage('Game saved successfully.')
+          setSaveLabel('Saved!')
+          if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+          saveTimerRef.current = setTimeout(() => setSaveLabel('Save'), 2000)
         }
       },
       disabled: false,
