@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Dice5, Package, Sparkles, Save } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { useWebSocket } from '../../contexts/WebSocketContext'
 import { useGameStore } from '../../stores/gameStore'
+import { useChatStore } from '../../stores/chatStore'
 import { isStateUpdatePayload } from '../../services/typeGuards'
 import { isSpellcasterClass } from '../../utils/spellcasters'
 
@@ -201,6 +202,7 @@ export default function QuickActions() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
   const { send, subscribe } = useWebSocket()
   const party = useGameStore((s) => s.gameState?.party)
+  const addSystemMessage = useChatStore((s) => s.addSystemMessage)
 
   const spellcasters = party?.filter((c) => isSpellcasterClass(c.class))
 
@@ -243,6 +245,13 @@ export default function QuickActions() {
   }, [saveState, subscribe])
 
   const handleSave = () => {
+    const { gameState } = useGameStore.getState()
+    if (gameState?.metadata) {
+      useGameStore.getState().updateGameState({
+        metadata: { ...gameState.metadata, updatedAt: Date.now() },
+      })
+      addSystemMessage('Game saved successfully.')
+    }
     setSaveState('saving')
     send({
       type: 'management',

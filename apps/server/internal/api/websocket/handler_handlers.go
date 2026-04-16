@@ -38,6 +38,24 @@ func (h *Hub) handleManagement(client *Client, msg models.ClientMessage) {
 			gs.Metadata.UpdatedAt = now
 			gs.Metadata.LastActivity = now
 		})
+
+		// Persist game state to disk
+		gs := h.stateManager.GetSession(client.SessionID)
+		if gs != nil && h.persistence != nil {
+			if err := h.persistence.SaveState(client.SessionID, gs); err != nil {
+				h.logger.Error().Err(err).Str("session_id", client.SessionID).Msg("failed to persist game state")
+				client.SendMessage(&models.ServerMessage{
+					Type: models.MsgTypeError,
+					Payload: map[string]string{
+						"code":    "SAVE_FAILED",
+						"message": "Failed to save game state to disk",
+					},
+					Timestamp: getCurrentTimestamp(),
+				})
+				return
+			}
+		}
+
 		client.SendMessage(&models.ServerMessage{
 			Type: models.MsgTypeStateUpdate,
 			Payload: map[string]interface{}{

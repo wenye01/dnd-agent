@@ -86,7 +86,7 @@ func main() {
 
 	// Create WebSocket hub
 	logger := &log.Logger
-	wsHub := websocket.NewHub(stateManager, sessionManager, toolRegistry, logger)
+	wsHub := websocket.NewHub(stateManager, sessionManager, toolRegistry, persistenceManager, logger)
 	go wsHub.Run()
 
 	// Setup HTTP server

@@ -436,6 +436,52 @@ describe('useGameMessages', () => {
       expect(useChatStore.getState().messages[0].content).toContain('char-1')
     })
 
+    it('should resolve character name from party for turn_start', () => {
+      // Set up game state with party members so resolveCharacterName works
+      useGameStore.getState().setGameState({
+        sessionId: 'session-123',
+        phase: 'exploration',
+        party: [
+          {
+            id: 'char-1',
+            name: 'Gandalf',
+            race: 'Human',
+            class: 'Wizard',
+            level: 5,
+            background: 'Sage',
+            alignment: 'Neutral Good',
+            abilityScores: { strength: 10, dexterity: 14, constitution: 12, intelligence: 20, wisdom: 15, charisma: 16 },
+            maxHitPoints: 30,
+            currentHitPoints: 30,
+            temporaryHitPoints: 0,
+            armorClass: 12,
+            speed: 30,
+            initiative: 2,
+            proficiencyBonus: 3,
+            inventory: [],
+            equipment: {},
+            spellSlots: {},
+            conditions: [],
+            experiencePoints: 6500,
+            hitDice: '5d6',
+            deathSaves: { successes: 0, failures: 0 },
+          },
+        ],
+        currentMapId: 'map-1',
+        combat: null,
+        scenario: null,
+        metadata: { createdAt: Date.now(), updatedAt: Date.now(), playTime: 0, scenarioId: 'test' },
+      })
+
+      renderHook(() => useGameMessages())
+      const handler = getWebSocketHandler()!
+
+      handler({ type: 'combat_event', payload: { eventType: 'turn_start', characterId: 'char-1' }, timestamp: Date.now() })
+
+      expect(useChatStore.getState().messages[0].content).toContain('Gandalf')
+      expect(useChatStore.getState().messages[0].content).not.toContain('char-1')
+    })
+
     it('should handle turn_end event', () => {
       renderHook(() => useGameMessages())
       const handler = getWebSocketHandler()!

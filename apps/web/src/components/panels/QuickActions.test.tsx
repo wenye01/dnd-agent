@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
-import QuickActions from './QuickActions'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { useGameStore } from '../../stores/gameStore'
-import type { GameState } from '../../types'
+import { useChatStore } from '../../stores/chatStore'
+import QuickActions from './QuickActions'
+import type { Character } from '../../types'
 
 const sendMock = vi.fn()
 let subscribedHandler: ((message: unknown) => void) | null = null
@@ -21,97 +22,202 @@ vi.mock('../../contexts/WebSocketContext', () => ({
   }),
 }))
 
-function setGameState(overrides: Partial<GameState> = {}) {
+function createMockCharacter(overrides: Partial<Character> = {}): Character {
+  return {
+    id: 'char-1',
+    name: 'TestHero',
+    race: 'Human',
+    class: 'Wizard',
+    level: 1,
+    background: 'Sage',
+    alignment: 'Neutral Good',
+    abilityScores: { strength: 10, dexterity: 14, constitution: 12, intelligence: 18, wisdom: 13, charisma: 8 },
+    maxHitPoints: 28,
+    currentHitPoints: 28,
+    temporaryHitPoints: 0,
+    armorClass: 12,
+    speed: 30,
+    initiative: 2,
+    proficiencyBonus: 2,
+    inventory: [],
+    equipment: {},
+    spellSlots: {},
+    conditions: [],
+    experiencePoints: 0,
+    hitDice: '1d6',
+    deathSaves: { successes: 0, failures: 0 },
+    ...overrides,
+  }
+}
+
+function setupGameStateWithParty(party: Character[]) {
   useGameStore.getState().setGameState({
-    sessionId: 'session-1',
-    phase: 'exploring',
-    party: [],
+    sessionId: 'session-123',
+    phase: 'exploration',
+    party,
     currentMapId: 'map-1',
     combat: null,
     scenario: null,
-    metadata: {
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      playTime: 0,
-      scenarioId: 'scenario-1',
-    },
-    ...overrides,
+    metadata: { createdAt: Date.now(), updatedAt: Date.now(), playTime: 0, scenarioId: 'test' },
   })
 }
 
 describe('QuickActions', () => {
   beforeEach(() => {
-    sendMock.mockReset()
+    vi.clearAllMocks()
     subscribedHandler = null
     useGameStore.getState().reset()
+    useChatStore.getState().clearMessages()
   })
 
-  it('should enable spells button for lowercase spellcaster classes', () => {
-    setGameState({
-      party: [
-        {
-          id: 'char-1',
-          name: '法师测试',
-          race: 'human',
-          class: 'wizard',
-          level: 1,
-          background: 'sage',
-          alignment: 'neutral',
-          abilityScores: {
-            strength: 8,
-            dexterity: 14,
-            constitution: 12,
-            intelligence: 16,
-            wisdom: 10,
-            charisma: 10,
-          },
-          maxHitPoints: 8,
-          currentHitPoints: 8,
-          temporaryHitPoints: 0,
-          armorClass: 12,
-          speed: 30,
-          initiative: 2,
-          proficiencyBonus: 2,
-          skills: {},
-          savingThrows: [],
-          conditions: [],
-          deathSaves: { successes: 0, failures: 0 },
-          equipment: [],
-          inventory: [],
-          spellSlots: {
-            1: { max: 2, used: 0 },
-          },
-        },
-      ],
+  describe('Spellcaster class detection (case-insensitive)', () => {
+    it('should enable Spells button for "Wizard" (PascalCase)', () => {
+      setupGameStateWithParty([createMockCharacter({ class: 'Wizard' })])
+      render(<QuickActions />)
+
+      const spellsButton = screen.getByTitle('Spells')
+      expect(spellsButton).not.toBeDisabled()
     })
 
-    render(<QuickActions />)
+    it('should enable Spells button for "wizard" (lowercase)', () => {
+      setupGameStateWithParty([createMockCharacter({ class: 'wizard' })])
+      render(<QuickActions />)
 
-    expect(screen.getByRole('button', { name: /spells/i })).toBeEnabled()
+      const spellsButton = screen.getByTitle('Spells')
+      expect(spellsButton).not.toBeDisabled()
+    })
+
+    it('should enable Spells button for "WIZARD" (uppercase)', () => {
+      setupGameStateWithParty([createMockCharacter({ class: 'WIZARD' })])
+      render(<QuickActions />)
+
+      const spellsButton = screen.getByTitle('Spells')
+      expect(spellsButton).not.toBeDisabled()
+    })
+
+    it('should enable Spells button for Sorcerer', () => {
+      setupGameStateWithParty([createMockCharacter({ class: 'Sorcerer' })])
+      render(<QuickActions />)
+
+      expect(screen.getByTitle('Spells')).not.toBeDisabled()
+    })
+
+    it('should enable Spells button for Cleric', () => {
+      setupGameStateWithParty([createMockCharacter({ class: 'Cleric' })])
+      render(<QuickActions />)
+
+      expect(screen.getByTitle('Spells')).not.toBeDisabled()
+    })
+
+    it('should enable Spells button for Paladin', () => {
+      setupGameStateWithParty([createMockCharacter({ class: 'Paladin' })])
+      render(<QuickActions />)
+
+      expect(screen.getByTitle('Spells')).not.toBeDisabled()
+    })
+
+    it('should enable Spells button for Ranger', () => {
+      setupGameStateWithParty([createMockCharacter({ class: 'Ranger' })])
+      render(<QuickActions />)
+
+      expect(screen.getByTitle('Spells')).not.toBeDisabled()
+    })
+
+    it('should disable Spells button for non-spellcaster class (Fighter)', () => {
+      setupGameStateWithParty([createMockCharacter({ class: 'Fighter', id: 'char-f1' })])
+      render(<QuickActions />)
+
+      expect(screen.getByTitle('Spells')).toBeDisabled()
+    })
+
+    it('should disable Spells button when no party exists', () => {
+      render(<QuickActions />)
+
+      expect(screen.getByTitle('Spells')).toBeDisabled()
+    })
+
+    it('should enable Spells button if any party member is a spellcaster', () => {
+      setupGameStateWithParty([
+        createMockCharacter({ class: 'Fighter', id: 'char-f1' }),
+        createMockCharacter({ class: 'Cleric', id: 'char-c1' }),
+      ])
+      render(<QuickActions />)
+
+      expect(screen.getByTitle('Spells')).not.toBeDisabled()
+    })
   })
 
-  it('should send management save action and show success feedback', () => {
-    render(<QuickActions />)
+  describe('Save button feedback', () => {
+    it('should send management save action when clicked', () => {
+      setupGameStateWithParty([createMockCharacter()])
+      render(<QuickActions />)
 
-    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+      const saveButton = screen.getByTitle('Save')
+      fireEvent.click(saveButton)
 
-    expect(sendMock).toHaveBeenCalledWith({
-      type: 'management',
-      payload: { action: 'save' },
-    })
-    expect(screen.getByText('Saving adventure...')).toBeInTheDocument()
-
-    act(() => {
-      subscribedHandler?.({
-        type: 'state_update',
-        payload: {
-          stateType: 'notification',
-          data: { status: 'game_saved' },
-        },
-        timestamp: Date.now(),
+      expect(sendMock).toHaveBeenCalledWith({
+        type: 'management',
+        payload: { action: 'save' },
       })
     })
 
-    expect(screen.getByText('Save complete')).toBeInTheDocument()
+    it('should add system message when Save is clicked with metadata', () => {
+      setupGameStateWithParty([createMockCharacter()])
+      render(<QuickActions />)
+
+      const saveButton = screen.getByTitle('Save')
+      fireEvent.click(saveButton)
+
+      const messages = useChatStore.getState().messages
+      expect(messages.some((m) => m.content.includes('Game saved successfully'))).toBe(true)
+    })
+
+    it('should show saving state while waiting for server response', () => {
+      setupGameStateWithParty([createMockCharacter()])
+      render(<QuickActions />)
+
+      const saveButton = screen.getByTitle('Save')
+      fireEvent.click(saveButton)
+
+      expect(screen.getByText('Saving adventure...')).toBeInTheDocument()
+    })
+
+    it('should show success feedback when server confirms save', () => {
+      setupGameStateWithParty([createMockCharacter()])
+      render(<QuickActions />)
+
+      const saveButton = screen.getByTitle('Save')
+      fireEvent.click(saveButton)
+
+      act(() => {
+        subscribedHandler?.({
+          type: 'state_update',
+          payload: {
+            stateType: 'notification',
+            data: { status: 'game_saved' },
+          },
+          timestamp: Date.now(),
+        })
+      })
+
+      expect(screen.getByText('Save complete')).toBeInTheDocument()
+    })
+
+    it('should not crash when metadata is undefined', () => {
+      useGameStore.getState().setGameState({
+        sessionId: 's1',
+        phase: 'exploration',
+        party: [createMockCharacter()],
+        currentMapId: 'map-1',
+        combat: null,
+        scenario: null,
+        metadata: undefined as any,
+      })
+
+      render(<QuickActions />)
+
+      const saveButton = screen.getByTitle('Save')
+      expect(() => fireEvent.click(saveButton)).not.toThrow()
+    })
   })
 })

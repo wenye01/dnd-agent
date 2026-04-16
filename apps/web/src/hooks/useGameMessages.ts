@@ -25,6 +25,7 @@ import type { CombatLogEntry } from '../stores/combatStore'
 import type { ServerMessage, ClientMessage } from '../types'
 import { eventBus, GameEvents } from '../events'
 import { normalizePartyCharacters } from '../utils/characterTransform'
+import { resolveCharacterName } from '../utils/characterResolve'
 
 export function useGameMessages() {
   const { subscribe, send } = useWebSocket()
@@ -156,8 +157,8 @@ export function useGameMessages() {
   function formatCombatEventMessage(
     payload: CombatEventPayload,
   ): { text: string; logType: CombatLogEntry['type'] } {
-    const { eventType, characterId, characterName, round, spellName } = payload
-    const actorLabel = characterName ?? characterId ?? 'Unknown'
+    const { eventType, characterId, round, spellName } = payload
+    const name = resolveCharacterName(characterId)
 
     switch (eventType) {
       case 'combat_start':
@@ -169,52 +170,52 @@ export function useGameMessages() {
       case 'round_end':
         return { text: `Round ${round ?? 1} ends.`, logType: 'system' }
       case 'turn_start':
-        return { text: `Turn starts for ${actorLabel}.`, logType: 'turn' }
+        return { text: `Turn starts for ${name}.`, logType: 'turn' }
       case 'turn_end':
-        return { text: `Turn ends for ${actorLabel}.`, logType: 'turn' }
+        return { text: `Turn ends for ${name}.`, logType: 'turn' }
       case 'attack': {
         const hitStatus = payload.isHit === false ? ' (MISS)' : payload.isCrit ? ' (CRIT!)' : ''
         return {
-          text: `${actorLabel} attacks ${payload.target ?? 'target'}${hitStatus}`,
+          text: `${name} attacks ${payload.target ?? 'target'}${hitStatus}`,
           logType: 'damage',
         }
       }
       case 'damage': {
         const amount = payload.damage ?? payload.amount ?? 0
-        let text = `${payload.target ?? actorLabel} takes ${amount} damage`
+        let text = `${payload.target ?? name} takes ${amount} damage`
         if (payload.damageType) text += ` (${payload.damageType})`
         return { text, logType: 'damage' }
       }
       case 'heal':
-        return { text: `${actorLabel} heals ${payload.amount ?? 0} HP`, logType: 'heal' }
+        return { text: `${name} heals ${payload.amount ?? 0} HP`, logType: 'heal' }
       case 'death':
-        return { text: `${actorLabel} has fallen!`, logType: 'damage' }
+        return { text: `${name} has fallen!`, logType: 'damage' }
       case 'unconscious':
-        return { text: `${actorLabel} has been knocked unconscious!`, logType: 'damage' }
+        return { text: `${name} has been knocked unconscious!`, logType: 'damage' }
       case 'opportunity_attack':
         return {
-          text: `${actorLabel} makes an opportunity attack on ${payload.target ?? 'target'}!`,
+          text: `${name} makes an opportunity attack on ${payload.target ?? 'target'}!`,
           logType: 'damage',
         }
       case 'condition_applied':
-        return { text: `${actorLabel} gains condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
+        return { text: `${name} gains condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
       case 'condition_removed':
-        return { text: `${actorLabel} loses condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
+        return { text: `${name} loses condition: ${payload.condition ?? 'unknown'}`, logType: 'status' }
       case 'initiative_rolled':
         return { text: `Initiative rolled for round ${round ?? 1}.`, logType: 'system' }
       case 'move':
-        return { text: `${actorLabel} moves.`, logType: 'info' }
+        return { text: `${name} moves.`, logType: 'info' }
       case 'spell':
         return {
-          text: `${actorLabel} casts ${spellName ?? 'a spell'}${payload.target ? ` targeting ${payload.target}` : ''}.`,
+          text: `${name} casts ${spellName ?? 'a spell'}${payload.target ? ` targeting ${payload.target}` : ''}.`,
           logType: 'info',
         }
       case 'item':
         return { text: 'Use item action.', logType: 'info' }
       case 'dodge':
-        return { text: `${actorLabel} dodges.`, logType: 'info' }
+        return { text: `${name} dodges.`, logType: 'info' }
       case 'disengage':
-        return { text: `${actorLabel} disengages.`, logType: 'info' }
+        return { text: `${name} disengages.`, logType: 'info' }
       default:
         return { text: `Combat event: ${eventType}`, logType: 'info' }
     }
@@ -325,6 +326,9 @@ export function useGameMessages() {
 
     const { characterId, spellName, damage, healing, damageType, targetId } = payload
 
+    const casterName = resolveCharacterName(characterId)
+    const targetName = resolveCharacterName(targetId)
+
     // Update gameStore with spell slot usage
     useGameStore.getState().handleSpellCast(payload)
 
@@ -337,9 +341,9 @@ export function useGameMessages() {
     eventBus.emit(GameEvents.SPELL_CAST, { ...payload, source: 'server' as const })
 
     // Build notification text
-    let text = `${characterId} casts ${spellName}`
+    let text = `${casterName} casts ${spellName}`
     if (damage) {
-      text += ` dealing ${damage}${damageType ? ` ${damageType}` : ''} damage to ${targetId ?? 'target'}`
+      text += ` dealing ${damage}${damageType ? ` ${damageType}` : ''} damage to ${targetName}`
     }
     if (healing) {
       text += ` healing ${healing} HP`
@@ -356,6 +360,8 @@ export function useGameMessages() {
 
     const { characterId, itemName, consumed, healing, damage } = payload
 
+    const userName = resolveCharacterName(characterId)
+
     // Update gameStore (removes consumed items from inventory)
     useGameStore.getState().handleItemUse(payload)
 
@@ -368,7 +374,7 @@ export function useGameMessages() {
     eventBus.emit(GameEvents.ITEM_USE, { ...payload, source: 'server' as const })
 
     // Build notification text
-    let text = `${characterId} uses ${itemName}`
+    let text = `${userName} uses ${itemName}`
     if (consumed) text += ' (consumed)'
     if (healing) text += ` restoring ${healing} HP`
     if (damage) text += ` dealing ${damage} damage`
@@ -384,13 +390,15 @@ export function useGameMessages() {
 
     const { characterId, itemName, slot, acBonus } = payload
 
+    const equipName = resolveCharacterName(characterId)
+
     // Update gameStore (updates equipment and AC)
     useGameStore.getState().handleEquip(payload)
 
     // Emit EventBus event for Phaser visual update
     eventBus.emit(GameEvents.EQUIP_CHANGE, { ...payload, source: 'server' as const })
 
-    let text = `${characterId} equips ${itemName} in ${slot} slot`
+    let text = `${equipName} equips ${itemName} in ${slot} slot`
     if (acBonus) text += ` (+${acBonus} AC)`
     addSystemMessage(text)
   }, [addSystemMessage])
@@ -404,13 +412,15 @@ export function useGameMessages() {
 
     const { characterId, itemName, slot } = payload
 
+    const unequipName = resolveCharacterName(characterId)
+
     // Update gameStore (returns item to inventory)
     useGameStore.getState().handleUnequip(payload)
 
     // Emit EventBus event for Phaser visual update
     eventBus.emit(GameEvents.UNEQUIP_CHANGE, { ...payload, source: 'server' as const })
 
-    addSystemMessage(`${characterId} unequips ${itemName} from ${slot} slot`)
+    addSystemMessage(`${unequipName} unequips ${itemName} from ${slot} slot`)
   }, [addSystemMessage])
 
   /** Handle map_interact server messages. */
@@ -422,10 +432,12 @@ export function useGameMessages() {
 
     const { characterId, interactableType, action } = payload
 
+    const interactName = resolveCharacterName(characterId)
+
     // Emit EventBus event for Phaser map interaction
     eventBus.emit(GameEvents.MAP_INTERACT, { ...payload, source: 'server' as const })
 
-    addSystemMessage(`${characterId} ${action}s ${interactableType} on the map`)
+    addSystemMessage(`${interactName} ${action}s ${interactableType} on the map`)
   }, [addSystemMessage])
 
   /** Handle map_switch server messages. */

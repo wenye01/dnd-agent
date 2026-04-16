@@ -12,6 +12,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Persistence defines the interface for persistence operations needed by the Hub.
+type Persistence interface {
+	SaveState(sessionID string, gs *state.GameState) error
+}
+
 // Hub configuration constants.
 const (
 	unregisterChanSize    = 64
@@ -30,13 +35,14 @@ type Hub struct {
 	stateManager *state.Manager
 	sessionMgr   *session.Manager
 	toolRegistry *tools.Registry
+	persistence  Persistence
 	logger       *zerolog.Logger
 
 	mu sync.RWMutex
 }
 
 // NewHub creates a new WebSocket hub.
-func NewHub(stateManager *state.Manager, sessionMgr *session.Manager, toolRegistry *tools.Registry, logger *zerolog.Logger) *Hub {
+func NewHub(stateManager *state.Manager, sessionMgr *session.Manager, toolRegistry *tools.Registry, persistence Persistence, logger *zerolog.Logger) *Hub {
 	return &Hub{
 		clients:      make(map[*Client]bool),
 		register:     make(chan *Client),
@@ -45,6 +51,7 @@ func NewHub(stateManager *state.Manager, sessionMgr *session.Manager, toolRegist
 		stateManager: stateManager,
 		sessionMgr:   sessionMgr,
 		toolRegistry: toolRegistry,
+		persistence:  persistence,
 		logger:       logger,
 	}
 }

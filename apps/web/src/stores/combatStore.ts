@@ -20,6 +20,7 @@ import { create } from 'zustand'
 import type { Combatant, CombatState } from '../types'
 import type { SpellCastPayload, ItemUsePayload } from '../types'
 import { eventBus, GameEvents } from '../events'
+import { resolveCharacterName } from '../utils/characterResolve'
 
 export type TargetMode = 'none' | 'attack' | 'spell' | 'item'
 
@@ -223,11 +224,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       })
 
       // Log the spell cast
+      const casterName = resolveCharacterName(payload.characterId)
       const logText = payload.damage
-        ? `${payload.characterId} casts ${payload.spellName} for ${payload.damage} ${payload.damageType ?? ''} damage`
+        ? `${casterName} casts ${payload.spellName} for ${payload.damage} ${payload.damageType ?? ''} damage`
         : payload.healing
-          ? `${payload.characterId} casts ${payload.spellName} healing ${payload.healing} HP`
-          : `${payload.characterId} casts ${payload.spellName}`
+          ? `${casterName} casts ${payload.spellName} healing ${payload.healing} HP`
+          : `${casterName} casts ${payload.spellName}`
 
       // Emit moved to useGameMessages.ts handler (single source of truth to avoid double animation)
       if (payload.damage && payload.targetId) {
@@ -282,11 +284,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       })
 
       // Log the item use
+      const userName = resolveCharacterName(payload.characterId)
       const logText = payload.healing
-        ? `${payload.characterId} uses ${payload.itemName} healing ${payload.healing} HP`
+        ? `${userName} uses ${payload.itemName} healing ${payload.healing} HP`
         : payload.damage
-          ? `${payload.characterId} uses ${payload.itemName} for ${payload.damage} damage`
-          : `${payload.characterId} uses ${payload.itemName}`
+          ? `${userName} uses ${payload.itemName} for ${payload.damage} damage`
+          : `${userName} uses ${payload.itemName}`
 
       // Emit moved to useGameMessages.ts handler (single source of truth to avoid double animation)
       if (payload.healing) {
