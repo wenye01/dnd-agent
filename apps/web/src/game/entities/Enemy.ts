@@ -27,7 +27,7 @@ export class Enemy extends BaseEntity {
     this.add(this.createInitialLetter())
 
     // CR label (bottom right)
-    const cr = combatant.cr ?? 0
+    const cr = (combatant as Combatant & { cr?: number }).cr ?? 0
     this.crLabel = scene.add.text(TILE_SIZE / 2 + CR_LABEL_X_OFFSET, TILE_SIZE / 2 + CR_LABEL_Y_OFFSET, `CR${cr}`, {
       fontSize: CR_FONT_SIZE,
       color: '#ffcccc',

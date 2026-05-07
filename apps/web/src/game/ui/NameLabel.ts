@@ -13,7 +13,8 @@ export class NameLabel extends Phaser.GameObjects.Text {
     this.setOrigin(0.5, 1)
   }
 
-  setName(name: string): void {
+  setName(name: string): this {
     this.setText(name)
+    return this
   }
 }

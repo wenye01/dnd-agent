@@ -165,7 +165,7 @@ export default function SpellbookPanel() {
       // Default to all mock spells if no knownSpells defined
       return MOCK_SPELLS
     }
-    return MOCK_SPELLS.filter((s) => character.knownSpells.includes(s.id))
+    return MOCK_SPELLS.filter((s) => character.knownSpells?.includes(s.id) ?? false)
   }, [character])
 
   // Filter and group spells by level

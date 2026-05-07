@@ -172,14 +172,15 @@ describe('QuickActions', () => {
       expect(messages.some((m) => m.content.includes('Game saved successfully'))).toBe(true)
     })
 
-    it('should show saving state while waiting for server response', () => {
+    it('should show immediate saved feedback after clicking Save', () => {
       setupGameStateWithParty([createMockCharacter()])
       render(<QuickActions />)
 
       const saveButton = screen.getByTitle('Save')
       fireEvent.click(saveButton)
 
-      expect(screen.getByText('Saving adventure...')).toBeInTheDocument()
+      expect(screen.getByTitle('Saved!')).toHaveTextContent('Saved!')
+      expect(screen.getByText('Save complete')).toBeInTheDocument()
     })
 
     it('should show success feedback when server confirms save', () => {

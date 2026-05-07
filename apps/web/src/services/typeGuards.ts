@@ -8,6 +8,7 @@ import type {
   UnequipPayload,
   MapInteractPayload,
   MapSwitchPayload,
+  GamePhase,
 } from '../types'
 import {
   COMBAT_EVENT_TYPES,
@@ -59,7 +60,13 @@ export interface UserInputPayload {
 }
 
 // Type guard for partial game state update
-export function isPartialGameState(data: unknown): data is { sessionId?: string; phase?: string; currentMapId?: string } {
+const GAME_PHASES: readonly GamePhase[] = ['exploring', 'combat', 'dialog', 'resting']
+
+function isGamePhase(value: unknown): value is GamePhase {
+  return typeof value === 'string' && (GAME_PHASES as readonly string[]).includes(value)
+}
+
+export function isPartialGameState(data: unknown): data is { sessionId?: string; phase?: GamePhase; currentMapId?: string } {
   if (typeof data !== 'object' || data === null) {
     return false
   }
@@ -70,7 +77,7 @@ export function isPartialGameState(data: unknown): data is { sessionId?: string;
   if ('sessionId' in obj && typeof obj.sessionId !== 'string') {
     return false
   }
-  if ('phase' in obj && typeof obj.phase !== 'string') {
+  if ('phase' in obj && !isGamePhase(obj.phase)) {
     return false
   }
   if ('currentMapId' in obj && typeof obj.currentMapId !== 'string') {

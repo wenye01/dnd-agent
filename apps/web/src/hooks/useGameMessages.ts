@@ -157,8 +157,8 @@ export function useGameMessages() {
   function formatCombatEventMessage(
     payload: CombatEventPayload,
   ): { text: string; logType: CombatLogEntry['type'] } {
-    const { eventType, characterId, round, spellName } = payload
-    const name = resolveCharacterName(characterId)
+    const { eventType, characterId, characterName, round, spellName } = payload
+    const name = characterName ?? resolveCharacterName(characterId)
 
     switch (eventType) {
       case 'combat_start':

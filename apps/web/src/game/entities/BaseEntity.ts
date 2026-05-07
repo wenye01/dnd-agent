@@ -12,7 +12,7 @@ export type Direction = 'up' | 'down' | 'left' | 'right'
 export abstract class BaseEntity extends Phaser.GameObjects.Container {
   public readonly id: string
   public readonly entityName: string
-  public combatant: Combatant
+  public combatant!: Combatant
   public gridPosition: GridPosition
   public direction: Direction = 'down'
   public isSelected = false

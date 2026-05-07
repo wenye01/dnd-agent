@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Dice5, Package, Sparkles, Save } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
@@ -213,7 +213,7 @@ export default function QuickActions() {
 
     const timer = window.setTimeout(() => {
       setSaveState('idle')
-    }, 2500)
+    }, 2000)
 
     return () => window.clearTimeout(timer)
   }, [saveState])
@@ -252,13 +252,13 @@ export default function QuickActions() {
       })
       addSystemMessage('Game saved successfully.')
     }
-    setSaveState('saving')
     send({
       type: 'management',
       payload: {
         action: 'save',
       },
     })
+    setSaveState('success')
   }
 
   const actions = [
@@ -282,7 +282,7 @@ export default function QuickActions() {
     },
     {
       icon: Save,
-      label: 'Save',
+      label: saveState === 'success' ? 'Saved!' : 'Save',
       onClick: handleSave,
       disabled: saveState === 'saving',
     },

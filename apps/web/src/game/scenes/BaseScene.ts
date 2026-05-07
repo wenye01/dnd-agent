@@ -13,7 +13,7 @@ export abstract class BaseScene extends Phaser.Scene {
   }
 
   /** Register an unsubscribe callback to be called on scene shutdown. */
-  protected addUnsubscribe(fn: () => void): void {
+  addUnsubscribe(fn: () => void): void {
     this.unsubscribers.push(fn)
   }
 
