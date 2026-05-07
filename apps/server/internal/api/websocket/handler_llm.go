@@ -141,25 +141,11 @@ func (h *Hub) executeAndSendToolResult(client *Client, tc *llm.ToolCall, request
 
 	case "start_combat":
 		h.sendGameStateSnapshots(client, requestID)
-		client.SendMessage(&models.ServerMessage{
-			Type: models.MsgTypeCombatEvent,
-			Payload: map[string]interface{}{
-				"eventType": combatEventStart,
-			},
-			RequestID: requestID,
-			Timestamp: getCurrentTimestamp(),
-		})
+		h.sendCombatEvent(client, requestID, combatEventStart)
 
 	case "end_combat":
 		h.sendGameStateSnapshots(client, requestID)
-		client.SendMessage(&models.ServerMessage{
-			Type: models.MsgTypeCombatEvent,
-			Payload: map[string]interface{}{
-				"eventType": combatEventEnd,
-			},
-			RequestID: requestID,
-			Timestamp: getCurrentTimestamp(),
-		})
+		h.sendCombatEvent(client, requestID, combatEventEnd)
 
 	case "cast_spell":
 		// Build spell_cast event from the tool result
@@ -240,94 +226,6 @@ func (h *Hub) executeAndSendToolResult(client *Client, tc *llm.ToolCall, request
 			}
 		}
 
-	case "start_combat":
-		// Send game state update with phase=combat
-		sessionID, _ := tc.Arguments["session_id"].(string)
-		if sessionID != "" {
-			gs := h.stateManager.GetSession(sessionID)
-			if gs != nil {
-				// Send game state update (phase change to combat)
-				client.SendMessage(&models.ServerMessage{
-					Type: models.MsgTypeStateUpdate,
-					Payload: map[string]interface{}{
-						"stateType": "game",
-						"data": map[string]interface{}{
-							"sessionId":    gs.SessionID,
-							"phase":        string(gs.Phase),
-							"currentMapId": gs.CurrentMapID,
-						},
-					},
-					RequestID: requestID,
-					Timestamp: getCurrentTimestamp(),
-				})
-				// Send combat state data
-				if gs.Combat != nil {
-					client.SendMessage(&models.ServerMessage{
-						Type: models.MsgTypeStateUpdate,
-						Payload: map[string]interface{}{
-							"stateType": "combat",
-							"data":      gs.Combat,
-						},
-						RequestID: requestID,
-						Timestamp: getCurrentTimestamp(),
-					})
-				}
-				// Send combat_start combat event
-				client.SendMessage(&models.ServerMessage{
-					Type: models.MsgTypeCombatEvent,
-					Payload: map[string]interface{}{
-						"eventType":   "combat_start",
-						"round":       1,
-						"timestamp":   getCurrentTimestamp(),
-						"eventId":     generateEventID("combat"),
-					},
-					RequestID: requestID,
-					Timestamp: getCurrentTimestamp(),
-				})
-			}
-		}
-
-	case "end_combat":
-		sessionID, _ := tc.Arguments["session_id"].(string)
-		if sessionID != "" {
-			// Send game state update (phase change back to exploring)
-			gs := h.stateManager.GetSession(sessionID)
-			if gs != nil {
-				client.SendMessage(&models.ServerMessage{
-					Type: models.MsgTypeStateUpdate,
-					Payload: map[string]interface{}{
-						"stateType": "game",
-						"data": map[string]interface{}{
-							"sessionId":    gs.SessionID,
-							"phase":        string(gs.Phase),
-							"currentMapId": gs.CurrentMapID,
-						},
-					},
-					RequestID: requestID,
-					Timestamp: getCurrentTimestamp(),
-				})
-			}
-			// Send combat_end event and null combat state
-			client.SendMessage(&models.ServerMessage{
-				Type: models.MsgTypeCombatEvent,
-				Payload: map[string]interface{}{
-					"eventType": "combat_end",
-					"timestamp": getCurrentTimestamp(),
-					"eventId":   generateEventID("combat"),
-				},
-				RequestID: requestID,
-				Timestamp: getCurrentTimestamp(),
-			})
-			client.SendMessage(&models.ServerMessage{
-				Type: models.MsgTypeStateUpdate,
-				Payload: map[string]interface{}{
-					"stateType": "combat",
-					"data":      nil,
-				},
-				RequestID: requestID,
-				Timestamp: getCurrentTimestamp(),
-			})
-		}
 	}
 
 	h.logger.Info().
@@ -363,6 +261,27 @@ func (h *Hub) sendGameStateSnapshots(client *Client, requestID string) {
 			"stateType": "combat",
 			"data":      gs.Combat,
 		},
+		RequestID: requestID,
+		Timestamp: getCurrentTimestamp(),
+	})
+}
+
+func (h *Hub) sendCombatEvent(client *Client, requestID, eventType string) {
+	payload := map[string]interface{}{
+		"eventType": eventType,
+		"timestamp": getCurrentTimestamp(),
+		"eventId":   generateEventID("combat"),
+	}
+
+	if eventType == combatEventStart {
+		if gs := h.stateManager.GetSession(client.SessionID); gs != nil && gs.Combat != nil {
+			payload["round"] = gs.Combat.Round
+		}
+	}
+
+	client.SendMessage(&models.ServerMessage{
+		Type:      models.MsgTypeCombatEvent,
+		Payload:   payload,
 		RequestID: requestID,
 		Timestamp: getCurrentTimestamp(),
 	})
